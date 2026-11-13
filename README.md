@@ -1,12 +1,12 @@
-# EPWP Candidate Database - registration site
+# EPWP General Workers - advert and online application
 
-Public registration page for the Eastern Cape Department of Health EPWP candidate
-database. The page is static (GitHub Pages) and saves each registration to a
+Public advert and online application form for the Eastern Cape Department of
+Health EPWP General Worker positions. The page is static (GitHub Pages) and saves each application to a
 Google Sheet through a Google Apps Script web app.
 
 ```
-index.html              Landing page + registration form
-assets/config.js        The Apps Script URL goes here
+index.html              Advert + application form
+assets/config.js        Apps Script URL, age range and closing date
 assets/units.js         District > Municipality > Hospital lists (generated)
 assets/logo.png         Department of Health logo
 apps-script/Code.gs     Backend - paste into the Google Sheet's Apps Script
@@ -16,11 +16,11 @@ docs/                   Source lists (reporting units, database fields)
 
 ## 1. Set up the Google Sheet backend
 
-1. Create a new Google Sheet, for example "EPWP Candidate Database".
+1. Create a new Google Sheet, for example "EPWP Applications".
 2. Open **Extensions > Apps Script**, delete the sample code and paste in the
    contents of `apps-script/Code.gs`. Save.
 3. Choose the function **setup** and press **Run**. Approve the permissions.
-   A "Registrations" tab with the column headings appears in the Sheet.
+   An "Applications" tab with the column headings appears in the Sheet.
 4. Press **Deploy > New deployment**, type **Web app**, and set
    - Execute as: **Me**
    - Who has access: **Anyone**
@@ -31,12 +31,16 @@ docs/                   Source lists (reporting units, database fields)
 If you change `Code.gs` later, use **Deploy > Manage deployments > Edit >
 Version: New version** so the same URL keeps working.
 
+The closing date and the age range are set in two places that must agree:
+`assets/config.js` (what applicants see) and the top of `Code.gs` (what the
+backend enforces).
+
 ## 2. Publish on GitHub Pages
 
 ```
 git init
 git add .
-git commit -m "EPWP candidate registration site"
+git commit -m "EPWP application site"
 git branch -M main
 git remote add origin https://github.com/<account>/<repository>.git
 git push -u origin main
@@ -49,7 +53,7 @@ at `https://<account>.github.io/<repository>/`.
 ## 3. Test
 
 Open the live site, complete the form and submit. A new row should appear in
-the Registrations tab and the page should show a reference number
+the Applications tab and the page should show a reference number
 (EPWP-000001). Submitting the same ID number again must be refused.
 
 ## Updating the district / municipality / hospital lists

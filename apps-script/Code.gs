@@ -1,30 +1,34 @@
 /**
- * EPWP Candidate Database - Google Sheets backend.
+ * EPWP General Worker applications - Google Sheets backend.
  *
- * This script is bound to the Google Sheet that stores the registrations
+ * This script is bound to the Google Sheet that stores the applications
  * (Extensions > Apps Script). Deploy it as a Web App:
  *   Execute as: Me        Who has access: Anyone
  * and paste the /exec URL into assets/config.js on the website.
  */
 
-var SHEET_NAME = 'Registrations';
+var SHEET_NAME = 'Applications';
 var REF_PREFIX = 'EPWP-';
 var MIN_AGE = 18;
+var MAX_AGE = 45;
+// Closing date and time (South African time). Later submissions are refused.
+var CLOSING = '2026-11-16T16:00:00+02:00';
+var QUALIFICATIONS = ['Grade 10', 'N2', 'NC(V) Level 2'];
 
 // Column order follows docs/databasefields.csv.
 var FIELDS = [
   'Title', 'Name', 'Surname', 'SouthAfricanID', 'DateOfBirth', 'Gender',
-  'DisabilityStatus', 'CurrentAddress', 'CellphoneNumber', 'EmailAddress',
-  'District', 'LocalMunicipality', 'Hospital', 'MunicipalWardNo',
-  'HighestSchoolLevel', 'PracticalSkills', 'OtherSkills', 'DriversLicence'
+  'DisabilityStatus', 'CurrentAddress', 'CellphoneNumber', 'AlternativeNumber',
+  'EmailAddress', 'District', 'LocalMunicipality', 'NearestFacility',
+  'MunicipalWardNo', 'HighestSchoolLevel', 'PracticalSkills', 'OtherSkills'
 ];
 var HEADERS = ['Timestamp', 'Reference'].concat(FIELDS).concat(['Consent']);
 
 var REQUIRED = [
   'Title', 'Name', 'Surname', 'SouthAfricanID', 'DateOfBirth', 'Gender',
   'DisabilityStatus', 'CurrentAddress', 'CellphoneNumber', 'District',
-  'LocalMunicipality', 'MunicipalWardNo', 'HighestSchoolLevel',
-  'PracticalSkills', 'DriversLicence'
+  'LocalMunicipality', 'NearestFacility', 'MunicipalWardNo',
+  'HighestSchoolLevel', 'PracticalSkills'
 ];
 
 /** Run this once from the Apps Script editor to create the sheet and headers. */
@@ -35,7 +39,7 @@ function setup() {
 
 /** Opening the Web App URL in a browser shows that it is alive. */
 function doGet() {
-  return json_({ ok: true, service: 'EPWP candidate registration' });
+  return json_({ ok: true, service: 'EPWP general worker applications' });
 }
 
 function doPost(e) {
@@ -50,6 +54,10 @@ function doPost(e) {
 
   // Honeypot: real applicants never fill this hidden field in.
   if (data.website) return json_({ ok: true, ref: REF_PREFIX + '000000' });
+
+  if (new Date().getTime() > new Date(CLOSING).getTime()) {
+    return json_({ ok: false, error: 'closed', message: 'Applications are closed.' });
+  }
 
   var record = clean_(data);
   var problem = validate_(record, data);
@@ -76,7 +84,7 @@ function doPost(e) {
             ok: false,
             error: 'duplicate',
             ref: sheet.getRange(i + 2, refCol).getDisplayValue(),
-            message: 'This ID number is already registered on the database.'
+            message: 'An application with this ID number has already been received.'
           });
         }
       }
@@ -97,7 +105,7 @@ function doPost(e) {
     return json_({ ok: true, ref: ref });
   } catch (err) {
     console.error(err);
-    return json_({ ok: false, error: 'server', message: 'Your registration could not be saved. Please try again.' });
+    return json_({ ok: false, error: 'server', message: 'Your application could not be saved. Please try again.' });
   } finally {
     lock.releaseLock();
   }
@@ -137,7 +145,9 @@ function clean_(data) {
     out[f] = v.replace(/\s+/g, ' ').trim().slice(0, f === 'CurrentAddress' ? 300 : 200);
   });
   out.SouthAfricanID = out.SouthAfricanID.replace(/\D/g, '');
-  out.CellphoneNumber = out.CellphoneNumber.replace(/[^\d+]/g, '').replace(/^\+27/, '0');
+  ['CellphoneNumber', 'AlternativeNumber'].forEach(function (f) {
+    out[f] = out[f].replace(/[^\d+]/g, '').replace(/^\+27/, '0');
+  });
   return out;
 }
 
@@ -145,14 +155,17 @@ function validate_(r, data) {
   for (var i = 0; i < REQUIRED.length; i++) {
     if (!r[REQUIRED[i]]) return 'Please complete all the required fields (' + REQUIRED[i] + ').';
   }
-  if (data.Consent !== true && data.Consent !== 'Yes') return 'Consent is required to register.';
+  if (data.Consent !== true && data.Consent !== 'Yes') return 'Consent is required to apply.';
 
   var dob = idBirthDate_(r.SouthAfricanID);
   if (!dob) return 'The South African ID number is not valid.';
   if (r.DateOfBirth !== dob) return 'The date of birth does not match the ID number.';
-  if (ageOn_(dob, new Date()) < MIN_AGE) return 'You must be ' + MIN_AGE + ' or older to register.';
+  var age = ageOn_(dob, new Date());
+  if (age < MIN_AGE || age > MAX_AGE) return 'These positions are for people aged ' + MIN_AGE + ' to ' + MAX_AGE + '.';
+  if (QUALIFICATIONS.indexOf(r.HighestSchoolLevel) === -1) return 'Please choose a qualification from the list.';
 
   if (!/^0\d{9}$/.test(r.CellphoneNumber)) return 'The cellphone number must have 10 digits and start with 0.';
+  if (r.AlternativeNumber && !/^0\d{9}$/.test(r.AlternativeNumber)) return 'The alternative number must have 10 digits and start with 0.';
   if (r.EmailAddress && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.EmailAddress)) return 'The email address is not valid.';
   if (!/^\d{1,3}$/.test(r.MunicipalWardNo) || Number(r.MunicipalWardNo) < 1) return 'The ward number is not valid.';
   if (r.DisabilityStatus !== 'Yes' && r.DisabilityStatus !== 'No') return 'Please answer the disability question.';

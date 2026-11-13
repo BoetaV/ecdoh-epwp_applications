@@ -7,12 +7,13 @@ Gender;Dropdown;Male, Female, Prefer not to say
 DisabilityStatus;Radio Button;Yes/No
 CurrentAddress;;
 CellphoneNumber;;
+AlternativeNumber;;
 EmailAddress;;
 District;Dropdown;ec_epwp.csv
 LocalMunicipality;Dependent Dropdown;ec_epwp.csv
-Hospital;Dependent Dropdown;ec_epwp.csv
+Nearest Facility;Dependent Dropdown;ec_epwp.csv
 MunicipalWardNo;;
-HighestSchoolLevel;Dropdown;No Formal Scool, Primary School, Grade 6, Grade 7, Grade 8, Grade 9
+HighestSchoolLevel;Dropdown;Grade 10, N2 or NC(V) Level 2
 PracticalSkills;Dropdown (Multiple Selection);Carpenter, Painter, Builder, Electrician, Plumber, Welder, Bricklayer, Mechanic, Driver, Cleaner, Gardener, Security, Other (Specify)
 OtherSkills;;
 DriversLicence;Dropdown;Code 08 (Automatic), Code 08 (Manual), Code 10, Code 14

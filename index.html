@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EPWP Candidate Database | Eastern Cape Department of Health</title>
-<meta name="description" content="Register on the Eastern Cape Department of Health EPWP candidate database to be considered when opportunities open in your ward.">
+<title>EPWP General Workers - Apply Online | Eastern Cape Department of Health</title>
+<meta name="description" content="Apply online for one of 450 EPWP General Worker positions in the Eastern Cape Department of Health. Closing date 16 November 2026.">
 <meta name="theme-color" content="#06402b">
 <link rel="icon" href="assets/logo.png">
 <style>
@@ -81,6 +81,17 @@ a { color: var(--green-700); }
 .hero .lead { margin-top: 18px; max-width: 36em; font-size: clamp(17px, 2.4vw, 20px); color: #eaf5ec; }
 .hero .cta { margin-top: 26px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px 20px; }
 .hero .cta small { font-size: 14px; color: #d5ead9; }
+.hero .ages { margin-top: 10px; font-size: clamp(20px, 3.6vw, 30px); font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
+.closed-pill { display: inline-block; background: var(--white); color: var(--red); font-weight: 800; font-size: 18px; padding: 12px 22px; border-radius: 999px; }
+.closed-only { display: none !important; }
+body.closed .closed-only { display: flex !important; }
+body.closed .open-only { display: none !important; }
+.facts { list-style: none; margin: 22px 0 0; padding: 0; display: grid; gap: 14px; }
+.facts li { background: var(--green-700); color: var(--white); border-radius: var(--radius); padding: 16px 18px; }
+.facts li.gold { background: var(--yellow); color: var(--green-900); }
+.facts small { display: block; font-size: 13px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; opacity: .85; }
+.facts strong { display: block; font-size: 26px; font-weight: 900; line-height: 1.15; margin-top: 2px; }
+.facts span { display: block; font-size: 15px; }
 .stripe { height: 12px; background: linear-gradient(90deg, var(--yellow) 0 38%, var(--green-600) 38% 100%); }
 
 /* ---------- notice ---------- */
@@ -217,7 +228,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 @media (min-width: 720px) {
   .topbar img { height: 68px; }
   .grid.two { grid-template-columns: 1fr 1fr; }
-  .steps { grid-template-columns: repeat(3, 1fr); }
+  .facts { grid-template-columns: repeat(3, 1fr); }
   .districts { grid-template-columns: repeat(4, 1fr); }
   .fields.cols { grid-template-columns: 1fr 1fr; }
   .fields .full { grid-column: 1 / -1; }
@@ -250,14 +261,16 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   <section class="hero">
     <div class="wrap">
       <span class="eyebrow">EPWP &middot; Eastern Cape Health</span>
-      <h1>EPWP Candidate Database <span>Register for future opportunities</span></h1>
-      <p class="lead">The Eastern Cape Department of Health is building a database of people who are available for Expanded Public Works Programme (EPWP) work at health facilities in their own ward.</p>
-      <div class="cta">
-        <a class="btn" href="#register">Register now
+      <h1>EPWP Advertisement <span>for 450 General Workers</span></h1>
+      <p class="ages">(Ages 18 &ndash; 45 years)</p>
+      <p class="lead">Applications are hereby invited for 450 EPWP General Worker positions, which will be placed across various districts within the Eastern Cape Department of Health.</p>
+      <div class="cta open-only">
+        <a class="btn" href="#apply">Apply online
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </a>
-        <small>Free &middot; takes about 5 minutes &middot; works on your phone</small>
+        <small>Closing date: 16 November 2026 at 16h00</small>
       </div>
+      <div class="cta closed-only"><span class="closed-pill">Applications are now closed</span></div>
     </div>
   </section>
   <div class="stripe"></div>
@@ -268,31 +281,36 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         <svg viewBox="0 0 24 24" fill="none" stroke="#06402b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"/></svg>
       </div>
       <div>
-        <h2 id="notice-title">This is not a job advert</h2>
-        <p>There are no posts open right now. Registering puts your details on a database so that the Department can contact you when an EPWP opportunity becomes available in your area. Registration does not guarantee work.</p>
+        <h2 id="notice-title">This is a re-advertisement</h2>
+        <p>If you have already applied, you do not need to apply again. This is the opportunity for those who could not apply.</p>
       </div>
     </section>
 
-    <ol class="steps" aria-label="How it works">
-      <li><h3>Register</h3><p>Fill in the online form with your details, your ward and your skills.</p></li>
-      <li><h3>You are on the database</h3><p>You get a reference number. Your details are kept safely by the Department.</p></li>
-      <li><h3>We contact you</h3><p>When an opportunity opens in your ward, people on the database can be contacted.</p></li>
-    </ol>
+    <ul class="facts">
+      <li><small>Contract</small><strong>Five (5) months</strong><span>Fixed-term, starting November 2026</span></li>
+      <li class="gold"><small>Stipend</small><strong>R4 500</strong><span>per month</span></li>
+      <li><small>Closing date</small><strong>16 November 2026</strong><span>Monday, 16h00</span></li>
+    </ul>
 
     <div class="grid two">
       <section class="card">
         <header>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M8.5 13l2.5 2.5 4.5-5"/></svg>
-          <h2>Who can register</h2>
+          <h2>Minimum requirements</h2>
         </header>
         <div class="body">
           <ul class="ticks">
-            <li>You have a valid South African ID.</li>
-            <li>You are 18 years or older.</li>
-            <li>You live in a ward in the Eastern Cape, and can show proof of residence from your Ward Councillor if asked.</li>
-            <li>You are unemployed and meet the EPWP eligibility requirements.</li>
-            <li>You are physically fit and able to do manual labour.</li>
-            <li>Any school level is welcome. A trade or artisan skill is an added advantage.</li>
+            <li>A minimum qualification of Grade 10, N2 or NC(V) Level 2.</li>
+            <li>A qualification in any artisan trade will be an added advantage.</li>
+            <li>Applicants must submit a certified copy of their latest school report or relevant qualification certificate.</li>
+            <li>Must be able to read and write.</li>
+            <li>Must have a valid RSA ID document (certified copy).</li>
+            <li>Must be residing in the same area/village and ward of the vacant position.</li>
+            <li>Proof of residence from the Ward Councillor.</li>
+            <li>Community involvement and good communication skills.</li>
+            <li>Attributes: excellent time management and physical fitness to perform manual labour.</li>
+            <li>Applicants must be unemployed and meet the eligibility requirements of the Expanded Public Works Programme (EPWP).</li>
+            <li>Applicants must be between 18 and 45 years old.</li>
           </ul>
         </div>
       </section>
@@ -300,38 +318,56 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       <section class="card">
         <header>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M5.5 18.5l2.1-2.1M16.4 7.6l2.1-2.1"/></svg>
-          <h2>Typical EPWP work</h2>
+          <h2>Key responsibilities / duties</h2>
         </header>
         <div class="body">
           <ul class="ticks dots">
-            <li>General cleaning in and around health facilities.</li>
-            <li>Grass cutting, gardening and looking after facility grounds.</li>
-            <li>Loading, unloading, moving and storing materials and equipment.</li>
-            <li>Helping with the upkeep of buildings and grounds.</li>
-            <li>Minor repairs and renovations under supervision.</li>
-            <li>Collecting and disposing of waste according to facility hygiene procedures.</li>
+            <li>Perform general cleaning and maintain cleanliness within and around health facilities.</li>
+            <li>Assist with grass cutting, gardening, landscaping and maintaining facility grounds.</li>
+            <li>Assist with the loading, unloading, moving and storage of materials and equipment as required.</li>
+            <li>Support the maintenance and upkeep of buildings, grounds and the surrounding environment.</li>
+            <li>Assist with minor repairs and renovations under supervision, where applicable.</li>
+            <li>Collect and dispose of waste in accordance with health facility hygiene and waste management procedures.</li>
+            <li>Assist supervisors and other staff with general duties related to the project.</li>
+            <li>Perform any other reasonable duties assigned by the supervisor in support of the EPWP project.</li>
           </ul>
         </div>
       </section>
     </div>
 
-    <section class="card" style="margin-top:18px">
-      <header>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>
-        <h2>Have this ready before you start</h2>
-      </header>
-      <div class="body">
-        <ul class="ticks">
-          <li>Your South African ID number (13 digits).</li>
-          <li>Your municipal ward number.</li>
-          <li>A cellphone number where you can be reached.</li>
-          <li>Your current home address.</li>
-        </ul>
-      </div>
-    </section>
+    <div class="grid two">
+      <section class="card">
+        <header>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>
+          <h2>Have this ready before you start</h2>
+        </header>
+        <div class="body">
+          <ul class="ticks">
+            <li>Your South African ID number (13 digits).</li>
+            <li>Your municipal ward number.</li>
+            <li>A cellphone number where you can be reached.</li>
+            <li>Your current home address.</li>
+          </ul>
+        </div>
+      </section>
 
-    <h2 class="section-title">All eight districts</h2>
-    <p>You register under the district, local municipality and ward where you live.</p>
+      <section class="card">
+        <header>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M9.5 8h5M9.5 12h5M9.5 16h3"/></svg>
+          <h2>Supporting documents</h2>
+        </header>
+        <div class="body">
+          <ul class="ticks">
+            <li>Certified copy of your RSA ID document.</li>
+            <li>Certified copy of your latest school report or relevant qualification certificate.</li>
+            <li>Proof of residence from the Ward Councillor.</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <h2 class="section-title">Placements across the province</h2>
+    <p>You apply under the district, local municipality and ward where you live.</p>
     <ul class="districts">
       <li>Alfred Nzo <small>District</small></li>
       <li>Amathole <small>District</small></li>
@@ -344,28 +380,28 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     </ul>
 
     <section class="important">
-      <span class="label">Important</span>
+      <span class="label">Please note</span>
       <ul class="ticks">
-        <li><strong>Registration is free.</strong> Nobody may ask you to pay to be registered or to be placed. If someone asks for money, report it to your District Office.</li>
-        <li>Register only once. Each ID number can be on the database one time.</li>
-        <li>Being on the database is not an offer of work and does not guarantee placement.</li>
+        <li>Only applicants who meet the minimum requirements and submit the required supporting documents will be considered.</li>
+        <li>Apply only once. Each ID number can apply one time.</li>
+        <li><strong>Applying is free.</strong> Nobody may ask you to pay to apply or to be placed. If someone asks for money, report it to your District Office.</li>
       </ul>
     </section>
 
-    <section class="band">
-      <h2>Ready to register?</h2>
-      <p>Add your details to the EPWP candidate database now.</p>
-      <a class="btn" href="#register">Go to the registration form</a>
+    <section class="band open-only">
+      <h2>Ready to apply?</h2>
+      <p>Applications close on Monday, 16 November 2026 at 16h00.</p>
+      <a class="btn" href="#apply">Go to the application form</a>
     </section>
   </div>
 </main>
 
-<!-- ======================= REGISTRATION FORM ======================= -->
+<!-- ======================= APPLICATION FORM ======================= -->
 <main id="view-register" hidden>
   <div class="form-head">
     <div class="wrap form-wrap">
-      <a href="#home">&larr; Back to information page</a>
-      <h1>EPWP candidate registration</h1>
+      <a href="#home">&larr; Back to the advertisement</a>
+      <h1>EPWP General Worker application</h1>
       <p>Fill in all the fields. Fields marked <em>optional</em> can be left empty.</p>
     </div>
   </div>
@@ -431,7 +467,12 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
             <span class="hint" id="cell-hint">10 digits, for example 0821234567.</span>
             <input type="tel" id="CellphoneNumber" name="CellphoneNumber" inputmode="numeric" maxlength="15" autocomplete="tel" aria-describedby="cell-hint" required>
           </div>
-          <div class="field" data-field="EmailAddress">
+          <div class="field" data-field="AlternativeNumber">
+            <label for="AlternativeNumber">Alternative number <span class="opt">(optional)</span></label>
+            <span class="hint" id="alt-hint">Another number where we can reach you.</span>
+            <input type="tel" id="AlternativeNumber" name="AlternativeNumber" inputmode="numeric" maxlength="15" aria-describedby="alt-hint">
+          </div>
+          <div class="field full" data-field="EmailAddress">
             <label for="EmailAddress">Email address <span class="opt">(optional)</span></label>
             <span class="hint" id="email-hint">Leave empty if you do not have one.</span>
             <input type="email" id="EmailAddress" name="EmailAddress" maxlength="120" autocomplete="email" aria-describedby="email-hint">
@@ -455,42 +496,25 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
             <span class="hint" id="ward-hint">The number of the ward you live in, for example 12.</span>
             <input type="text" id="MunicipalWardNo" name="MunicipalWardNo" inputmode="numeric" maxlength="3" aria-describedby="ward-hint" required>
           </div>
-          <div class="field" data-field="Hospital">
-            <label for="Hospital">Nearest hospital <span class="opt">(optional)</span></label>
-            <span class="hint" id="hosp-hint">The hospital in your municipality that is closest to you.</span>
-            <select id="Hospital" name="Hospital" aria-describedby="hosp-hint" disabled><option value="">Choose a municipality first</option></select>
+          <div class="field" data-field="NearestFacility">
+            <label for="NearestFacility">Nearest health facility</label>
+            <span class="hint" id="fac-hint">The facility in your municipality that is closest to where you live.</span>
+            <select id="NearestFacility" name="NearestFacility" aria-describedby="fac-hint" required disabled><option value="">Choose a municipality first</option></select>
           </div>
         </div>
       </fieldset>
 
       <fieldset class="group">
-        <legend><b>4</b> Education and skills</legend>
+        <legend><b>4</b> Qualification and skills</legend>
         <div class="fields cols">
-          <div class="field" data-field="HighestSchoolLevel">
-            <label for="HighestSchoolLevel">Highest school level passed</label>
-            <select id="HighestSchoolLevel" name="HighestSchoolLevel" required>
+          <div class="field full" data-field="HighestSchoolLevel">
+            <label for="HighestSchoolLevel">Qualification</label>
+            <span class="hint" id="qual-hint">The minimum requirement is Grade 10, N2 or NC(V) Level 2.</span>
+            <select id="HighestSchoolLevel" name="HighestSchoolLevel" aria-describedby="qual-hint" required>
               <option value="">Choose</option>
-              <option>No Formal School</option>
-              <option>Primary School</option>
-              <option>Grade 6</option>
-              <option>Grade 7</option>
-              <option>Grade 8</option>
-              <option>Grade 9</option>
               <option>Grade 10</option>
-              <option>Grade 11</option>
-              <option>Grade 12 (Matric)</option>
-              <option>N2 / NC(V) Level 2 or higher</option>
-            </select>
-          </div>
-          <div class="field" data-field="DriversLicence">
-            <label for="DriversLicence">Driver's licence</label>
-            <select id="DriversLicence" name="DriversLicence" required>
-              <option value="">Choose</option>
-              <option>None</option>
-              <option>Code 08 (Automatic)</option>
-              <option>Code 08 (Manual)</option>
-              <option>Code 10</option>
-              <option>Code 14</option>
+              <option>N2</option>
+              <option>NC(V) Level 2</option>
             </select>
           </div>
           <div class="field full" data-field="PracticalSkills">
@@ -512,13 +536,13 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
           <div class="field" data-field="Declaration">
             <div class="check">
               <input type="checkbox" id="Declaration" name="Declaration">
-              <label for="Declaration">I declare that the information I have given is true and correct. I understand that this is a registration on a database and not an offer of work.</label>
+              <label for="Declaration">I declare that the information I have given is true and correct, and that I am currently unemployed.</label>
             </div>
           </div>
           <div class="field" data-field="Consent">
             <div class="check">
               <input type="checkbox" id="Consent" name="Consent">
-              <label for="Consent">I agree that the Eastern Cape Department of Health may keep and use my personal information to consider and contact me for EPWP opportunities, in line with the Protection of Personal Information Act (POPIA).</label>
+              <label for="Consent">I agree that the Eastern Cape Department of Health may keep and use my personal information to process my application and to contact me about EPWP opportunities, in line with the Protection of Personal Information Act (POPIA).</label>
             </div>
           </div>
         </div>
@@ -531,21 +555,27 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 
       <div class="submit-row">
         <div class="alert" id="form-alert" role="alert" hidden></div>
-        <button class="btn green" type="submit" id="submit-btn">Submit registration</button>
+        <button class="btn green" type="submit" id="submit-btn">Submit application</button>
       </div>
     </form>
+
+    <section class="done" id="closed" hidden>
+      <h2>Applications are closed</h2>
+      <p>The closing date for these positions was Monday, 16 November 2026 at 16h00. Online applications can no longer be submitted.</p>
+      <div class="actions"><a class="btn ghost" href="#home">Back to the advertisement</a></div>
+    </section>
 
     <section class="done" id="done" hidden tabindex="-1" aria-live="polite">
       <div class="badge" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
       </div>
-      <h2>You are registered</h2>
+      <h2>Application received</h2>
       <div class="ref"><small>Your reference number</small><strong id="done-ref"></strong></div>
       <p><strong>Write this number down or take a screenshot.</strong></p>
-      <p>Your details are now on the EPWP candidate database. The Department will contact you on your cellphone if an opportunity becomes available in your ward. This is not an offer of work.</p>
+      <p>Your application for an EPWP General Worker position has been received. Only applicants who meet the minimum requirements and submit the required supporting documents will be considered.</p>
       <div class="actions">
-        <button class="btn green" type="button" id="another-btn">Register another person</button>
-        <a class="btn ghost" href="#home">Back to information page</a>
+        <button class="btn green" type="button" id="another-btn">Apply for another person</button>
+        <a class="btn ghost" href="#home">Back to the advertisement</a>
       </div>
     </section>
   </div>
@@ -554,7 +584,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 <footer class="site">
   <div class="wrap">
     <strong>Eastern Cape Department of Health</strong> &middot; Expanded Public Works Programme (EPWP)<br>
-    Registration is free. The information you give is used only to consider and contact you for EPWP opportunities.
+    Applying is free. The information you give is used only to process your application and to contact you about EPWP opportunities.
   </div>
 </footer>
 
@@ -567,6 +597,9 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   var CONFIG = window.EPWP_CONFIG || {};
   var UNITS = window.EPWP_UNITS || {};
   var MIN_AGE = CONFIG.MIN_AGE || 18;
+  var MAX_AGE = CONFIG.MAX_AGE || 45;
+  var CLOSING = Date.parse(CONFIG.CLOSING || '');
+  function isClosed() { return !isNaN(CLOSING) && Date.now() > CLOSING; }
   var SKILLS = ['Carpenter', 'Painter', 'Builder', 'Electrician', 'Plumber', 'Welder', 'Bricklayer',
                 'Mechanic', 'Driver', 'Cleaner', 'Gardener', 'Security', 'Other (Specify)'];
   var OTHER = 'Other (Specify)';
@@ -576,33 +609,25 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 
   /* ---------- views ---------- */
   function showView() {
-    var register = location.hash === '#register';
-    $('view-home').hidden = register;
-    $('view-register').hidden = !register;
+    var apply = location.hash === '#apply' || location.hash === '#register';
+    $('view-home').hidden = apply;
+    $('view-register').hidden = !apply;
+    applyClosedState();
     window.scrollTo(0, 0);
+  }
+  function applyClosedState() {
+    if (!isClosed()) return;
+    document.body.classList.add('closed');
+    form.hidden = true;
+    $('done').hidden = true;
+    $('closed').hidden = false;
   }
   window.addEventListener('hashchange', showView);
   showView();
 
-  /* ---------- friendly names for the reporting units ---------- */
-  var DISTRICT_NAMES = {
-    'A Nzo DM': 'Alfred Nzo District',
-    'Amathole DM': 'Amathole District',
-    'Buffalo City MM': 'Buffalo City Metro',
-    'C Hani DM': 'Chris Hani District',
-    'Joe Gqabi DM': 'Joe Gqabi District',
-    'N Mandela Bay MM': 'Nelson Mandela Bay Metro',
-    'O Tambo DM': 'OR Tambo District',
-    'Sarah Baartman DM': 'Sarah Baartman District'
-  };
+  // The list uses a short name for this one metro; show the full name to applicants.
+  var DISTRICT_NAMES = { 'N Mandela Bay MM': 'Nelson Mandela Bay Metro' };
   function districtLabel(v) { return DISTRICT_NAMES[v] || v; }
-  function localLabel(v) {
-    var m = /^N Mandela ([A-Z]) SD$/.exec(v);
-    if (m) return 'Nelson Mandela Bay Sub-district ' + m[1];
-    return v.replace(/^Dr B Naud/, 'Dr Beyers Naud')
-            .replace(/ LM$/, ' Local Municipality')
-            .replace(/ SD$/, ' Sub-district');
-  }
 
   function fill(select, values, placeholder, labeller) {
     select.innerHTML = '';
@@ -610,20 +635,20 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     values.forEach(function (v) { select.add(new Option(labeller ? labeller(v) : v, v)); });
   }
 
-  var district = $('District'), local = $('LocalMunicipality'), hospital = $('Hospital');
+  var district = $('District'), local = $('LocalMunicipality'), facility = $('NearestFacility');
   fill(district, Object.keys(UNITS), 'Choose your district', districtLabel);
 
   district.addEventListener('change', function () {
     var locals = Object.keys(UNITS[district.value] || {});
-    fill(local, locals, locals.length ? 'Choose your municipality' : 'Choose a district first', localLabel);
+    fill(local, locals, locals.length ? 'Choose your municipality' : 'Choose a district first');
     local.disabled = !locals.length;
-    fill(hospital, [], 'Choose a municipality first');
-    hospital.disabled = true;
+    fill(facility, [], 'Choose a municipality first');
+    facility.disabled = true;
   });
   local.addEventListener('change', function () {
     var list = (UNITS[district.value] || {})[local.value] || [];
-    fill(hospital, list, list.length ? 'Not sure / none' : 'Choose a municipality first');
-    hospital.disabled = !list.length;
+    fill(facility, list, list.length ? 'Choose your nearest facility' : 'Choose a municipality first');
+    facility.disabled = !list.length;
   });
 
   /* ---------- skills ---------- */
@@ -685,16 +710,17 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       setError('DateOfBirth', '');
     }
   });
-  ['CellphoneNumber', 'MunicipalWardNo'].forEach(function (id) {
+  ['CellphoneNumber', 'AlternativeNumber', 'MunicipalWardNo'].forEach(function (id) {
     $(id).addEventListener('input', function () {
-      var keepPlus = id === 'CellphoneNumber' && this.value.charAt(0) === '+';
+      var keepPlus = id !== 'MunicipalWardNo' && this.value.charAt(0) === '+';
       this.value = (keepPlus ? '+' : '') + this.value.replace(/\D/g, '');
     });
   });
 
   /* ---------- validation ---------- */
   function val(id) { return $(id).value.replace(/\s+/g, ' ').trim(); }
-  function cell() { return val('CellphoneNumber').replace(/^\+27/, '0'); }
+  function phone(id) { return val(id).replace(/^\+27/, '0'); }
+  function cell() { return phone('CellphoneNumber'); }
   function need(id, msg) { return function () { return val(id) ? '' : msg; }; }
 
   var validators = {
@@ -708,7 +734,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       if (v.length !== 13) return 'An ID number has 13 digits. You entered ' + v.length + '.';
       var info = parseId(v);
       if (!info) return 'This ID number is not valid. Check the digits and try again.';
-      if (ageFrom(info.dob) < MIN_AGE) return 'You must be ' + MIN_AGE + ' or older to register.';
+      var age = ageFrom(info.dob);
+      if (age < MIN_AGE || age > MAX_AGE) return 'These positions are for people aged ' + MIN_AGE + ' to ' + MAX_AGE + '. You cannot apply.';
       return '';
     },
     DateOfBirth: function () { return ''; },
@@ -719,6 +746,10 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     CellphoneNumber: function () {
       if (!cell()) return 'Enter your cellphone number.';
       return /^0\d{9}$/.test(cell()) ? '' : 'A cellphone number has 10 digits and starts with 0.';
+    },
+    AlternativeNumber: function () {
+      var v = phone('AlternativeNumber');
+      return !v || /^0\d{9}$/.test(v) ? '' : 'A phone number has 10 digits and starts with 0. Fix it or leave it empty.';
     },
     EmailAddress: function () {
       var v = val('EmailAddress');
@@ -731,15 +762,14 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       if (!v) return 'Enter your ward number.';
       return /^\d{1,3}$/.test(v) && Number(v) >= 1 ? '' : 'Enter the ward number as a number, for example 12.';
     },
-    Hospital: function () { return ''; },
-    HighestSchoolLevel: need('HighestSchoolLevel', 'Choose your highest school level.'),
-    DriversLicence: need('DriversLicence', 'Choose your licence, or None.'),
+    NearestFacility: need('NearestFacility', 'Choose your nearest health facility.'),
+    HighestSchoolLevel: need('HighestSchoolLevel', 'Choose your qualification.'),
     PracticalSkills: function () { return selectedSkills().length ? '' : 'Tick at least one skill.'; },
     OtherSkills: function () {
       return selectedSkills().indexOf(OTHER) === -1 || val('OtherSkills') ? '' : 'Tell us what your other skills are.';
     },
     Declaration: function () { return $('Declaration').checked ? '' : 'Tick this box to confirm.'; },
-    Consent: function () { return $('Consent').checked ? '' : 'Tick this box to agree. We cannot register you without it.'; }
+    Consent: function () { return $('Consent').checked ? '' : 'Tick this box to agree. We cannot accept your application without it.'; }
   };
 
   function setError(name, message) {
@@ -765,13 +795,23 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     if (!wrap) return;
     var name = wrap.getAttribute('data-field');
     if (e.target.type === 'checkbox' || e.target.type === 'radio') return;
-    if (e.target.value || wrap.classList.contains('invalid')) setError(name, validators[name]());
+    if (e.target.value || wrap.classList.contains('invalid')) whenPointerUp(function () { setError(name, validators[name]()); });
   });
+
+  // Showing or hiding an error message moves the fields below it. If that happens
+  // between pressing and releasing on the next field, the tap misses, so wait for the release.
+  var pressing = false, waiting = [];
+  function whenPointerUp(fn) { if (pressing) waiting.push(fn); else fn(); }
+  document.addEventListener('mousedown', function () { pressing = true; }, true);
+  document.addEventListener('mouseup', function () {
+    pressing = false;
+    setTimeout(function () { waiting.splice(0).forEach(function (fn) { fn(); }); }, 0);
+  }, true);
   form.addEventListener('change', function (e) {
     var wrap = e.target.closest('[data-field]');
     if (wrap && wrap.classList.contains('invalid')) {
       var name = wrap.getAttribute('data-field');
-      setError(name, validators[name]());
+      whenPointerUp(function () { setError(name, validators[name]()); });
     }
   });
 
@@ -796,7 +836,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   }
   function setBusy(busy) {
     button.disabled = busy;
-    button.innerHTML = busy ? '<span class="spinner" aria-hidden="true"></span> Sending, please wait' : 'Submit registration';
+    button.innerHTML = busy ? '<span class="spinner" aria-hidden="true"></span> Sending, please wait' : 'Submit application';
   }
 
   function collect() {
@@ -810,15 +850,18 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       DisabilityStatus: form.querySelector('input[name=DisabilityStatus]:checked').value,
       CurrentAddress: val('CurrentAddress'),
       CellphoneNumber: cell(),
+      AlternativeNumber: phone('AlternativeNumber'),
       EmailAddress: val('EmailAddress'),
       District: district.value,
       LocalMunicipality: local.value,
-      Hospital: hospital.value,
+      NearestFacility: facility.value,
+      // Also sent under the old names so that a backend that has not been updated yet still accepts the row.
+      Hospital: facility.value,
+      DriversLicence: 'N/A',
       MunicipalWardNo: String(Number(val('MunicipalWardNo'))),
       HighestSchoolLevel: val('HighestSchoolLevel'),
       PracticalSkills: selectedSkills().join(', '),
       OtherSkills: val('OtherSkills'),
-      DriversLicence: val('DriversLicence'),
       Consent: true,
       website: $('website').value
     };
@@ -827,6 +870,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     showAlert('');
+    if (isClosed()) { applyClosedState(); return; }
 
     var firstBad = validateAll();
     if (firstBad) {
@@ -839,7 +883,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     }
 
     if (!/^https:\/\/script\.google\.com\//.test(CONFIG.ENDPOINT || '')) {
-      showAlert('This form is not connected to the database yet, so your registration was not sent. Please try again later.');
+      showAlert('This form is not connected yet, so your application was not sent. Please try again later.');
       return;
     }
 
@@ -863,21 +907,24 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
           window.scrollTo(0, 0);
           $('done').focus({ preventScroll: true });
         } else if (out && out.error === 'duplicate') {
-          setError('SouthAfricanID', 'This ID number is already registered' + (out.ref ? ' (reference ' + out.ref + ')' : '') + '.');
-          showAlert('This ID number is already on the database' + (out.ref ? ' with reference number ' + out.ref : '') + '. You do not need to register again.');
+          setError('SouthAfricanID', 'An application with this ID number has already been received' + (out.ref ? ' (reference ' + out.ref + ')' : '') + '.');
+          showAlert('An application with this ID number has already been received' + (out.ref ? ' (reference number ' + out.ref + ')' : '') + '. You do not need to apply again.');
+        } else if (out && out.error === 'closed') {
+          CLOSING = 0;
+          applyClosedState();
         } else {
-          showAlert((out && out.message) || 'Your registration could not be saved. Please try again.');
+          showAlert((out && out.message) || 'Your application could not be saved. Please try again.');
         }
       })
       .catch(function () {
         setBusy(false);
-        showAlert('Your registration was not sent. Check your internet or data connection, then press Submit again. Your answers are still on this page.');
+        showAlert('Your application was not sent. Check your internet or data connection, then press Submit again. Your answers are still on this page.');
       });
   });
 
   function resetDependents() {
     fill(local, [], 'Choose a district first'); local.disabled = true;
-    fill(hospital, [], 'Choose a municipality first'); hospital.disabled = true;
+    fill(facility, [], 'Choose a municipality first'); facility.disabled = true;
     $('other-wrap').hidden = true;
     Object.keys(validators).forEach(function (name) { setError(name, ''); });
     showAlert('');
@@ -890,7 +937,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('Title').focus({ preventScroll: true });
   });
   window.addEventListener('hashchange', function () {
-    if (location.hash === '#register' && !$('done').hidden) { $('done').hidden = true; form.hidden = false; }
+    if (location.hash === '#apply' && !$('done').hidden) { $('done').hidden = true; form.hidden = false; }
   });
 })();
 </script>
