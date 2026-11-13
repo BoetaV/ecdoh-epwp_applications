@@ -122,6 +122,9 @@ body.closed .open-only { display: none !important; }
 .ticks.dots li { padding-left: 22px; }
 .ticks.dots li::before { top: 9px; left: 3px; width: 8px; height: 8px; background: var(--green-600); }
 
+.nums { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: num; }
+.nums li { counter-increment: num; position: relative; padding-left: 34px; }
+.nums li::before { content: counter(num) "."; position: absolute; left: 0; top: 0; width: 26px; text-align: right; font-weight: 800; color: var(--green-700); }
 .steps { list-style: none; margin: 22px 0 0; padding: 0; display: grid; gap: 14px; counter-reset: step; }
 .steps li { counter-increment: step; background: var(--green-100); border-radius: var(--radius); padding: 16px 18px 16px 70px; position: relative; }
 .steps li::before {
@@ -308,7 +311,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
           <h2>Minimum requirements</h2>
         </header>
         <div class="body">
-          <ul class="ticks">
+          <ol class="nums">
             <li>A minimum qualification of Grade 10, N2 or NC(V) Level 2.</li>
             <li>A qualification in any artisan trade will be an added advantage.</li>
             <li>Applicants must submit a certified copy of their latest school report or relevant qualification certificate.</li>
@@ -320,7 +323,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
             <li>Attributes: excellent time management and physical fitness to perform manual labour.</li>
             <li>Applicants must be unemployed and meet the eligibility requirements of the Expanded Public Works Programme (EPWP).</li>
             <li>Applicants must be between 18 and 45 years old.</li>
-          </ul>
+          </ol>
         </div>
       </section>
 
@@ -330,7 +333,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
           <h2>Key responsibilities / duties</h2>
         </header>
         <div class="body">
-          <ul class="ticks dots">
+          <ol class="nums">
             <li>Perform general cleaning and maintain cleanliness within and around health facilities.</li>
             <li>Assist with grass cutting, gardening, landscaping and maintaining facility grounds.</li>
             <li>Assist with the loading, unloading, moving and storage of materials and equipment as required.</li>
@@ -339,7 +342,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
             <li>Collect and dispose of waste in accordance with health facility hygiene and waste management procedures.</li>
             <li>Assist supervisors and other staff with general duties related to the project.</li>
             <li>Perform any other reasonable duties assigned by the supervisor in support of the EPWP project.</li>
-          </ul>
+          </ol>
         </div>
       </section>
     </div>
