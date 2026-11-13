@@ -168,6 +168,15 @@ fieldset.group > legend b { display: grid; place-items: center; width: 28px; hei
 .field label, .field .label { display: block; font-weight: 700; margin-bottom: 5px; }
 .opt { font-weight: 400; color: var(--muted); font-size: 14px; }
 .hint { display: block; font-size: 14px; color: var(--muted); margin-bottom: 6px; font-weight: 400; }
+.card-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 15px; }
+input[type=file] {
+  display: block; width: 100%; padding: 12px; font: inherit; font-size: 15px; color: var(--ink);
+  background: var(--green-50); border: 2px dashed #8fa697; border-radius: 10px; cursor: pointer;
+}
+input[type=file]::file-selector-button {
+  font: inherit; font-weight: 700; color: var(--white); background: var(--green-700);
+  border: 0; border-radius: 999px; padding: 9px 16px; margin-right: 12px; cursor: pointer;
+}
 input[type=text], input[type=tel], input[type=email], input[type=date], input[type=number], select, textarea {
   display: block; width: 100%; min-height: 50px; padding: 11px 13px;
   font: inherit; color: var(--ink); background: var(--white);
@@ -362,6 +371,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
             <li>Certified copy of your latest school report or relevant qualification certificate.</li>
             <li>Proof of residence from the Ward Councillor.</li>
           </ul>
+          <p class="card-note">You attach a clear photo or a PDF of each document in the online form.</p>
         </div>
       </section>
     </div>
@@ -530,8 +540,27 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         </div>
       </fieldset>
 
+      <fieldset class="group" id="docs-group">
+        <legend><b>5</b> Supporting documents</legend>
+        <div class="fields">
+          <p class="hint" style="margin:0">Attach a clear photo or a PDF of each document. You can take the photo with your phone. Make sure all the writing can be read.</p>
+          <div class="field" data-field="IDCopy">
+            <label for="IDCopy">Certified copy of your RSA ID document</label>
+            <input type="file" id="IDCopy" name="IDCopy" accept="image/*,application/pdf">
+          </div>
+          <div class="field" data-field="QualificationCopy">
+            <label for="QualificationCopy">Certified copy of your latest school report or qualification certificate</label>
+            <input type="file" id="QualificationCopy" name="QualificationCopy" accept="image/*,application/pdf">
+          </div>
+          <div class="field" data-field="ProofOfResidence">
+            <label for="ProofOfResidence">Proof of residence from the Ward Councillor</label>
+            <input type="file" id="ProofOfResidence" name="ProofOfResidence" accept="image/*,application/pdf">
+          </div>
+        </div>
+      </fieldset>
+
       <fieldset class="group">
-        <legend><b>5</b> Declaration</legend>
+        <legend><b id="decl-no">6</b> Declaration</legend>
         <div class="fields">
           <div class="field" data-field="Declaration">
             <div class="check">
@@ -717,6 +746,87 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     });
   });
 
+  /* ---------- supporting documents ---------- */
+  var DOCS = ['IDCopy', 'QualificationCopy', 'ProofOfResidence'];
+  var MAX_FILE = 4 * 1024 * 1024;   // largest file the backend accepts
+  var MAX_SIDE = 1600;              // photos are scaled down to this many pixels
+  var uploadsOn = true;
+
+  // Ask the backend whether it accepts documents. An older backend does not,
+  // and then the upload fields are hidden so that applications still go through.
+  var backendReady = /^https:\/\/script\.google\.com\//.test(CONFIG.ENDPOINT || '')
+    ? fetch(CONFIG.ENDPOINT).then(function (res) { return res.json(); })
+        .then(function (info) { uploadsOn = !!(info && info.uploads); })
+        .catch(function () { uploadsOn = true; })
+    : Promise.resolve();
+  backendReady.then(function () {
+    $('docs-group').hidden = !uploadsOn;
+    $('decl-no').textContent = uploadsOn ? '6' : '5';
+  });
+
+  function isPdf(file) { return file.type === 'application/pdf' || /\.pdf$/i.test(file.name); }
+  function isImage(file) { return /^image\//.test(file.type); }
+
+  function checkFile(id, missing) {
+    if (!uploadsOn) return '';
+    var file = $(id).files[0];
+    if (!file) return missing;
+    if (isPdf(file)) return file.size <= MAX_FILE ? '' : 'This PDF is too big. Take a photo of the document instead.';
+    return isImage(file) ? '' : 'Choose a photo or a PDF file.';
+  }
+
+  function toBase64(blob) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(String(reader.result).split(',')[1] || ''); };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  // Phone photos are several megabytes. Scale them down so that the upload
+  // is quick and cheap on mobile data, while the writing stays readable.
+  function shrinkPhoto(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        var scale = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        canvas.toBlob(function (blob) { if (blob) resolve(blob); else reject(new Error('no blob')); }, 'image/jpeg', 0.72);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('cannot read image')); };
+      img.src = url;
+    });
+  }
+
+  function prepareFile(id) {
+    var file = $(id).files[0];
+    if (isPdf(file)) {
+      return toBase64(file).then(function (data) { return { type: 'application/pdf', data: data }; });
+    }
+    return shrinkPhoto(file).then(function (blob) {
+      if (blob.size > MAX_FILE) throw new Error('too big');
+      return toBase64(blob).then(function (data) { return { type: 'image/jpeg', data: data }; });
+    });
+  }
+
+  function prepareDocuments() {
+    if (!uploadsOn) return Promise.resolve(null);
+    return Promise.all(DOCS.map(prepareFile)).then(function (files) {
+      var out = {};
+      DOCS.forEach(function (id, i) { out[id] = files[i]; });
+      return out;
+    });
+  }
+
   /* ---------- validation ---------- */
   function val(id) { return $(id).value.replace(/\s+/g, ' ').trim(); }
   function phone(id) { return val(id).replace(/^\+27/, '0'); }
@@ -768,6 +878,9 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     OtherSkills: function () {
       return selectedSkills().indexOf(OTHER) === -1 || val('OtherSkills') ? '' : 'Tell us what your other skills are.';
     },
+    IDCopy: function () { return checkFile('IDCopy', 'Attach a photo or PDF of your ID document.'); },
+    QualificationCopy: function () { return checkFile('QualificationCopy', 'Attach a photo or PDF of your school report or certificate.'); },
+    ProofOfResidence: function () { return checkFile('ProofOfResidence', 'Attach a photo or PDF of your proof of residence.'); },
     Declaration: function () { return $('Declaration').checked ? '' : 'Tick this box to confirm.'; },
     Consent: function () { return $('Consent').checked ? '' : 'Tick this box to agree. We cannot accept your application without it.'; }
   };
@@ -836,7 +949,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   }
   function setBusy(busy) {
     button.disabled = busy;
-    button.innerHTML = busy ? '<span class="spinner" aria-hidden="true"></span> Sending, please wait' : 'Submit application';
+    button.innerHTML = busy ? '<span class="spinner" aria-hidden="true"></span> Sending, please wait. This can take a minute.' : 'Submit application';
   }
 
   function collect() {
@@ -869,6 +982,11 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
+    if (button.disabled) return;
+    backendReady.then(submitApplication);
+  });
+
+  function submitApplication() {
     showAlert('');
     if (isClosed()) { applyClosedState(); return; }
 
@@ -888,11 +1006,20 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     }
 
     setBusy(true);
+    prepareDocuments().then(send, function () {
+      setBusy(false);
+      showAlert('One of your documents could not be read. Choose the files again, or take new photos, then press Submit.');
+    });
+  }
+
+  function send(documents) {
+    var payload = collect();
+    if (documents) payload.Documents = documents;
     // text/plain keeps this a "simple" request, which Apps Script web apps accept cross-origin.
     fetch(CONFIG.ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(collect()),
+      body: JSON.stringify(payload),
       redirect: 'follow'
     })
       .then(function (res) { return res.json(); })
@@ -920,7 +1047,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         setBusy(false);
         showAlert('Your application was not sent. Check your internet or data connection, then press Submit again. Your answers are still on this page.');
       });
-  });
+  }
 
   function resetDependents() {
     fill(local, [], 'Choose a district first'); local.disabled = true;

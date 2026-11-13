@@ -21,6 +21,9 @@ docs/                   Source lists (reporting units, database fields)
    contents of `apps-script/Code.gs`. Save.
 3. Choose the function **setup** and press **Run**. Approve the permissions.
    An "Applications" tab with the column headings appears in the Sheet.
+   A Drive folder called "EPWP Applications - Supporting Documents" is created
+   in your Google Drive; uploaded documents are saved there and linked from
+   the last three columns of the Sheet.
 4. Press **Deploy > New deployment**, type **Web app**, and set
    - Execute as: **Me**
    - Who has access: **Anyone**
@@ -28,7 +31,8 @@ docs/                   Source lists (reporting units, database fields)
 6. Paste it into `assets/config.js` in place of
    `PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE`.
 
-If you change `Code.gs` later, use **Deploy > Manage deployments > Edit >
+If you change `Code.gs` later, run **setup** again (Google may ask for new
+permissions, for example Drive), then use **Deploy > Manage deployments > Edit >
 Version: New version** so the same URL keeps working.
 
 The closing date and the age range are set in two places that must agree:
@@ -62,6 +66,7 @@ Edit `docs/EC_EPWP.csv`, then run `python tools/build_units.py` and push.
 
 ## Looking after the data
 
-The Sheet holds ID numbers and other personal information. Keep it shared only
+The Sheet and the Drive folder hold ID numbers, copies of ID documents and
+other personal information. Keep them shared only
 with the officials who need it; the website never needs the Sheet to be shared,
 because the script runs as the Sheet owner.

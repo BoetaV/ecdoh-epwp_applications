@@ -63,11 +63,7 @@ window.EPWP_UNITS = {
    "Grey Hospital",
    "Mt Coke CHC",
    "Nkqubela Hospital",
-   "Nontyatyambo CHC"
-  ]
- },
- "Head Office": {
-  "Buffalo City Metropolitan Municipality": [
+   "Nontyatyambo CHC",
    "Head Office"
   ]
  },

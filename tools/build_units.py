@@ -10,11 +10,15 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "docs" / "EC_EPWP.csv"
 OUT = ROOT / "assets" / "units.js"
 
+# Head Office is in Buffalo City, so its entry is listed under that metro.
+DISTRICT_ALIASES = {"Head Office": "Buffalo City Metro"}
+
 units = {}
 # The CSV is saved by Excel as Windows-1252 with ';' separators.
 with SRC.open(encoding="cp1252", newline="") as fh:
     for row in csv.DictReader(fh, delimiter=";"):
         district = row["District"].strip()
+        district = DISTRICT_ALIASES.get(district, district)
         local = row["Local Municipality"].strip()
         facility = row["Facility"].strip()
         if not district or not local:

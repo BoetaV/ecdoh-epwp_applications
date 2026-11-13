@@ -5,9 +5,14 @@
  * (Extensions > Apps Script). Deploy it as a Web App:
  *   Execute as: Me        Who has access: Anyone
  * and paste the /exec URL into assets/config.js on the website.
+ *
+ * Supporting documents are saved to a Google Drive folder owned by the
+ * account that deploys the script. Run setup() once after pasting this code
+ * so that Google asks for permission to use Drive.
  */
 
 var SHEET_NAME = 'Applications';
+var FOLDER_NAME = 'EPWP Applications - Supporting Documents';
 var REF_PREFIX = 'EPWP-';
 var MIN_AGE = 18;
 var MAX_AGE = 45;
@@ -22,7 +27,13 @@ var FIELDS = [
   'EmailAddress', 'District', 'LocalMunicipality', 'NearestFacility',
   'MunicipalWardNo', 'HighestSchoolLevel', 'PracticalSkills', 'OtherSkills'
 ];
-var HEADERS = ['Timestamp', 'Reference'].concat(FIELDS).concat(['Consent']);
+
+// Supporting documents: one uploaded file each, stored as a link in the sheet.
+var DOCUMENTS = ['IDCopy', 'QualificationCopy', 'ProofOfResidence'];
+var FILE_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'application/pdf': 'pdf' };
+var MAX_FILE_BYTES = 4 * 1024 * 1024;
+
+var HEADERS = ['Timestamp', 'Reference'].concat(FIELDS).concat(['Consent']).concat(DOCUMENTS);
 
 var REQUIRED = [
   'Title', 'Name', 'Surname', 'SouthAfricanID', 'DateOfBirth', 'Gender',
@@ -31,22 +42,28 @@ var REQUIRED = [
   'HighestSchoolLevel', 'PracticalSkills'
 ];
 
-/** Run this once from the Apps Script editor to create the sheet and headers. */
+/**
+ * Run this once from the Apps Script editor. It creates the sheet and the
+ * Drive folder, and makes Google ask for the permissions the script needs.
+ */
 function setup() {
   var sheet = getSheet_();
-  SpreadsheetApp.getActiveSpreadsheet().toast('Sheet "' + sheet.getName() + '" is ready.');
+  var folder = getFolder_();
+  SpreadsheetApp.getActiveSpreadsheet().toast(
+    'Sheet "' + sheet.getName() + '" and Drive folder "' + folder.getName() + '" are ready.');
 }
 
 /** Opening the Web App URL in a browser shows that it is alive. */
 function doGet() {
-  return json_({ ok: true, service: 'EPWP general worker applications' });
+  // "uploads" tells the website that this version accepts supporting documents.
+  return json_({ ok: true, service: 'EPWP general worker applications', uploads: true });
 }
 
 function doPost(e) {
   var data;
   try {
     var raw = e && e.postData && e.postData.contents;
-    if (!raw || raw.length > 10000) throw new Error('bad payload');
+    if (!raw || raw.length > 20000000) throw new Error('bad payload');
     data = JSON.parse(raw);
   } catch (err) {
     return json_({ ok: false, error: 'invalid', message: 'The form data could not be read.' });
@@ -60,63 +77,68 @@ function doPost(e) {
   }
 
   var record = clean_(data);
-  var problem = validate_(record, data);
+  var problem = validate_(record, data) || validateDocuments_(data.Documents);
   if (problem) return json_({ ok: false, error: 'invalid', message: problem });
 
-  var lock = LockService.getScriptLock();
+  var saved = [];
+  var lock = null;
   try {
-    lock.waitLock(25000);
-  } catch (err) {
-    return json_({ ok: false, error: 'busy', message: 'The system is busy. Please try again in a minute.' });
-  }
+    // Refuse a repeat application before spending time on the uploads.
+    var early = findDuplicate_(getSheet_(), record.SouthAfricanID);
+    if (early) return json_(early);
 
-  try {
-    var sheet = getSheet_();
-    var lastRow = sheet.getLastRow();
-    var idCol = HEADERS.indexOf('SouthAfricanID') + 1;
+    // Saving to Drive is slow, so it is done before taking the lock.
+    saved = saveDocuments_(record, data.Documents);
 
-    if (lastRow > 1) {
-      var ids = sheet.getRange(2, idCol, lastRow - 1, 1).getDisplayValues();
-      for (var i = 0; i < ids.length; i++) {
-        if (String(ids[i][0]).replace(/\D/g, '') === record.SouthAfricanID) {
-          var refCol = HEADERS.indexOf('Reference') + 1;
-          return json_({
-            ok: false,
-            error: 'duplicate',
-            ref: sheet.getRange(i + 2, refCol).getDisplayValue(),
-            message: 'An application with this ID number has already been received.'
-          });
-        }
-      }
+    lock = LockService.getScriptLock();
+    try {
+      lock.waitLock(25000);
+    } catch (err) {
+      lock = null;
+      trash_(saved);
+      return json_({ ok: false, error: 'busy', message: 'The system is busy. Please try again in a minute.' });
     }
 
+    var sheet = getSheet_();
+    var duplicate = findDuplicate_(sheet, record.SouthAfricanID);
+    if (duplicate) {
+      trash_(saved);
+      return json_(duplicate);
+    }
+
+    var lastRow = sheet.getLastRow();
     var ref = nextReference_(lastRow);
     var row = [new Date(), ref];
     FIELDS.forEach(function (f) { row.push(safeCell_(record[f])); });
     row.push('Yes');
+    saved.forEach(function (file) { row.push(file.getUrl()); });
 
-    var target = sheet.getRange(lastRow + 1, 1, 1, HEADERS.length);
     // Keep ID numbers, cellphone numbers and ward numbers as text so that
     // leading zeros survive and long numbers are not rounded.
     sheet.getRange(lastRow + 1, 2, 1, HEADERS.length - 1).setNumberFormat('@');
-    target.setValues([row]);
+    sheet.getRange(lastRow + 1, 1, 1, HEADERS.length).setValues([row]);
     SpreadsheetApp.flush();
 
     return json_({ ok: true, ref: ref });
   } catch (err) {
     console.error(err);
+    trash_(saved);
     return json_({ ok: false, error: 'server', message: 'Your application could not be saved. Please try again.' });
   } finally {
-    lock.releaseLock();
+    if (lock) lock.releaseLock();
   }
 }
 
-/* ---------- helpers ---------- */
+/* ---------- sheet ---------- */
 
 function getSheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
-  if (sheet.getLastRow() === 0) {
+  var width = sheet.getLastColumn();
+  var current = width ? sheet.getRange(1, 1, 1, width).getDisplayValues()[0].join('|') : '';
+  if (current !== HEADERS.join('|')) {
+    // New sheet, or a sheet from an earlier version: (re)write the heading row.
+    // New columns are only ever added at the end, so existing rows stay valid.
     sheet.getRange(1, 1, 1, HEADERS.length)
       .setValues([HEADERS])
       .setFontWeight('bold')
@@ -128,12 +150,88 @@ function getSheet_() {
   return sheet;
 }
 
+/** Returns the "duplicate" reply if this ID number has already applied, else null. */
+function findDuplicate_(sheet, id) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return null;
+  var idCol = HEADERS.indexOf('SouthAfricanID') + 1;
+  var refCol = HEADERS.indexOf('Reference') + 1;
+  var ids = sheet.getRange(2, idCol, lastRow - 1, 1).getDisplayValues();
+  for (var i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]).replace(/\D/g, '') === id) {
+      return {
+        ok: false,
+        error: 'duplicate',
+        ref: sheet.getRange(i + 2, refCol).getDisplayValue(),
+        message: 'An application with this ID number has already been received.'
+      };
+    }
+  }
+  return null;
+}
+
 function nextReference_(lastRow) {
   var props = PropertiesService.getScriptProperties();
   var counter = Math.max(Number(props.getProperty('counter')) || 0, lastRow - 1) + 1;
   props.setProperty('counter', String(counter));
   return REF_PREFIX + ('000000' + counter).slice(-6);
 }
+
+/* ---------- supporting documents ---------- */
+
+function getFolder_() {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty('folderId');
+  if (id) {
+    try {
+      var existing = DriveApp.getFolderById(id);
+      if (!existing.isTrashed()) return existing;
+    } catch (err) { /* folder was removed: make a new one below */ }
+  }
+  var folder = DriveApp.createFolder(FOLDER_NAME);
+  props.setProperty('folderId', folder.getId());
+  return folder;
+}
+
+function validateDocuments_(docs) {
+  var missing = 'Please attach all three supporting documents. Refresh the page and try again.';
+  if (!docs || typeof docs !== 'object') return missing;
+  for (var i = 0; i < DOCUMENTS.length; i++) {
+    var doc = docs[DOCUMENTS[i]];
+    if (!doc || typeof doc.data !== 'string' || !doc.data) return missing;
+    if (!FILE_TYPES[doc.type]) return 'Supporting documents must be photos (JPG or PNG) or PDF files.';
+    if (!/^[A-Za-z0-9+\/]+=*$/.test(doc.data)) return 'A supporting document could not be read. Please choose the file again.';
+    if (doc.data.length * 0.75 > MAX_FILE_BYTES) return 'A supporting document is too big. Each file must be smaller than 4 MB.';
+  }
+  return '';
+}
+
+/** Saves the three files to Drive and returns them in DOCUMENTS order. */
+function saveDocuments_(record, docs) {
+  var folder = getFolder_();
+  var owner = (record.Surname + '_' + record.Name).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 60);
+  var saved = [];
+  try {
+    DOCUMENTS.forEach(function (key) {
+      var doc = docs[key];
+      var name = record.SouthAfricanID + '_' + owner + '_' + key + '.' + FILE_TYPES[doc.type];
+      var blob = Utilities.newBlob(Utilities.base64Decode(doc.data), doc.type, name);
+      saved.push(folder.createFile(blob));
+    });
+  } catch (err) {
+    trash_(saved);
+    throw err;
+  }
+  return saved;
+}
+
+function trash_(files) {
+  files.forEach(function (file) {
+    try { file.setTrashed(true); } catch (err) { console.error(err); }
+  });
+}
+
+/* ---------- validation ---------- */
 
 /** Keep only the known fields, as trimmed strings of a sensible length. */
 function clean_(data) {
