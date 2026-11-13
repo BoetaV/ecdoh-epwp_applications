@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EPWP Candidate Database | Eastern Cape Department of Health</title>
+<meta name="description" content="Register on the Eastern Cape Department of Health EPWP candidate database to be considered when opportunities open in your ward.">
+<meta name="theme-color" content="#06402b">
+<link rel="icon" href="assets/logo.png">
+<style>
+:root {
+  --green-900: #06402b;
+  --green-700: #0a6b3d;
+  --green-600: #128a4a;
+  --green-100: #e3f1e4;
+  --green-50: #f3f9f2;
+  --yellow: #ffd21f;
+  --yellow-100: #fff3bf;
+  --ink: #14261c;
+  --muted: #4d5f54;
+  --line: #cfdcd1;
+  --red: #b3261e;
+  --white: #fff;
+  --radius: 14px;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--green-50);
+}
+h1, h2, h3, p { margin: 0; }
+h1, h2, h3 { text-wrap: balance; }
+a { color: var(--green-700); }
+.wrap { width: 100%; max-width: 1060px; margin: 0 auto; padding: 0 18px; }
+[hidden] { display: none !important; }
+
+/* ---------- top bar ---------- */
+.topbar { background: var(--white); border-bottom: 4px solid var(--green-700); }
+.topbar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 10px; padding-bottom: 10px; }
+.topbar img { display: block; height: 54px; width: auto; }
+.topbar a.home { display: block; }
+.topbar .tag { font-weight: 800; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--green-700); text-align: right; }
+
+/* ---------- buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 52px; padding: 12px 26px;
+  font: inherit; font-weight: 800; font-size: 17px; letter-spacing: .02em;
+  color: var(--green-900); background: var(--yellow);
+  border: 0; border-radius: 999px; cursor: pointer; text-decoration: none;
+  box-shadow: 0 3px 0 rgba(0,0,0,.22);
+}
+.btn:hover { filter: brightness(1.05); }
+.btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.22); }
+.btn.green { color: var(--white); background: var(--green-700); }
+.btn.ghost { color: var(--green-700); background: transparent; box-shadow: inset 0 0 0 2px var(--green-700); }
+.btn[disabled] { opacity: .6; cursor: progress; }
+.btn svg { width: 20px; height: 20px; flex: none; }
+:focus-visible { outline: 3px solid #1a73e8; outline-offset: 2px; }
+
+/* ---------- hero ---------- */
+.hero {
+  position: relative; overflow: hidden; color: var(--white);
+  background: linear-gradient(120deg, var(--green-900) 0%, var(--green-700) 62%, var(--green-600) 100%);
+}
+.hero::before, .hero::after {
+  content: ""; position: absolute; right: -12%; width: 70%; height: 200%; top: -50%;
+  transform: rotate(24deg); pointer-events: none;
+}
+.hero::before { background: rgba(255,255,255,.06); right: -30%; }
+.hero::after { width: 26px; right: 16%; background: var(--yellow); opacity: .9; }
+.hero .wrap { position: relative; z-index: 1; padding-top: 44px; padding-bottom: 60px; }
+.hero .eyebrow { display: inline-block; font-weight: 800; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--green-900); background: var(--yellow); padding: 5px 12px; border-radius: 6px; }
+.hero h1 { margin-top: 16px; font-size: clamp(34px, 7.4vw, 62px); line-height: 1.02; font-weight: 900; text-transform: uppercase; letter-spacing: -.01em; max-width: 13em; }
+.hero h1 span { display: block; color: var(--yellow); }
+.hero .lead { margin-top: 18px; max-width: 36em; font-size: clamp(17px, 2.4vw, 20px); color: #eaf5ec; }
+.hero .cta { margin-top: 26px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px 20px; }
+.hero .cta small { font-size: 14px; color: #d5ead9; }
+.stripe { height: 12px; background: linear-gradient(90deg, var(--yellow) 0 38%, var(--green-600) 38% 100%); }
+
+/* ---------- notice ---------- */
+.notice {
+  margin-top: -30px; position: relative; z-index: 2;
+  display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start;
+  background: var(--white); border-radius: var(--radius); border-left: 8px solid var(--yellow);
+  padding: 18px 20px; box-shadow: 0 6px 22px rgba(6,64,43,.14);
+}
+.notice .ico { width: 46px; height: 46px; border-radius: 50%; background: var(--yellow); display: grid; place-items: center; }
+.notice .ico svg { width: 26px; height: 26px; }
+.notice h2 { font-size: 19px; font-weight: 800; color: var(--green-900); }
+.notice p { margin-top: 4px; color: var(--muted); }
+
+/* ---------- cards ---------- */
+.grid { display: grid; gap: 18px; margin-top: 22px; }
+.card { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.card > header { display: flex; align-items: center; gap: 12px; padding: 12px 18px; background: var(--green-700); color: var(--white); }
+.card > header svg { width: 26px; height: 26px; flex: none; color: var(--yellow); }
+.card > header h2 { font-size: 17px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.card .body { padding: 16px 18px 18px; }
+.ticks { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.ticks li { position: relative; padding-left: 32px; }
+.ticks li::before {
+  content: ""; position: absolute; left: 0; top: 2px; width: 21px; height: 21px; border-radius: 50%;
+  background: var(--green-600) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/13px no-repeat;
+}
+.ticks.dots li { padding-left: 22px; }
+.ticks.dots li::before { top: 9px; left: 3px; width: 8px; height: 8px; background: var(--green-600); }
+
+.steps { list-style: none; margin: 22px 0 0; padding: 0; display: grid; gap: 14px; counter-reset: step; }
+.steps li { counter-increment: step; background: var(--green-100); border-radius: var(--radius); padding: 16px 18px 16px 70px; position: relative; }
+.steps li::before {
+  content: counter(step); position: absolute; left: 16px; top: 16px; width: 40px; height: 40px; border-radius: 50%;
+  display: grid; place-items: center; font-weight: 900; font-size: 20px; color: var(--green-900); background: var(--yellow);
+}
+.steps h3 { font-size: 17px; font-weight: 800; color: var(--green-900); }
+.steps p { color: var(--muted); font-size: 15px; }
+
+.section-title { margin-top: 34px; font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: .03em; color: var(--green-900); }
+.section-title + p { color: var(--muted); margin-top: 4px; }
+
+.districts { list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.districts li { background: var(--white); border: 1px solid var(--line); border-radius: 10px; padding: 12px 10px; text-align: center; font-weight: 700; line-height: 1.25; }
+.districts li small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+
+.important { margin-top: 22px; background: var(--yellow-100); border: 2px solid var(--yellow); border-radius: var(--radius); padding: 16px 18px; }
+.important .label { display: inline-block; background: var(--red); color: var(--white); font-weight: 800; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: 6px; margin-bottom: 10px; }
+
+.band { margin-top: 30px; background: var(--green-900); color: var(--white); border-radius: var(--radius); padding: 26px 20px; text-align: center; }
+.band h2 { font-size: 24px; font-weight: 900; text-transform: uppercase; }
+.band p { margin: 6px auto 18px; color: #d5ead9; max-width: 32em; }
+
+footer.site { margin-top: 40px; background: var(--green-900); color: #cfe4d4; font-size: 14px; border-top: 6px solid var(--yellow); }
+footer.site .wrap { padding-top: 20px; padding-bottom: 24px; }
+footer.site strong { color: var(--white); }
+
+/* ---------- form ---------- */
+.form-head { background: var(--green-900); color: var(--white); }
+.form-head .wrap { padding-top: 22px; padding-bottom: 24px; }
+.form-head a { color: var(--yellow); font-weight: 700; text-decoration: none; font-size: 15px; }
+.form-head h1 { margin-top: 8px; font-size: clamp(26px, 5vw, 38px); font-weight: 900; text-transform: uppercase; line-height: 1.08; }
+.form-head p { margin-top: 6px; color: #d5ead9; }
+.form-wrap { max-width: 760px; }
+fieldset.group { border: 0; margin: 20px 0 0; padding: 0; min-width: 0; }
+fieldset.group > legend {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 18px;
+  background: var(--green-700); color: var(--white); border-radius: var(--radius) var(--radius) 0 0;
+  font-size: 16px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+}
+fieldset.group > legend b { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--yellow); color: var(--green-900); font-size: 15px; flex: none; }
+.fields { background: var(--white); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 var(--radius) var(--radius); padding: 18px; display: grid; gap: 18px; }
+.field { min-width: 0; }
+.field label, .field .label { display: block; font-weight: 700; margin-bottom: 5px; }
+.opt { font-weight: 400; color: var(--muted); font-size: 14px; }
+.hint { display: block; font-size: 14px; color: var(--muted); margin-bottom: 6px; font-weight: 400; }
+input[type=text], input[type=tel], input[type=email], input[type=date], input[type=number], select, textarea {
+  display: block; width: 100%; min-height: 50px; padding: 11px 13px;
+  font: inherit; color: var(--ink); background: var(--white);
+  border: 2px solid #8fa697; border-radius: 10px; appearance: none; -webkit-appearance: none;
+}
+textarea { min-height: 92px; resize: vertical; }
+select {
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230a6b3d' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center; background-size: 18px;
+}
+select:disabled { background-color: #eef2ee; color: var(--muted); border-color: var(--line); }
+input[readonly] { background: #eef2ee; border-color: var(--line); }
+input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.35); border-color: var(--green-700); }
+.invalid input, .invalid select, .invalid textarea, .invalid .choices { border-color: var(--red); }
+.error { display: block; margin-top: 5px; color: var(--red); font-weight: 700; font-size: 14px; }
+.ok-note { display: block; margin-top: 5px; color: var(--green-700); font-weight: 700; font-size: 14px; }
+
+.choices { display: flex; flex-wrap: wrap; gap: 8px; border: 2px solid transparent; border-radius: 10px; }
+.invalid .choices { padding: 6px; }
+.choice { position: relative; }
+.choice input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.choice span {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding: 8px 16px;
+  border: 2px solid #8fa697; border-radius: 999px; background: var(--white); font-weight: 600;
+}
+.choice span::before { content: ""; width: 18px; height: 18px; border-radius: 5px; border: 2px solid #8fa697; flex: none; background: var(--white) center/12px no-repeat; }
+.choice input[type=radio] + span::before { border-radius: 50%; }
+.choice input:checked + span { background: var(--green-100); border-color: var(--green-700); color: var(--green-900); }
+.choice input:checked + span::before {
+  border-color: var(--green-700); background-color: var(--green-700);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+}
+.choice input:focus-visible + span { outline: 3px solid #1a73e8; outline-offset: 2px; }
+
+.check { display: grid; grid-template-columns: 26px 1fr; gap: 12px; align-items: start; }
+.check input { width: 24px; height: 24px; margin: 2px 0 0; accent-color: var(--green-700); }
+.check label { font-weight: 400; margin: 0; }
+
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+.submit-row { margin-top: 22px; display: grid; gap: 12px; }
+.submit-row .btn { width: 100%; }
+.alert { border-radius: var(--radius); padding: 14px 16px; font-weight: 600; background: #fde8e6; border: 2px solid var(--red); color: #7a1610; }
+.spinner { width: 20px; height: 20px; border-radius: 50%; border: 3px solid rgba(255,255,255,.4); border-top-color: var(--white); animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.done { margin-top: 26px; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 30px 20px; text-align: center; }
+.done .badge { width: 72px; height: 72px; margin: 0 auto 14px; border-radius: 50%; background: var(--green-600); display: grid; place-items: center; }
+.done .badge svg { width: 40px; height: 40px; }
+.done h2 { font-size: 26px; font-weight: 900; color: var(--green-900); text-transform: uppercase; }
+.done .ref { margin: 18px auto; display: inline-block; background: var(--yellow-100); border: 2px dashed var(--green-700); border-radius: 12px; padding: 12px 24px; }
+.done .ref small { display: block; color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+.done .ref strong { font-size: 28px; letter-spacing: .04em; color: var(--green-900); }
+.done p { color: var(--muted); max-width: 34em; margin: 8px auto 0; }
+.done .actions { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+
+@media (min-width: 720px) {
+  .topbar img { height: 68px; }
+  .grid.two { grid-template-columns: 1fr 1fr; }
+  .steps { grid-template-columns: repeat(3, 1fr); }
+  .districts { grid-template-columns: repeat(4, 1fr); }
+  .fields.cols { grid-template-columns: 1fr 1fr; }
+  .fields .full { grid-column: 1 / -1; }
+  .submit-row .btn { width: auto; justify-self: start; min-width: 280px; }
+  .hero .wrap { padding-top: 64px; padding-bottom: 84px; }
+}
+@media (max-width: 719px) {
+  .hero::after { display: none; }
+}
+@media (max-width: 480px) {
+  .topbar .tag { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .spinner { animation-duration: 2s; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap">
+    <a class="home" href="#home"><img src="assets/logo.png" width="409" height="107" alt="Province of the Eastern Cape, Department of Health"></a>
+    <div class="tag">Expanded Public Works Programme</div>
+  </div>
+</div>
+
+<!-- ======================= LANDING PAGE ======================= -->
+<main id="view-home">
+  <section class="hero">
+    <div class="wrap">
+      <span class="eyebrow">EPWP &middot; Eastern Cape Health</span>
+      <h1>EPWP Candidate Database <span>Register for future opportunities</span></h1>
+      <p class="lead">The Eastern Cape Department of Health is building a database of people who are available for Expanded Public Works Programme (EPWP) work at health facilities in their own ward.</p>
+      <div class="cta">
+        <a class="btn" href="#register">Register now
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <small>Free &middot; takes about 5 minutes &middot; works on your phone</small>
+      </div>
+    </div>
+  </section>
+  <div class="stripe"></div>
+
+  <div class="wrap">
+    <section class="notice" aria-labelledby="notice-title">
+      <div class="ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#06402b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"/></svg>
+      </div>
+      <div>
+        <h2 id="notice-title">This is not a job advert</h2>
+        <p>There are no posts open right now. Registering puts your details on a database so that the Department can contact you when an EPWP opportunity becomes available in your area. Registration does not guarantee work.</p>
+      </div>
+    </section>
+
+    <ol class="steps" aria-label="How it works">
+      <li><h3>Register</h3><p>Fill in the online form with your details, your ward and your skills.</p></li>
+      <li><h3>You are on the database</h3><p>You get a reference number. Your details are kept safely by the Department.</p></li>
+      <li><h3>We contact you</h3><p>When an opportunity opens in your ward, people on the database can be contacted.</p></li>
+    </ol>
+
+    <div class="grid two">
+      <section class="card">
+        <header>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M8.5 13l2.5 2.5 4.5-5"/></svg>
+          <h2>Who can register</h2>
+        </header>
+        <div class="body">
+          <ul class="ticks">
+            <li>You have a valid South African ID.</li>
+            <li>You are 18 years or older.</li>
+            <li>You live in a ward in the Eastern Cape, and can show proof of residence from your Ward Councillor if asked.</li>
+            <li>You are unemployed and meet the EPWP eligibility requirements.</li>
+            <li>You are physically fit and able to do manual labour.</li>
+            <li>Any school level is welcome. A trade or artisan skill is an added advantage.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="card">
+        <header>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M5.5 18.5l2.1-2.1M16.4 7.6l2.1-2.1"/></svg>
+          <h2>Typical EPWP work</h2>
+        </header>
+        <div class="body">
+          <ul class="ticks dots">
+            <li>General cleaning in and around health facilities.</li>
+            <li>Grass cutting, gardening and looking after facility grounds.</li>
+            <li>Loading, unloading, moving and storing materials and equipment.</li>
+            <li>Helping with the upkeep of buildings and grounds.</li>
+            <li>Minor repairs and renovations under supervision.</li>
+            <li>Collecting and disposing of waste according to facility hygiene procedures.</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <section class="card" style="margin-top:18px">
+      <header>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>
+        <h2>Have this ready before you start</h2>
+      </header>
+      <div class="body">
+        <ul class="ticks">
+          <li>Your South African ID number (13 digits).</li>
+          <li>Your municipal ward number. Your Ward Councillor or municipal office can tell you what it is.</li>
+          <li>A cellphone number where you can be reached.</li>
+          <li>Your current home address.</li>
+        </ul>
+      </div>
+    </section>
+
+    <h2 class="section-title">All eight districts</h2>
+    <p>You register under the district, local municipality and ward where you live.</p>
+    <ul class="districts">
+      <li>Alfred Nzo <small>District</small></li>
+      <li>Amathole <small>District</small></li>
+      <li>Buffalo City <small>Metro</small></li>
+      <li>Chris Hani <small>District</small></li>
+      <li>Joe Gqabi <small>District</small></li>
+      <li>Nelson Mandela Bay <small>Metro</small></li>
+      <li>OR Tambo <small>District</small></li>
+      <li>Sarah Baartman <small>District</small></li>
+    </ul>
+
+    <section class="important">
+      <span class="label">Important</span>
+      <ul class="ticks">
+        <li><strong>Registration is free.</strong> Nobody may ask you to pay to be registered or to be placed. If someone asks for money, report it to your District Office.</li>
+        <li>Register only once. Each ID number can be on the database one time.</li>
+        <li>Being on the database is not an offer of work and does not guarantee placement.</li>
+      </ul>
+    </section>
+
+    <section class="band">
+      <h2>Ready to register?</h2>
+      <p>Add your details to the EPWP candidate database now.</p>
+      <a class="btn" href="#register">Go to the registration form</a>
+    </section>
+  </div>
+</main>
+
+<!-- ======================= REGISTRATION FORM ======================= -->
+<main id="view-register" hidden>
+  <div class="form-head">
+    <div class="wrap form-wrap">
+      <a href="#home">&larr; Back to information page</a>
+      <h1>EPWP candidate registration</h1>
+      <p>Fill in all the fields. Fields marked <em>optional</em> can be left empty.</p>
+    </div>
+  </div>
+
+  <div class="wrap form-wrap">
+    <form id="reg-form" novalidate autocomplete="on">
+
+      <fieldset class="group">
+        <legend><b>1</b> Personal details</legend>
+        <div class="fields cols">
+          <div class="field" data-field="Title">
+            <label for="Title">Title</label>
+            <select id="Title" name="Title" required>
+              <option value="">Choose</option>
+              <option>Mr</option><option>Ms</option><option>Mrs</option>
+            </select>
+          </div>
+          <div class="field" data-field="Gender">
+            <label for="Gender">Gender</label>
+            <select id="Gender" name="Gender" required>
+              <option value="">Choose</option>
+              <option>Male</option><option>Female</option><option>Prefer not to say</option>
+            </select>
+          </div>
+          <div class="field" data-field="Name">
+            <label for="Name">First name(s)</label>
+            <input type="text" id="Name" name="Name" maxlength="80" autocomplete="given-name" required>
+          </div>
+          <div class="field" data-field="Surname">
+            <label for="Surname">Surname</label>
+            <input type="text" id="Surname" name="Surname" maxlength="80" autocomplete="family-name" required>
+          </div>
+          <div class="field" data-field="SouthAfricanID">
+            <label for="SouthAfricanID">South African ID number</label>
+            <span class="hint" id="id-hint">13 digits, as on your ID book or card.</span>
+            <input type="text" id="SouthAfricanID" name="SouthAfricanID" inputmode="numeric" maxlength="13" autocomplete="off" aria-describedby="id-hint" required>
+          </div>
+          <div class="field" data-field="DateOfBirth">
+            <label for="DateOfBirth">Date of birth</label>
+            <span class="hint" id="dob-hint">Filled in from your ID number.</span>
+            <input type="date" id="DateOfBirth" name="DateOfBirth" aria-describedby="dob-hint" readonly required>
+          </div>
+          <div class="field full" data-field="DisabilityStatus">
+            <span class="label" id="dis-label">Do you have a disability?</span>
+            <div class="choices" role="radiogroup" aria-labelledby="dis-label">
+              <label class="choice"><input type="radio" name="DisabilityStatus" value="Yes"><span>Yes</span></label>
+              <label class="choice"><input type="radio" name="DisabilityStatus" value="No"><span>No</span></label>
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend><b>2</b> Contact details</legend>
+        <div class="fields cols">
+          <div class="field full" data-field="CurrentAddress">
+            <label for="CurrentAddress">Current home address</label>
+            <span class="hint" id="addr-hint">House or stand number, street or village, and town.</span>
+            <textarea id="CurrentAddress" name="CurrentAddress" maxlength="300" autocomplete="street-address" aria-describedby="addr-hint" required></textarea>
+          </div>
+          <div class="field" data-field="CellphoneNumber">
+            <label for="CellphoneNumber">Cellphone number</label>
+            <span class="hint" id="cell-hint">10 digits, for example 0821234567.</span>
+            <input type="tel" id="CellphoneNumber" name="CellphoneNumber" inputmode="numeric" maxlength="15" autocomplete="tel" aria-describedby="cell-hint" required>
+          </div>
+          <div class="field" data-field="EmailAddress">
+            <label for="EmailAddress">Email address <span class="opt">(optional)</span></label>
+            <span class="hint" id="email-hint">Leave empty if you do not have one.</span>
+            <input type="email" id="EmailAddress" name="EmailAddress" maxlength="120" autocomplete="email" aria-describedby="email-hint">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend><b>3</b> Where you live</legend>
+        <div class="fields cols">
+          <div class="field" data-field="District">
+            <label for="District">District or Metro</label>
+            <select id="District" name="District" required><option value="">Choose your district</option></select>
+          </div>
+          <div class="field" data-field="LocalMunicipality">
+            <label for="LocalMunicipality">Local Municipality or Sub-district</label>
+            <select id="LocalMunicipality" name="LocalMunicipality" required disabled><option value="">Choose a district first</option></select>
+          </div>
+          <div class="field" data-field="MunicipalWardNo">
+            <label for="MunicipalWardNo">Municipal ward number</label>
+            <span class="hint" id="ward-hint">The number of the ward you live in, for example 12.</span>
+            <input type="text" id="MunicipalWardNo" name="MunicipalWardNo" inputmode="numeric" maxlength="3" aria-describedby="ward-hint" required>
+          </div>
+          <div class="field" data-field="Hospital">
+            <label for="Hospital">Nearest hospital <span class="opt">(optional)</span></label>
+            <span class="hint" id="hosp-hint">The hospital in your municipality that is closest to you.</span>
+            <select id="Hospital" name="Hospital" aria-describedby="hosp-hint" disabled><option value="">Choose a municipality first</option></select>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend><b>4</b> Education and skills</legend>
+        <div class="fields cols">
+          <div class="field" data-field="HighestSchoolLevel">
+            <label for="HighestSchoolLevel">Highest school level passed</label>
+            <select id="HighestSchoolLevel" name="HighestSchoolLevel" required>
+              <option value="">Choose</option>
+              <option>No Formal School</option>
+              <option>Primary School</option>
+              <option>Grade 6</option>
+              <option>Grade 7</option>
+              <option>Grade 8</option>
+              <option>Grade 9</option>
+              <option>Grade 10</option>
+              <option>Grade 11</option>
+              <option>Grade 12 (Matric)</option>
+              <option>N2 / NC(V) Level 2 or higher</option>
+            </select>
+          </div>
+          <div class="field" data-field="DriversLicence">
+            <label for="DriversLicence">Driver's licence</label>
+            <select id="DriversLicence" name="DriversLicence" required>
+              <option value="">Choose</option>
+              <option>None</option>
+              <option>Code 08 (Automatic)</option>
+              <option>Code 08 (Manual)</option>
+              <option>Code 10</option>
+              <option>Code 14</option>
+            </select>
+          </div>
+          <div class="field full" data-field="PracticalSkills">
+            <span class="label" id="skills-label">Practical skills</span>
+            <span class="hint">Tick everything you can do.</span>
+            <div class="choices" id="skills" role="group" aria-labelledby="skills-label"></div>
+          </div>
+          <div class="field full" data-field="OtherSkills" id="other-wrap" hidden>
+            <label for="OtherSkills">Other skills</label>
+            <span class="hint" id="other-hint">Tell us what other skills you have.</span>
+            <input type="text" id="OtherSkills" name="OtherSkills" maxlength="200" aria-describedby="other-hint">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend><b>5</b> Declaration</legend>
+        <div class="fields">
+          <div class="field" data-field="Declaration">
+            <div class="check">
+              <input type="checkbox" id="Declaration" name="Declaration">
+              <label for="Declaration">I declare that the information I have given is true and correct. I understand that this is a registration on a database and not an offer of work.</label>
+            </div>
+          </div>
+          <div class="field" data-field="Consent">
+            <div class="check">
+              <input type="checkbox" id="Consent" name="Consent">
+              <label for="Consent">I agree that the Eastern Cape Department of Health may keep and use my personal information to consider and contact me for EPWP opportunities, in line with the Protection of Personal Information Act (POPIA).</label>
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="hp" aria-hidden="true">
+        <label for="website">Leave this field empty</label>
+        <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+      </div>
+
+      <div class="submit-row">
+        <div class="alert" id="form-alert" role="alert" hidden></div>
+        <button class="btn green" type="submit" id="submit-btn">Submit registration</button>
+      </div>
+    </form>
+
+    <section class="done" id="done" hidden tabindex="-1" aria-live="polite">
+      <div class="badge" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+      </div>
+      <h2>You are registered</h2>
+      <div class="ref"><small>Your reference number</small><strong id="done-ref"></strong></div>
+      <p><strong>Write this number down or take a screenshot.</strong></p>
+      <p>Your details are now on the EPWP candidate database. The Department will contact you on your cellphone if an opportunity becomes available in your ward. This is not an offer of work.</p>
+      <div class="actions">
+        <button class="btn green" type="button" id="another-btn">Register another person</button>
+        <a class="btn ghost" href="#home">Back to information page</a>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <strong>Eastern Cape Department of Health</strong> &middot; Expanded Public Works Programme (EPWP)<br>
+    Registration is free. The information you give is used only to consider and contact you for EPWP opportunities.
+  </div>
+</footer>
+
+<script src="assets/config.js"></script>
+<script src="assets/units.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var CONFIG = window.EPWP_CONFIG || {};
+  var UNITS = window.EPWP_UNITS || {};
+  var MIN_AGE = CONFIG.MIN_AGE || 18;
+  var SKILLS = ['Carpenter', 'Painter', 'Builder', 'Electrician', 'Plumber', 'Welder', 'Bricklayer',
+                'Mechanic', 'Driver', 'Cleaner', 'Gardener', 'Security', 'Other (Specify)'];
+  var OTHER = 'Other (Specify)';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var form = $('reg-form');
+
+  /* ---------- views ---------- */
+  function showView() {
+    var register = location.hash === '#register';
+    $('view-home').hidden = register;
+    $('view-register').hidden = !register;
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener('hashchange', showView);
+  showView();
+
+  /* ---------- friendly names for the reporting units ---------- */
+  var DISTRICT_NAMES = {
+    'A Nzo DM': 'Alfred Nzo District',
+    'Amathole DM': 'Amathole District',
+    'Buffalo City MM': 'Buffalo City Metro',
+    'C Hani DM': 'Chris Hani District',
+    'Joe Gqabi DM': 'Joe Gqabi District',
+    'N Mandela Bay MM': 'Nelson Mandela Bay Metro',
+    'O Tambo DM': 'OR Tambo District',
+    'Sarah Baartman DM': 'Sarah Baartman District'
+  };
+  function districtLabel(v) { return DISTRICT_NAMES[v] || v; }
+  function localLabel(v) {
+    var m = /^N Mandela ([A-Z]) SD$/.exec(v);
+    if (m) return 'Nelson Mandela Bay Sub-district ' + m[1];
+    return v.replace(/^Dr B Naud/, 'Dr Beyers Naud')
+            .replace(/ LM$/, ' Local Municipality')
+            .replace(/ SD$/, ' Sub-district');
+  }
+
+  function fill(select, values, placeholder, labeller) {
+    select.innerHTML = '';
+    select.add(new Option(placeholder, ''));
+    values.forEach(function (v) { select.add(new Option(labeller ? labeller(v) : v, v)); });
+  }
+
+  var district = $('District'), local = $('LocalMunicipality'), hospital = $('Hospital');
+  fill(district, Object.keys(UNITS), 'Choose your district', districtLabel);
+
+  district.addEventListener('change', function () {
+    var locals = Object.keys(UNITS[district.value] || {});
+    fill(local, locals, locals.length ? 'Choose your municipality' : 'Choose a district first', localLabel);
+    local.disabled = !locals.length;
+    fill(hospital, [], 'Choose a municipality first');
+    hospital.disabled = true;
+  });
+  local.addEventListener('change', function () {
+    var list = (UNITS[district.value] || {})[local.value] || [];
+    fill(hospital, list, list.length ? 'Not sure / none' : 'Choose a municipality first');
+    hospital.disabled = !list.length;
+  });
+
+  /* ---------- skills ---------- */
+  SKILLS.forEach(function (skill) {
+    var label = document.createElement('label');
+    label.className = 'choice';
+    var input = document.createElement('input');
+    input.type = 'checkbox'; input.name = 'PracticalSkills'; input.value = skill;
+    var span = document.createElement('span');
+    span.textContent = skill === OTHER ? 'Other' : skill;
+    label.appendChild(input); label.appendChild(span);
+    $('skills').appendChild(label);
+  });
+  function selectedSkills() {
+    return Array.prototype.map.call(form.querySelectorAll('input[name=PracticalSkills]:checked'), function (i) { return i.value; });
+  }
+  $('skills').addEventListener('change', function () {
+    var other = selectedSkills().indexOf(OTHER) !== -1;
+    $('other-wrap').hidden = !other;
+    if (!other) { $('OtherSkills').value = ''; setError('OtherSkills', ''); }
+    setError('PracticalSkills', '');
+  });
+
+  /* ---------- SA ID number ---------- */
+  function parseId(id) {
+    if (!/^\d{13}$/.test(id)) return null;
+    if (id.charAt(10) !== '0' && id.charAt(10) !== '1') return null;
+    var sum = 0;
+    for (var i = 0; i < 13; i++) {
+      var d = Number(id.charAt(12 - i));
+      if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9; }
+      sum += d;
+    }
+    if (sum % 10 !== 0) return null;
+    var yy = Number(id.substr(0, 2)), mm = Number(id.substr(2, 2)), dd = Number(id.substr(4, 2));
+    var year = (yy <= new Date().getFullYear() % 100 ? 2000 : 1900) + yy;
+    var date = new Date(Date.UTC(year, mm - 1, dd));
+    if (date.getUTCFullYear() !== year || date.getUTCMonth() !== mm - 1 || date.getUTCDate() !== dd) return null;
+    return {
+      dob: year + '-' + ('0' + mm).slice(-2) + '-' + ('0' + dd).slice(-2),
+      gender: Number(id.substr(6, 4)) >= 5000 ? 'Male' : 'Female'
+    };
+  }
+  function ageFrom(iso) {
+    var p = iso.split('-').map(Number), t = new Date();
+    var age = t.getFullYear() - p[0];
+    if (t.getMonth() + 1 < p[1] || (t.getMonth() + 1 === p[1] && t.getDate() < p[2])) age--;
+    return age;
+  }
+
+  var idInput = $('SouthAfricanID');
+  idInput.addEventListener('input', function () {
+    idInput.value = idInput.value.replace(/\D/g, '').slice(0, 13);
+    var info = parseId(idInput.value);
+    $('DateOfBirth').value = info ? info.dob : '';
+    if (info) {
+      if (!$('Gender').value) $('Gender').value = info.gender;
+      setError('SouthAfricanID', validators.SouthAfricanID());
+      setError('DateOfBirth', '');
+    }
+  });
+  ['CellphoneNumber', 'MunicipalWardNo'].forEach(function (id) {
+    $(id).addEventListener('input', function () {
+      var keepPlus = id === 'CellphoneNumber' && this.value.charAt(0) === '+';
+      this.value = (keepPlus ? '+' : '') + this.value.replace(/\D/g, '');
+    });
+  });
+
+  /* ---------- validation ---------- */
+  function val(id) { return $(id).value.replace(/\s+/g, ' ').trim(); }
+  function cell() { return val('CellphoneNumber').replace(/^\+27/, '0'); }
+  function need(id, msg) { return function () { return val(id) ? '' : msg; }; }
+
+  var validators = {
+    Title: need('Title', 'Choose your title.'),
+    Gender: need('Gender', 'Choose your gender.'),
+    Name: need('Name', 'Enter your first name.'),
+    Surname: need('Surname', 'Enter your surname.'),
+    SouthAfricanID: function () {
+      var v = val('SouthAfricanID');
+      if (!v) return 'Enter your ID number.';
+      if (v.length !== 13) return 'An ID number has 13 digits. You entered ' + v.length + '.';
+      var info = parseId(v);
+      if (!info) return 'This ID number is not valid. Check the digits and try again.';
+      if (ageFrom(info.dob) < MIN_AGE) return 'You must be ' + MIN_AGE + ' or older to register.';
+      return '';
+    },
+    DateOfBirth: function () { return ''; },
+    DisabilityStatus: function () {
+      return form.querySelector('input[name=DisabilityStatus]:checked') ? '' : 'Choose Yes or No.';
+    },
+    CurrentAddress: function () { return val('CurrentAddress').length >= 5 ? '' : 'Enter your home address.'; },
+    CellphoneNumber: function () {
+      if (!cell()) return 'Enter your cellphone number.';
+      return /^0\d{9}$/.test(cell()) ? '' : 'A cellphone number has 10 digits and starts with 0.';
+    },
+    EmailAddress: function () {
+      var v = val('EmailAddress');
+      return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? '' : 'This email address is not valid. Fix it or leave it empty.';
+    },
+    District: need('District', 'Choose your district.'),
+    LocalMunicipality: need('LocalMunicipality', 'Choose your municipality.'),
+    MunicipalWardNo: function () {
+      var v = val('MunicipalWardNo');
+      if (!v) return 'Enter your ward number.';
+      return /^\d{1,3}$/.test(v) && Number(v) >= 1 ? '' : 'Enter the ward number as a number, for example 12.';
+    },
+    Hospital: function () { return ''; },
+    HighestSchoolLevel: need('HighestSchoolLevel', 'Choose your highest school level.'),
+    DriversLicence: need('DriversLicence', 'Choose your licence, or None.'),
+    PracticalSkills: function () { return selectedSkills().length ? '' : 'Tick at least one skill.'; },
+    OtherSkills: function () {
+      return selectedSkills().indexOf(OTHER) === -1 || val('OtherSkills') ? '' : 'Tell us what your other skills are.';
+    },
+    Declaration: function () { return $('Declaration').checked ? '' : 'Tick this box to confirm.'; },
+    Consent: function () { return $('Consent').checked ? '' : 'Tick this box to agree. We cannot register you without it.'; }
+  };
+
+  function setError(name, message) {
+    var wrap = form.querySelector('[data-field="' + name + '"]');
+    if (!wrap) return;
+    var el = wrap.querySelector('.error');
+    wrap.classList.toggle('invalid', !!message);
+    Array.prototype.forEach.call(wrap.querySelectorAll('input, select, textarea'), function (c) {
+      if (message) c.setAttribute('aria-invalid', 'true'); else c.removeAttribute('aria-invalid');
+    });
+    if (!message) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement('span');
+      el.className = 'error';
+      wrap.appendChild(el);
+    }
+    el.textContent = message;
+  }
+
+  // Check a field when the applicant leaves it, and clear its error as soon as it is fixed.
+  form.addEventListener('focusout', function (e) {
+    var wrap = e.target.closest('[data-field]');
+    if (!wrap) return;
+    var name = wrap.getAttribute('data-field');
+    if (e.target.type === 'checkbox' || e.target.type === 'radio') return;
+    if (e.target.value || wrap.classList.contains('invalid')) setError(name, validators[name]());
+  });
+  form.addEventListener('change', function (e) {
+    var wrap = e.target.closest('[data-field]');
+    if (wrap && wrap.classList.contains('invalid')) {
+      var name = wrap.getAttribute('data-field');
+      setError(name, validators[name]());
+    }
+  });
+
+  form.addEventListener('input', function () { if (!alertBox.hidden) showAlert(''); });
+
+  function validateAll() {
+    var first = null;
+    Object.keys(validators).forEach(function (name) {
+      var message = validators[name]();
+      setError(name, message);
+      if (message && !first) first = name;
+    });
+    return first;
+  }
+
+  /* ---------- submit ---------- */
+  var alertBox = $('form-alert'), button = $('submit-btn');
+
+  function showAlert(message) {
+    alertBox.textContent = message;
+    alertBox.hidden = !message;
+  }
+  function setBusy(busy) {
+    button.disabled = busy;
+    button.innerHTML = busy ? '<span class="spinner" aria-hidden="true"></span> Sending, please wait' : 'Submit registration';
+  }
+
+  function collect() {
+    return {
+      Title: val('Title'),
+      Name: val('Name'),
+      Surname: val('Surname'),
+      SouthAfricanID: val('SouthAfricanID'),
+      DateOfBirth: $('DateOfBirth').value,
+      Gender: val('Gender'),
+      DisabilityStatus: form.querySelector('input[name=DisabilityStatus]:checked').value,
+      CurrentAddress: val('CurrentAddress'),
+      CellphoneNumber: cell(),
+      EmailAddress: val('EmailAddress'),
+      District: district.value,
+      LocalMunicipality: local.value,
+      Hospital: hospital.value,
+      MunicipalWardNo: String(Number(val('MunicipalWardNo'))),
+      HighestSchoolLevel: val('HighestSchoolLevel'),
+      PracticalSkills: selectedSkills().join(', '),
+      OtherSkills: val('OtherSkills'),
+      DriversLicence: val('DriversLicence'),
+      Consent: true,
+      website: $('website').value
+    };
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    showAlert('');
+
+    var firstBad = validateAll();
+    if (firstBad) {
+      showAlert('Some answers are missing or not correct. Fix the fields marked in red, then submit again.');
+      var wrap = form.querySelector('[data-field="' + firstBad + '"]');
+      var control = wrap.querySelector('input, select, textarea');
+      wrap.scrollIntoView({ block: 'center' });
+      if (control) control.focus({ preventScroll: true });
+      return;
+    }
+
+    if (!/^https:\/\/script\.google\.com\//.test(CONFIG.ENDPOINT || '')) {
+      showAlert('This form is not connected to the database yet, so your registration was not sent. Please try again later.');
+      return;
+    }
+
+    setBusy(true);
+    // text/plain keeps this a "simple" request, which Apps Script web apps accept cross-origin.
+    fetch(CONFIG.ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(collect()),
+      redirect: 'follow'
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (out) {
+        setBusy(false);
+        if (out && out.ok) {
+          $('done-ref').textContent = out.ref;
+          form.reset();
+          resetDependents();
+          form.hidden = true;
+          $('done').hidden = false;
+          window.scrollTo(0, 0);
+          $('done').focus({ preventScroll: true });
+        } else if (out && out.error === 'duplicate') {
+          setError('SouthAfricanID', 'This ID number is already registered' + (out.ref ? ' (reference ' + out.ref + ')' : '') + '.');
+          showAlert('This ID number is already on the database' + (out.ref ? ' with reference number ' + out.ref : '') + '. You do not need to register again.');
+        } else {
+          showAlert((out && out.message) || 'Your registration could not be saved. Please try again.');
+        }
+      })
+      .catch(function () {
+        setBusy(false);
+        showAlert('Your registration was not sent. Check your internet or data connection, then press Submit again. Your answers are still on this page.');
+      });
+  });
+
+  function resetDependents() {
+    fill(local, [], 'Choose a district first'); local.disabled = true;
+    fill(hospital, [], 'Choose a municipality first'); hospital.disabled = true;
+    $('other-wrap').hidden = true;
+    Object.keys(validators).forEach(function (name) { setError(name, ''); });
+    showAlert('');
+  }
+
+  $('another-btn').addEventListener('click', function () {
+    $('done').hidden = true;
+    form.hidden = false;
+    window.scrollTo(0, 0);
+    $('Title').focus({ preventScroll: true });
+  });
+  window.addEventListener('hashchange', function () {
+    if (location.hash === '#register' && !$('done').hidden) { $('done').hidden = true; form.hidden = false; }
+  });
+})();
+</script>
+</body>
+</html>
