@@ -222,7 +222,11 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 
 .submit-row { margin-top: 22px; display: grid; gap: 12px; }
+.submit-row .buttons { display: grid; gap: 12px; }
 .submit-row .btn { width: 100%; }
+.stop { margin-top: 10px; padding: 12px 14px; border-radius: 10px; background: #fde8e6; border: 2px solid var(--red); color: #7a1610; }
+.stop p { margin: 0 0 10px; font-weight: 600; }
+.stop .btn { min-height: 44px; padding: 8px 20px; font-size: 16px; }
 .alert { border-radius: var(--radius); padding: 14px 16px; font-weight: 600; background: #fde8e6; border: 2px solid var(--red); color: #7a1610; }
 .spinner { width: 20px; height: 20px; border-radius: 50%; border: 3px solid rgba(255,255,255,.4); border-top-color: var(--white); animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -244,7 +248,9 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   .districts { grid-template-columns: repeat(4, 1fr); }
   .fields.cols { grid-template-columns: 1fr 1fr; }
   .fields .full { grid-column: 1 / -1; }
-  .submit-row .btn { width: auto; justify-self: start; min-width: 280px; }
+  .submit-row .buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+  .submit-row .btn { width: auto; min-width: 220px; }
+  .submit-row .btn.green { min-width: 280px; }
   .hero .wrap { padding-top: 64px; padding-bottom: 84px; }
 }
 @media (max-width: 719px) {
@@ -451,6 +457,10 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
             <label for="SouthAfricanID">South African ID number</label>
             <span class="hint" id="id-hint">13 digits, as on your ID book or card.</span>
             <input type="text" id="SouthAfricanID" name="SouthAfricanID" inputmode="numeric" maxlength="13" autocomplete="off" aria-describedby="id-hint" required>
+            <div class="stop" id="age-stop" hidden>
+              <p>This person does not qualify, because these positions are for people aged 18 to 45.</p>
+              <button class="btn ghost" type="button" id="age-clear-btn">Clear form and start again</button>
+            </div>
           </div>
           <div class="field" data-field="DateOfBirth">
             <label for="DateOfBirth">Date of birth</label>
@@ -587,7 +597,10 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 
       <div class="submit-row">
         <div class="alert" id="form-alert" role="alert" hidden></div>
-        <button class="btn green" type="submit" id="submit-btn">Submit application</button>
+        <div class="buttons">
+          <button class="btn green" type="submit" id="submit-btn">Submit application</button>
+          <button class="btn ghost" type="button" id="clear-btn">Clear form</button>
+        </div>
       </div>
     </form>
 
@@ -736,6 +749,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     idInput.value = idInput.value.replace(/\D/g, '').slice(0, 13);
     var info = parseId(idInput.value);
     $('DateOfBirth').value = info ? info.dob : '';
+    var age = info ? ageFrom(info.dob) : null;
+    $('age-stop').hidden = !(info && (age < MIN_AGE || age > MAX_AGE));
     if (info) {
       if (!$('Gender').value) $('Gender').value = info.gender;
       setError('SouthAfricanID', validators.SouthAfricanID());
@@ -1059,6 +1074,28 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     Object.keys(validators).forEach(function (name) { setError(name, ''); });
     showAlert('');
   }
+
+  function hasAnswers() {
+    return Array.prototype.some.call(form.elements, function (el) {
+      if (el.id === 'website' || el.type === 'button' || el.type === 'submit') return false;
+      if (el.type === 'checkbox' || el.type === 'radio') return el.checked;
+      if (el.type === 'file') return el.files.length > 0;
+      return !!el.value;
+    });
+  }
+
+  function clearForm() {
+    form.reset();
+    resetDependents();
+    $('age-stop').hidden = true;
+    $('view-register').scrollIntoView();
+    $('Title').focus({ preventScroll: true });
+  }
+
+  $('clear-btn').addEventListener('click', function () {
+    if (!hasAnswers() || window.confirm('Clear all the answers on this form and start again?')) clearForm();
+  });
+  $('age-clear-btn').addEventListener('click', clearForm);
 
   $('another-btn').addEventListener('click', function () {
     $('done').hidden = true;
