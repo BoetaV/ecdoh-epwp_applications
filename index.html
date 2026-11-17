@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EPWP General Workers - Apply Online | Eastern Cape Department of Health</title>
+<title>Applications: EPWP Recruitment - 450 General Workers | Eastern Cape Department of Health</title>
 <meta name="description" content="Apply online for one of 450 EPWP General Worker positions in the Eastern Cape Department of Health. Closing date 20 November 2026.">
 <meta name="theme-color" content="#06402b">
 <link rel="icon" href="assets/logo.png">
@@ -280,7 +280,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   <section class="hero">
     <div class="wrap">
       <span class="eyebrow">EPWP &middot; Eastern Cape Health</span>
-      <h1>EPWP Advertisement <span>for 450 General Workers</span></h1>
+      <h1>Applications: EPWP Recruitment <span>450 General Workers</span></h1>
       <p class="ages">(Ages 18 &ndash; 45 years)</p>
       <p class="lead">Applications are hereby invited for 450 EPWP General Worker positions, which will be placed across various districts within the Eastern Cape Department of Health.</p>
       <div class="cta open-only">
@@ -300,8 +300,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         <svg viewBox="0 0 24 24" fill="none" stroke="#06402b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"/></svg>
       </div>
       <div>
-        <h2 id="notice-title">This is a re-advertisement</h2>
-        <p>If you have already applied, you do not need to apply again. This is the opportunity for those who could not apply.</p>
+        <h2 id="notice-title">Applications are open</h2>
+        <p id="notice-text">Apply online using the form on this page, before Friday, 20 November 2026 at 23h59. You need your ID document and your latest school results or qualification certificate to upload.</p>
       </div>
     </section>
 
@@ -325,7 +325,6 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
             <li>Must be able to read and write.</li>
             <li>Must have a valid RSA ID document (certified copy).</li>
             <li>Must be residing in the same area/village and ward of the vacant position.</li>
-            <li>Proof of residence from the Ward Councillor.</li>
             <li>Community involvement and good communication skills.</li>
             <li>Attributes: excellent time management and physical fitness to perform manual labour.</li>
             <li>Applicants must be unemployed and meet the eligibility requirements of the Expanded Public Works Programme (EPWP).</li>
@@ -659,6 +658,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   function applyClosedState() {
     if (!isClosed()) return;
     document.body.classList.add('closed');
+    $('notice-title').textContent = 'Applications are closed';
+    $('notice-text').textContent = 'The closing date was Friday, 20 November 2026 at 23h59. Online applications can no longer be submitted.';
     form.hidden = true;
     $('done').hidden = true;
     $('closed').hidden = false;
