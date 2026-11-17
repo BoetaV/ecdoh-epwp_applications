@@ -22,8 +22,7 @@ docs/                   Source lists (reporting units, database fields)
 3. Choose the function **setup** and press **Run**. Approve the permissions.
    An "Applications" tab with the column headings appears in the Sheet.
    A Drive folder called "EPWP Applications - Supporting Documents" is created
-   in your Google Drive; uploaded documents are saved there and linked from
-   the last three columns of the Sheet.
+   next to the Sheet in your Google Drive.
 4. Press **Deploy > New deployment**, type **Web app**, and set
    - Execute as: **Me**
    - Who has access: **Anyone**
@@ -59,6 +58,23 @@ at `https://<account>.github.io/<repository>/`.
 Open the live site, complete the form and submit. A new row should appear in
 the Applications tab and the page should show a reference number
 (EPWP-000001). Submitting the same ID number again must be refused.
+
+## Finding the supporting documents
+
+Applicants upload two documents: a copy of their ID and their proof of results
+(school results or qualification certificate).
+
+- **From the Sheet:** the last two columns of each row, "ID Document (link)"
+  and "Proof of Results (link)", open that applicant's files.
+- **From the menu:** in the Sheet choose **EPWP > Open supporting documents
+  folder**.
+- **In Google Drive:** the folder "EPWP Applications - Supporting Documents"
+  sits next to the Sheet and has one sub-folder per district. Files are named
+  `<reference>_<surname>_<name>_ID.jpg` and `..._Results.pdf`, so searching
+  Drive for a reference number or surname finds them.
+
+Reference numbers look like `EPWP-20261117-1432-000123`: the date and time
+(South African time) the application was received, then a running number.
 
 ## Updating the district / municipality / hospital lists
 

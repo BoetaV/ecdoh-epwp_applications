@@ -6,14 +6,18 @@
  *   Execute as: Me        Who has access: Anyone
  * and paste the /exec URL into assets/config.js on the website.
  *
- * Supporting documents are saved to a Google Drive folder owned by the
- * account that deploys the script. Run setup() once after pasting this code
- * so that Google asks for permission to use Drive.
+ * Supporting documents are saved to Google Drive, in a folder called
+ * "EPWP Applications - Supporting Documents" next to this spreadsheet, with
+ * one sub-folder per district. Each row in the sheet links to its files, and
+ * the EPWP menu in the spreadsheet opens the folder.
+ * Run setup() once after pasting this code so that Google asks for permission
+ * to use Drive.
  */
 
 var SHEET_NAME = 'Applications';
 var FOLDER_NAME = 'EPWP Applications - Supporting Documents';
 var REF_PREFIX = 'EPWP-';
+var TIME_ZONE = 'Africa/Johannesburg';
 var MIN_AGE = 18;
 var MAX_AGE = 45;
 // Closing date and time (South African time). Later submissions are refused.
@@ -29,11 +33,16 @@ var FIELDS = [
 ];
 
 // Supporting documents: one uploaded file each, stored as a link in the sheet.
-var DOCUMENTS = ['IDCopy', 'QualificationCopy', 'ProofOfResidence'];
+var DOCUMENTS = ['IDCopy', 'QualificationCopy'];
+var DOCUMENT_HEADERS = ['ID Document (link)', 'Proof of Results (link)'];
+var DOCUMENT_FILE_LABELS = { IDCopy: 'ID', QualificationCopy: 'Results' };
+
+// Folder names for the districts, as applicants see them.
+var DISTRICT_FOLDERS = { 'N Mandela Bay MM': 'Nelson Mandela Bay Metro' };
 var FILE_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'application/pdf': 'pdf' };
 var MAX_FILE_BYTES = 4 * 1024 * 1024;
 
-var HEADERS = ['Timestamp', 'Reference'].concat(FIELDS).concat(['Consent']).concat(DOCUMENTS);
+var HEADERS = ['Timestamp', 'Reference'].concat(FIELDS).concat(['Consent']).concat(DOCUMENT_HEADERS);
 
 var REQUIRED = [
   'Title', 'Name', 'Surname', 'SouthAfricanID', 'DateOfBirth', 'Gender',
@@ -53,6 +62,23 @@ function setup() {
     'Sheet "' + sheet.getName() + '" and Drive folder "' + folder.getName() + '" are ready.');
 }
 
+/** Adds an EPWP menu to the spreadsheet. */
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('EPWP')
+    .addItem('Open supporting documents folder', 'showDocumentsFolder')
+    .addToUi();
+}
+
+function showDocumentsFolder() {
+  var url = getFolder_().getUrl();
+  var html = HtmlService.createHtmlOutput(
+    '<p style="font-family:Arial,sans-serif">The supporting documents are in Google Drive, one folder per district.</p>' +
+    '<p style="font-family:Arial,sans-serif"><a href="' + url + '" target="_blank">Open the documents folder</a></p>')
+    .setWidth(380).setHeight(130);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Supporting documents');
+}
+
 /** Opening the Web App URL in a browser shows that it is alive. */
 function doGet() {
   // "uploads" tells the website that this version accepts supporting documents.
@@ -70,7 +96,7 @@ function doPost(e) {
   }
 
   // Honeypot: real applicants never fill this hidden field in.
-  if (data.website) return json_({ ok: true, ref: REF_PREFIX + '000000' });
+  if (data.website) return json_({ ok: true, ref: makeReference_(new Date(), 0) });
 
   if (new Date().getTime() > new Date(CLOSING).getTime()) {
     return json_({ ok: false, error: 'closed', message: 'Applications are closed.' });
@@ -107,8 +133,10 @@ function doPost(e) {
     }
 
     var lastRow = sheet.getLastRow();
-    var ref = nextReference_(lastRow);
-    var row = [new Date(), ref];
+    var now = new Date();
+    var ref = makeReference_(now, nextNumber_(lastRow));
+    nameDocuments_(saved, ref, record);
+    var row = [now, ref];
     FIELDS.forEach(function (f) { row.push(safeCell_(record[f])); });
     row.push('Yes');
     saved.forEach(function (file) { row.push(file.getUrl()); });
@@ -119,7 +147,7 @@ function doPost(e) {
     sheet.getRange(lastRow + 1, 1, 1, HEADERS.length).setValues([row]);
     SpreadsheetApp.flush();
 
-    return json_({ ok: true, ref: ref });
+    return json_({ ok: true, ref: ref, submitted: Utilities.formatDate(now, TIME_ZONE, "d MMMM yyyy 'at' HH:mm") });
   } catch (err) {
     console.error(err);
     trash_(saved);
@@ -170,11 +198,16 @@ function findDuplicate_(sheet, id) {
   return null;
 }
 
-function nextReference_(lastRow) {
+function nextNumber_(lastRow) {
   var props = PropertiesService.getScriptProperties();
   var counter = Math.max(Number(props.getProperty('counter')) || 0, lastRow - 1) + 1;
   props.setProperty('counter', String(counter));
-  return REF_PREFIX + ('000000' + counter).slice(-6);
+  return counter;
+}
+
+/** For example EPWP-20261117-1432-000123: date, time (SA time) and running number. */
+function makeReference_(date, number) {
+  return REF_PREFIX + Utilities.formatDate(date, TIME_ZONE, 'yyyyMMdd-HHmm') + '-' + ('000000' + number).slice(-6);
 }
 
 /* ---------- supporting documents ---------- */
@@ -188,13 +221,24 @@ function getFolder_() {
       if (!existing.isTrashed()) return existing;
     } catch (err) { /* folder was removed: make a new one below */ }
   }
-  var folder = DriveApp.createFolder(FOLDER_NAME);
+  // Put the folder next to this spreadsheet so that it is easy to find.
+  var parents = DriveApp.getFileById(SpreadsheetApp.getActiveSpreadsheet().getId()).getParents();
+  var parent = parents.hasNext() ? parents.next() : DriveApp.getRootFolder();
+  var folder = parent.createFolder(FOLDER_NAME);
   props.setProperty('folderId', folder.getId());
   return folder;
 }
 
+/** The sub-folder for one district, created the first time it is needed. */
+function getDistrictFolder_(district) {
+  var name = DISTRICT_FOLDERS[district] || district || 'Unknown district';
+  var root = getFolder_();
+  var found = root.getFoldersByName(name);
+  return found.hasNext() ? found.next() : root.createFolder(name);
+}
+
 function validateDocuments_(docs) {
-  var missing = 'Please attach all three supporting documents. Refresh the page and try again.';
+  var missing = 'Please attach both supporting documents. Refresh the page and try again.';
   if (!docs || typeof docs !== 'object') return missing;
   for (var i = 0; i < DOCUMENTS.length; i++) {
     var doc = docs[DOCUMENTS[i]];
@@ -206,9 +250,9 @@ function validateDocuments_(docs) {
   return '';
 }
 
-/** Saves the three files to Drive and returns them in DOCUMENTS order. */
+/** Saves the files to the district's Drive folder and returns them in DOCUMENTS order. */
 function saveDocuments_(record, docs) {
-  var folder = getFolder_();
+  var folder = getDistrictFolder_(record.District);
   var owner = (record.Surname + '_' + record.Name).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 60);
   var saved = [];
   try {
@@ -223,6 +267,19 @@ function saveDocuments_(record, docs) {
     throw err;
   }
   return saved;
+}
+
+/** Once the reference number is known, put it at the front of the file names. */
+function nameDocuments_(files, ref, record) {
+  var owner = (record.Surname + '_' + record.Name).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 60);
+  files.forEach(function (file, i) {
+    var key = DOCUMENTS[i];
+    var ext = file.getName().split('.').pop();
+    try {
+      file.setName(ref + '_' + owner + '_' + DOCUMENT_FILE_LABELS[key] + '.' + ext);
+      file.setDescription('EPWP application ' + ref + ', ID number ' + record.SouthAfricanID);
+    } catch (err) { console.error(err); }
+  });
 }
 
 function trash_(files) {
