@@ -17,7 +17,7 @@ var REF_PREFIX = 'EPWP-';
 var MIN_AGE = 18;
 var MAX_AGE = 45;
 // Closing date and time (South African time). Later submissions are refused.
-var CLOSING = '2026-11-16T16:00:00+02:00';
+var CLOSING = '2026-11-20T23:59:59+02:00';
 var QUALIFICATIONS = ['Grade 10', 'N2', 'NC(V) Level 2'];
 
 // Column order follows docs/databasefields.csv.
