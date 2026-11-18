@@ -91,6 +91,13 @@ Staff at the District Offices capture paper applications on the same website:
   list, search and filter the applications they are allowed to see, newest
   first, with links to uploaded documents. The document links open only for
   people the Drive folder has been shared with.
+- **Download to Excel:** the View applications screen has a **Download to
+  Excel** button. It downloads every application in the list currently
+  shown (the user's own district, or for provincial users all districts or
+  the district they picked, plus any search or Online/Captured filter) as an
+  `.xlsx` file. ID and phone numbers keep their leading zeros, and document
+  links are clickable. Every download is recorded in the **Downloads** tab
+  of the Sheet (who, when, what and how many rows).
 - **Forgotten password or locked out** (5 wrong tries locks an account for
   15 minutes): **EPWP > Reset a user's password** gives a new one.
 - **Stopping access:** change **Active** to `No` in the Users tab. It takes

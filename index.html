@@ -197,7 +197,10 @@ fieldset.group > legend b { display: grid; place-items: center; width: 28px; hei
 .list-wrap { max-width: 1440px; }
 .filters { margin-top: 20px; display: grid; gap: 12px; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
 .filters .btn { min-height: 50px; }
-.summary { margin-top: 16px; font-weight: 700; color: var(--green-900); }
+.summary { margin: 0; font-weight: 700; color: var(--green-900); }
+.summary-row { margin-top: 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.summary-row .btn { min-height: 44px; padding: 8px 18px; font-size: 15px; }
+.summary-row .btn svg { width: 18px; height: 18px; }
 .table-wrap { margin-top: 10px; overflow-x: auto; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); }
 .table-wrap table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .table-wrap th { position: sticky; top: 0; background: var(--green-700); color: var(--white); text-align: left; padding: 10px; white-space: nowrap; }
@@ -659,7 +662,13 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       <button class="btn green" type="submit" id="list-btn">Show</button>
     </form>
     <div class="alert" id="list-alert" role="alert" hidden style="margin-top:14px"></div>
-    <p class="summary" id="list-summary" aria-live="polite"></p>
+    <div class="summary-row">
+      <p class="summary" id="list-summary" aria-live="polite"></p>
+      <button class="btn ghost" type="button" id="list-export" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg>
+        <span id="list-export-label">Download to Excel</span>
+      </button>
+    </div>
     <div class="table-wrap">
       <table>
         <thead>
@@ -1714,7 +1723,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   });
 
   /* ---------- staff: view applications ---------- */
-  var listOffset = 0, listLoaded = false, listSeq = 0;
+  var listOffset = 0, listLoaded = false, listSeq = 0, listFilters = {};
 
   function openList() {
     var s = session();
@@ -1741,14 +1750,17 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     var s = session();
     if (!s) return sessionEnded();
     var seq = ++listSeq;
+    var filters = { search: $('list-search').value.trim(), channel: $('list-channel').value, district: $('list-district').value };
     $('list-alert').hidden = true;
     $('list-btn').disabled = true;
+    $('list-export').disabled = true;
     $('list-summary').textContent = 'Loading...';
     post({
       action: 'list', token: s.token, offset: offset,
-      search: $('list-search').value.trim(), channel: $('list-channel').value, district: $('list-district').value
+      search: filters.search, channel: filters.channel, district: filters.district
     }).then(function (out) {
       if (seq !== listSeq) return;
+      listFilters = filters;
       if (out && out.error === 'auth') return sessionEnded();
       if (!out || !out.ok) throw new Error((out && out.message) || 'failed');
       listLoaded = true;
@@ -1822,11 +1834,147 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       if (!docs.firstChild) docs.textContent = '-';
       body.appendChild(tr);
     });
+    $('list-export').disabled = !out.total;
+    $('list-export').title = out.total ? 'Downloads all ' + out.total + ' application' + (out.total === 1 ? '' : 's') + ' shown by the current filters (' + out.scope + ')' : '';
     var first = out.total ? out.offset + 1 : 0, lastShown = out.offset + out.rows.length;
     $('list-page').textContent = out.total ? first + ' to ' + lastShown + ' of ' + out.total : '';
     $('list-prev').disabled = out.offset === 0;
     $('list-next').disabled = lastShown >= out.total;
   }
+
+  /* ---------- staff: download to Excel ---------- */
+  // Builds a real .xlsx file in the browser (a small zip of XML files), so that
+  // ID and phone numbers keep their leading zeros and links stay clickable.
+  var CRC_TABLE = (function () {
+    var t = [];
+    for (var n = 0; n < 256; n++) {
+      var c = n;
+      for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+  function crc32(bytes) {
+    var c = 0xFFFFFFFF;
+    for (var i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+  function zip(files) {
+    var enc = new TextEncoder(), parts = [], central = [], offset = 0;
+    var now = new Date();
+    var time = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+    var date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    files.forEach(function (f) {
+      var name = enc.encode(f.name), data = enc.encode(f.text), crc = crc32(data);
+      var head = new DataView(new ArrayBuffer(30));
+      head.setUint32(0, 0x04034b50, true); head.setUint16(4, 20, true); head.setUint16(6, 0x0800, true);
+      head.setUint16(8, 0, true); head.setUint16(10, time, true); head.setUint16(12, date, true);
+      head.setUint32(14, crc, true); head.setUint32(18, data.length, true); head.setUint32(22, data.length, true);
+      head.setUint16(26, name.length, true); head.setUint16(28, 0, true);
+      parts.push(head.buffer, name, data);
+      var cd = new DataView(new ArrayBuffer(46));
+      cd.setUint32(0, 0x02014b50, true); cd.setUint16(4, 20, true); cd.setUint16(6, 20, true); cd.setUint16(8, 0x0800, true);
+      cd.setUint16(10, 0, true); cd.setUint16(12, time, true); cd.setUint16(14, date, true);
+      cd.setUint32(16, crc, true); cd.setUint32(20, data.length, true); cd.setUint32(24, data.length, true);
+      cd.setUint16(28, name.length, true); cd.setUint32(42, offset, true);
+      central.push(cd.buffer, name);
+      offset += 30 + name.length + data.length;
+    });
+    var cdSize = central.reduce(function (n, b) { return n + (b.byteLength || b.length); }, 0);
+    var end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+    end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+    return new Blob(parts.concat(central, [end.buffer]), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+  function xmlText(v) {
+    return String(v === null || v === undefined ? '' : v)
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function colName(i) { var s = ''; i++; while (i > 0) { var m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+
+  function buildXlsx(out) {
+    var headers = out.headers, rows = out.rows, links = out.links || [];
+    var lastCol = colName(headers.length - 1), lastRow = rows.length + 1;
+    var widths = headers.map(function (h, c) {
+      var w = h.length;
+      rows.slice(0, 300).forEach(function (r) { w = Math.max(w, String(r[c] || '').length); });
+      return Math.min(Math.max(w + 2, 8), links[c] ? 18 : 50);
+    });
+    var cell = function (ref, value, style) {
+      return '<c r="' + ref + '" t="inlineStr"' + (style ? ' s="' + style + '"' : '') + '><is><t xml:space="preserve">' + xmlText(value) + '</t></is></c>';
+    };
+    var hyperlinks = [], rels = [];
+    var data = '<row r="1">' + headers.map(function (h, c) { return cell(colName(c) + '1', h, 1); }).join('') + '</row>';
+    rows.forEach(function (r, i) {
+      var rowNo = i + 2;
+      data += '<row r="' + rowNo + '">' + r.map(function (v, c) {
+        var ref = colName(c) + rowNo;
+        if (links[c] && /^https:\/\//.test(v)) {
+          var id = 'rId' + (rels.length + 1);
+          rels.push('<Relationship Id="' + id + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="' + xmlText(v) + '" TargetMode="External"/>');
+          hyperlinks.push('<hyperlink ref="' + ref + '" r:id="' + id + '"/>');
+          return cell(ref, 'Open', 2);
+        }
+        return cell(ref, v, 0);
+      }).join('') + '</row>';
+    });
+    var sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+      '<dimension ref="A1:' + lastCol + lastRow + '"/>' +
+      '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' +
+      '<sheetFormatPr defaultRowHeight="15"/>' +
+      '<cols>' + widths.map(function (w, c) { return '<col min="' + (c + 1) + '" max="' + (c + 1) + '" width="' + w + '" customWidth="1"/>'; }).join('') + '</cols>' +
+      '<sheetData>' + data + '</sheetData>' +
+      '<autoFilter ref="A1:' + lastCol + lastRow + '"/>' +
+      (hyperlinks.length ? '<hyperlinks>' + hyperlinks.join('') + '</hyperlinks>' : '') +
+      '</worksheet>';
+    var files = [
+      { name: '[Content_Types].xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>' },
+      { name: '_rels/.rels', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>' },
+      { name: 'docProps/core.xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>' + xmlText('EPWP applications - ' + out.scope) + '</dc:title><dc:creator>Eastern Cape Department of Health EPWP system</dc:creator></cp:coreProperties>' },
+      { name: 'xl/workbook.xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Applications" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">Applications!$A$1:$' + lastCol + '$' + lastRow + '</definedName></definedNames></workbook>' },
+      { name: 'xl/_rels/workbook.xml.rels', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>' },
+      { name: 'xl/styles.xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><u/><sz val="11"/><color rgb="FF0563C1"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF0A6B3D"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>' },
+      { name: 'xl/worksheets/sheet1.xml', text: sheet }
+    ];
+    if (rels.length) {
+      files.push({ name: 'xl/worksheets/_rels/sheet1.xml.rels', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + rels.join('') + '</Relationships>' });
+    }
+    return zip(files);
+  }
+
+  function exportList() {
+    var s = session();
+    if (!s) return sessionEnded();
+    var btn = $('list-export');
+    btn.disabled = true;
+    $('list-export-label').textContent = 'Preparing file...';
+    $('list-alert').hidden = true;
+    // Download exactly what the list is showing, even if the search box was changed since.
+    post({
+      action: 'export', token: s.token,
+      search: listFilters.search || '', channel: listFilters.channel || '', district: listFilters.district || ''
+    }).then(function (out) {
+      if (out && out.error === 'auth') return sessionEnded();
+      if (!out || !out.ok) throw new Error((out && out.message) || 'failed');
+      var blob = buildXlsx(out);
+      var name = 'EPWP_Applications_' + out.scope.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '') + '_' + todayIso() + '.xlsx';
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+    }).catch(function () {
+      $('list-alert').textContent = 'The download could not be prepared. Check your internet connection and try again.';
+      $('list-alert').hidden = false;
+    }).then(function () {
+      btn.disabled = false;
+      $('list-export-label').textContent = 'Download to Excel';
+    });
+  }
+  $('list-export').addEventListener('click', exportList);
 
   $('list-form').addEventListener('submit', function (e) { e.preventDefault(); loadList(0); });
   $('list-channel').addEventListener('change', function () { loadList(0); });

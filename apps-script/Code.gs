@@ -19,9 +19,10 @@
  * Registration Form has been received; the approval is recorded for audit.
  *
  * Staff access: a user with a district (for example "Amathole District") can
- * only capture and view applications whose applicant lives in that district,
- * whether they applied online or on paper. A "Provincial (all districts)"
- * user can capture and view everything.
+ * only capture, view and download applications whose applicant lives in that
+ * district, whether they applied online or on paper. A "Provincial (all
+ * districts)" user can capture, view and download everything. Every download
+ * is recorded in the "Downloads" tab.
  *
  * Supporting documents are saved to Google Drive, in a folder called
  * "EPWP Applications - Supporting Documents" next to this spreadsheet, with
@@ -81,6 +82,22 @@ var PROVINCIAL = 'Provincial (all districts)';
 var DISTRICT_NAMES = {};
 DISTRICTS.forEach(function (d) { DISTRICT_NAMES[d[0]] = d[1]; });
 var PAGE_SIZE = 50;
+var DOWNLOADS_SHEET = 'Downloads';
+var DOWNLOAD_HEADERS = ['Timestamp', 'Username', 'Name', 'Access', 'Downloaded', 'Filters', 'Rows'];
+
+// Columns of the Excel download, in order: [heading in Excel, column in the Applications tab].
+var EXPORT_COLUMNS = [
+  ['Reference', 'Reference'], ['Received (date and time)', 'Timestamp'], ['How applied', 'Channel'],
+  ['Title', 'Title'], ['First name(s)', 'Name'], ['Surname', 'Surname'], ['ID number', 'SouthAfricanID'],
+  ['Date of birth', 'DateOfBirth'], ['Gender', 'Gender'], ['Disability', 'DisabilityStatus'],
+  ['Home address', 'CurrentAddress'], ['Cellphone', 'CellphoneNumber'], ['Alternative number', 'AlternativeNumber'],
+  ['Email', 'EmailAddress'], ['District', 'District'], ['Local municipality', 'LocalMunicipality'],
+  ['Ward', 'MunicipalWardNo'], ['Nearest facility', 'NearestFacility'], ['Qualification', 'HighestSchoolLevel'],
+  ['Practical skills', 'PracticalSkills'], ['Other skills', 'OtherSkills'], ['Consent', 'Consent'],
+  ['Paper form received on', 'Date Received'], ['Handed in at', 'Received At'], ['Paper documents', 'Paper Documents'],
+  ['Captured by', 'Captured By'], ['Captured by district', 'Captured By District'],
+  ['ID document', 'ID Document (link)'], ['Proof of results', 'Proof of Results (link)']
+];
 var FILE_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'application/pdf': 'pdf' };
 var MAX_FILE_BYTES = 4 * 1024 * 1024;
 
@@ -326,6 +343,7 @@ function doPost(e) {
       case 'lookup': return json_(lookup_(data));
       case 'capture': return json_(saveApplication_(data, sessionUser_(data.token)));
       case 'list': return json_(list_(data, sessionUser_(data.token)));
+      case 'export': return json_(export_(data, sessionUser_(data.token)));
       default: return json_(saveApplication_(data, null));
     }
   } catch (err) {
@@ -812,6 +830,102 @@ function canSee_(user, applicantDistrict) {
  * Filters: district (provincial users only), channel and a search text.
  */
 function list_(data, user) {
+  var f = filterApplications_(data, user);
+  var col = f.col, matches = f.matches, counts = f.counts, district = f.district;
+
+  var offset = Math.max(0, Math.floor(Number(data.offset) || 0));
+  var page = matches.slice(offset, offset + PAGE_SIZE).map(function (row) {
+    var stamp = row[col.Timestamp];
+    var link = function (h) { var v = String(row[col[h]] || ''); return /^https:\/\/drive\.google\.com\//.test(v) ? v : ''; };
+    return {
+      ref: String(row[col.Reference]),
+      when: stamp instanceof Date ? Utilities.formatDate(stamp, TIME_ZONE, 'yyyy-MM-dd HH:mm') : String(stamp || ''),
+      name: String(row[col.Name]),
+      surname: String(row[col.Surname]),
+      id: String(row[col.SouthAfricanID]),
+      gender: String(row[col.Gender]),
+      cell: String(row[col.CellphoneNumber]),
+      district: displayDistrict_(String(row[col.District])),
+      local: String(row[col.LocalMunicipality]),
+      ward: String(row[col.MunicipalWardNo]),
+      facility: String(row[col.NearestFacility]),
+      qualification: String(row[col.HighestSchoolLevel]),
+      channel: row[col.Channel] === 'Captured' ? 'Captured' : 'Online',
+      capturedBy: String(row[col['Captured By']] || ''),
+      dateReceived: formatDay_(row[col['Date Received']]),
+      idDoc: link('ID Document (link)'),
+      resultsDoc: link('Proof of Results (link)')
+    };
+  });
+
+  return {
+    ok: true,
+    scope: scopeName_(user, district),
+    counts: counts,
+    total: matches.length,
+    offset: offset,
+    pageSize: PAGE_SIZE,
+    rows: page
+  };
+}
+
+function scopeName_(user, district) {
+  return user.provincial ? (district ? displayDistrict_(district) : 'All districts') : user.district;
+}
+
+/**
+ * Every application this staff member may download, with the same filters as
+ * the list on screen, as rows of text ready for Excel. Each download is logged.
+ */
+function export_(data, user) {
+  var f = filterApplications_(data, user);
+  var col = f.col;
+  var text = function (row, h) {
+    var v = row[col[h]];
+    if (v instanceof Date) return Utilities.formatDate(v, TIME_ZONE, h === 'Timestamp' ? 'yyyy-MM-dd HH:mm' : 'yyyy-MM-dd');
+    if (h === 'Channel') return v === 'Captured' ? 'Captured' : 'Online';
+    if (h === 'District') return displayDistrict_(String(v));
+    v = String(v === undefined || v === null ? '' : v);
+    // Undo the leading apostrophe that stops text being read as a formula.
+    return v.charAt(0) === "'" ? v.slice(1) : v;
+  };
+  var rows = f.matches.map(function (row) {
+    return EXPORT_COLUMNS.map(function (c) { return text(row, c[1]); });
+  });
+  var scope = scopeName_(user, f.district);
+  logDownload_(user, scope, data, rows.length);
+  return {
+    ok: true,
+    scope: scope,
+    created: Utilities.formatDate(new Date(), TIME_ZONE, 'yyyy-MM-dd HH:mm'),
+    headers: EXPORT_COLUMNS.map(function (c) { return c[0]; }),
+    links: EXPORT_COLUMNS.map(function (c) { return /\(link\)$/.test(c[1]); }),
+    rows: rows
+  };
+}
+
+function logDownload_(user, scope, data, count) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(DOWNLOADS_SHEET);
+    if (!sheet) {
+      sheet = ss.insertSheet(DOWNLOADS_SHEET);
+      sheet.getRange(1, 1, 1, DOWNLOAD_HEADERS.length).setValues([DOWNLOAD_HEADERS])
+        .setFontWeight('bold').setBackground('#0a6b3d').setFontColor('#ffffff');
+      sheet.setFrozenRows(1);
+    }
+    var filters = [];
+    if (data.channel === 'Online' || data.channel === 'Captured') filters.push(data.channel + ' only');
+    if (String(data.search || '').trim()) filters.push('search "' + String(data.search).trim().slice(0, 60) + '"');
+    sheet.appendRow([new Date(), user.username, safeCell_(user.name), safeCell_(user.district), safeCell_(scope),
+      safeCell_(filters.join(', ') || 'none'), count]);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+/** The applications a staff member may see, newest first, after the filters. */
+function filterApplications_(data, user) {
   var sheet = getSheet_();
   var last = sheet.getLastRow();
   var values = last < 2 ? [] : sheet.getRange(2, 1, last - 1, HEADERS.length).getValues();
@@ -842,40 +956,7 @@ function list_(data, user) {
     return words.every(function (w) { return text.indexOf(w) !== -1; });
   });
 
-  var offset = Math.max(0, Math.floor(Number(data.offset) || 0));
-  var page = matches.slice(offset, offset + PAGE_SIZE).map(function (row) {
-    var stamp = row[col.Timestamp];
-    var link = function (h) { var v = String(row[col[h]] || ''); return /^https:\/\/drive\.google\.com\//.test(v) ? v : ''; };
-    return {
-      ref: String(row[col.Reference]),
-      when: stamp instanceof Date ? Utilities.formatDate(stamp, TIME_ZONE, 'yyyy-MM-dd HH:mm') : String(stamp || ''),
-      name: String(row[col.Name]),
-      surname: String(row[col.Surname]),
-      id: String(row[col.SouthAfricanID]),
-      gender: String(row[col.Gender]),
-      cell: String(row[col.CellphoneNumber]),
-      district: displayDistrict_(String(row[col.District])),
-      local: String(row[col.LocalMunicipality]),
-      ward: String(row[col.MunicipalWardNo]),
-      facility: String(row[col.NearestFacility]),
-      qualification: String(row[col.HighestSchoolLevel]),
-      channel: row[col.Channel] === 'Captured' ? 'Captured' : 'Online',
-      capturedBy: String(row[col['Captured By']] || ''),
-      dateReceived: formatDay_(row[col['Date Received']]),
-      idDoc: link('ID Document (link)'),
-      resultsDoc: link('Proof of Results (link)')
-    };
-  });
-
-  return {
-    ok: true,
-    scope: user.provincial ? (district ? displayDistrict_(district) : 'All districts') : user.district,
-    counts: counts,
-    total: matches.length,
-    offset: offset,
-    pageSize: PAGE_SIZE,
-    rows: page
-  };
+  return { col: col, matches: matches, counts: counts, district: district };
 }
 
 /* =====================================================================
