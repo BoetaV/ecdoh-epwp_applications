@@ -287,6 +287,43 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 .done p { color: var(--muted); max-width: 34em; margin: 8px auto 0; }
 .done .actions { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
 
+/* Staff dashboard */
+.dash-filters { grid-template-columns: 1fr; }
+.kpis { margin-top: 16px; display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.kpi { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+.kpi small { display: block; color: var(--muted); font-weight: 700; font-size: 13px; }
+.kpi strong { display: block; margin-top: 4px; font-size: 32px; line-height: 1.1; font-weight: 900; color: var(--green-900); font-variant-numeric: tabular-nums; }
+.kpi span { display: block; margin-top: 2px; color: var(--muted); font-size: 13px; }
+.dash-grid { margin: 16px 0 36px; display: grid; gap: 16px; }
+.dash-card { min-width: 0; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+.dash-card h2 { margin: 0 0 4px; font-size: 17px; color: var(--green-900); }
+.dash-card .muted { margin: 0 0 12px; }
+.bars { display: grid; gap: 4px; }
+.bar-row { display: grid; grid-template-columns: minmax(96px, 40%) 1fr auto; gap: 10px; align-items: center; padding: 3px 6px; border-radius: 6px; font-size: 14px; }
+.bar-row:hover { background: var(--green-50); }
+.bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { height: 14px; }
+.bar-fill { height: 100%; min-width: 2px; background: var(--green-700); border-radius: 0 4px 4px 0; }
+.bar-fill.none { min-width: 0; }
+.bar-value { white-space: nowrap; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bar-value span { color: var(--muted); font-weight: 400; }
+.cols { display: flex; align-items: flex-end; gap: 2px; height: 170px; padding-top: 6px; border-bottom: 1px solid var(--line); }
+.col { flex: 1 1 0; min-width: 3px; display: flex; align-items: flex-end; height: 100%; cursor: default; }
+.col i { display: block; width: 100%; min-height: 2px; background: var(--green-700); border-radius: 4px 4px 0 0; }
+.col:hover i, .col:focus i { background: var(--green-900); }
+.col:focus { outline: none; }
+.col-axis { display: flex; justify-content: space-between; margin-top: 4px; color: var(--muted); font-size: 12px; }
+.col-readout { margin: 8px 0 0; min-height: 1.4em; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.empty-chart { color: var(--muted); padding: 12px 0; }
+
+@media (min-width: 720px) {
+  .dash-filters { grid-template-columns: 1fr 1fr auto; align-items: end; }
+}
+@media (min-width: 960px) {
+  .dash-grid { grid-template-columns: 1fr 1fr; }
+  .dash-card.wide { grid-column: 1 / -1; }
+}
+
 @media (min-width: 720px) {
   .topbar img { height: 68px; }
   .grid.two { grid-template-columns: 1fr 1fr; }
@@ -327,6 +364,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     <nav aria-label="Staff">
       <a href="#capture" id="nav-capture">Capture an application</a>
       <a href="#applications" id="nav-list">View applications</a>
+      <a href="#dashboard" id="nav-dash">Dashboard</a>
     </nav>
     <button type="button" id="signout-btn">Sign out</button>
   </div>
@@ -688,6 +726,36 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   </div>
 </main>
 
+<!-- ======================= STAFF DASHBOARD ======================= -->
+<main id="view-dash" hidden>
+  <div class="form-head">
+    <div class="wrap list-wrap">
+      <h1>Dashboard</h1>
+      <p id="dash-scope"></p>
+    </div>
+  </div>
+  <div class="wrap list-wrap">
+    <div class="filters dash-filters">
+      <div class="field" id="dash-district-wrap" hidden>
+        <label for="dash-district">District</label>
+        <select id="dash-district"><option value="">All districts</option></select>
+      </div>
+      <div class="field">
+        <label for="dash-local">Local municipality</label>
+        <select id="dash-local"><option value="">All local municipalities</option></select>
+      </div>
+      <button class="btn ghost" type="button" id="dash-pdf" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg>
+        <span id="dash-pdf-label">Download PDF</span>
+      </button>
+    </div>
+    <div class="alert" id="dash-alert" role="alert" hidden style="margin-top:14px"></div>
+    <p class="summary" id="dash-status" aria-live="polite" style="margin-top:14px"></p>
+    <div class="kpis" id="dash-kpis"></div>
+    <div class="dash-grid" id="dash-charts"></div>
+  </div>
+</main>
+
 <!-- ======================= APPLICATION FORM ======================= -->
 <main id="view-register" hidden>
   <div class="form-head">
@@ -1005,7 +1073,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     var hash = location.hash;
     var capture = hash === '#capture';
     var listing = hash === '#applications';
-    var staff = capture || listing;
+    var dashboard = hash === '#dashboard';
+    var staff = capture || listing || dashboard;
     var apply = hash === '#apply' || hash === '#register';
     var requesting = hash === '#request-account';
     var s = session();
@@ -1017,11 +1086,14 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('view-login').hidden = !(staff && !s);
     $('view-register').hidden = !(apply || (capture && s));
     $('view-list').hidden = !(listing && s);
+    $('view-dash').hidden = !(dashboard && s);
     $('staff-nav').hidden = !(staff && s);
     $('nav-capture').setAttribute('aria-current', capture ? 'page' : 'false');
     $('nav-list').setAttribute('aria-current', listing ? 'page' : 'false');
+    $('nav-dash').setAttribute('aria-current', dashboard ? 'page' : 'false');
     setMode();
     if (listing && s) openList();
+    if (dashboard && s) openDash();
     if (isClosed()) markClosed();
 
     // Coming back to the form always shows the form, not an earlier result.
@@ -1990,6 +2062,468 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   $('list-prev').addEventListener('click', function () { loadList(Math.max(0, listOffset - 50)); });
   $('list-next').addEventListener('click', function () { loadList(listOffset + 50); });
 
+  /* ---------- staff: dashboard ---------- */
+  var dashSeq = 0, dashData = null, dashLoaded = false;
+
+  function dashDistrict() {
+    var s = session();
+    return s && !s.provincial ? s.districtCode : $('dash-district').value;
+  }
+  function shortLocal(name) { return String(name).replace(/ (Local|Metropolitan) Municipality$/, ''); }
+
+  function fillDashLocals() {
+    var sel = $('dash-local'), keep = sel.value, d = dashDistrict();
+    while (sel.options.length > 1) sel.remove(1);
+    var locals = d && UNITS[d] ? Object.keys(UNITS[d]).sort() : [];
+    locals.forEach(function (l) { sel.add(new Option(shortLocal(l), l)); });
+    sel.value = locals.indexOf(keep) !== -1 ? keep : '';
+    sel.disabled = !locals.length;
+    sel.options[0].text = locals.length ? 'All local municipalities' : 'Choose a district first';
+  }
+
+  function openDash() {
+    var s = session();
+    var provincial = !!(s && s.provincial);
+    $('dash-district-wrap').hidden = !provincial;
+    if (provincial && $('dash-district').options.length === 1) {
+      (s.districts || []).forEach(function (d) { $('dash-district').add(new Option(d.name, d.code)); });
+    }
+    fillDashLocals();
+    if (!dashLoaded) loadDash();
+  }
+
+  function clearDash() {
+    dashLoaded = false;
+    dashData = null;
+    dashSeq++;
+    $('dash-kpis').innerHTML = '';
+    $('dash-charts').innerHTML = '';
+    $('dash-status').textContent = '';
+    $('dash-scope').textContent = '';
+    $('dash-pdf').disabled = true;
+    while ($('dash-district').options.length > 1) $('dash-district').remove(1);
+    while ($('dash-local').options.length > 1) $('dash-local').remove(1);
+  }
+
+  function loadDash() {
+    var s = session();
+    if (!s) return sessionEnded();
+    var seq = ++dashSeq;
+    $('dash-alert').hidden = true;
+    $('dash-pdf').disabled = true;
+    $('dash-status').textContent = 'Loading...';
+    post({ action: 'stats', token: s.token, district: dashDistrict(), local: $('dash-local').value }).then(function (out) {
+      if (seq !== dashSeq) return;
+      if (out && out.error === 'auth') return sessionEnded();
+      if (!out || !out.ok) {
+        $('dash-status').textContent = '';
+        $('dash-alert').textContent = (!out || out.error === 'invalid' || !out.message)
+          ? 'The dashboard is not switched on yet. The administrator must update the Apps Script (Deploy > Manage deployments > New version).'
+          : out.message;
+        $('dash-alert').hidden = false;
+        return;
+      }
+      dashLoaded = true;
+      dashData = out;
+      renderDash(out);
+    }).catch(function () {
+      if (seq !== dashSeq) return;
+      $('dash-status').textContent = '';
+      $('dash-alert').textContent = 'The dashboard could not be loaded. Check your internet connection and try again.';
+      $('dash-alert').hidden = false;
+    });
+  }
+
+  function pct(n, total) { return total ? (Math.round(n / total * 1000) / 10).toFixed(1) + '%' : '0.0%'; }
+  function num(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+  function countOf(items, label) {
+    for (var i = 0; i < items.length; i++) if (items[i][0] === label) return items[i][1];
+    return 0;
+  }
+  var MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function shortDay(iso) {
+    var p = iso.split('-');
+    return Number(p[2]) + ' ' + MONTHS_SHORT[Number(p[1]) - 1] + ' ' + p[0];
+  }
+
+  // The charts on the dashboard, in order. Each is [title, note, items, wide].
+  function dashSections(d) {
+    var out = [];
+    if (d.districts) out.push(['Applications by district', 'Where the applicants live.', d.districts]);
+    if (d.locals) out.push(['Applications by local municipality', 'Where the applicants live.', d.locals.map(function (it) { return [shortLocal(it[0]), it[1]]; })]);
+    out.push(['Gender', '', d.gender]);
+    out.push(['People with disabilities', 'Answer to "Do you have a disability?"', d.disability]);
+    out.push(['Age group', 'Age today, from the date of birth.', d.ages]);
+    out.push(['How they applied', 'Online, or on paper and captured by a district office.', d.channel]);
+    out.push(['Highest qualification', 'As given by the applicant.', d.qualifications]);
+    out.push(['Nearest facility', 'The facility each applicant chose' + (d.facilities.length > 15 ? ' (the 15 most chosen).' : '.'), d.facilities]);
+    return out;
+  }
+
+  function renderDash(d) {
+    $('dash-scope').textContent = 'Showing: ' + d.scope;
+    $('dash-status').textContent = num(d.total) + ' application' + (d.total === 1 ? '' : 's') + '. Figures as at ' + d.generated + '.';
+
+    var women = countOf(d.gender, 'Female'), men = countOf(d.gender, 'Male');
+    var disabled = countOf(d.disability, 'Yes');
+    var kpis = [
+      ['Applications received', num(d.total), d.scope],
+      ['Applied online', num(countOf(d.channel, 'Online')), pct(countOf(d.channel, 'Online'), d.total) + ' of all'],
+      ['Captured from paper', num(countOf(d.channel, 'Captured')), pct(countOf(d.channel, 'Captured'), d.total) + ' of all'],
+      ['Women', num(women), pct(women, d.total) + ' of all (men: ' + num(men) + ')'],
+      ['People with disabilities', num(disabled), pct(disabled, d.total) + ' of all']
+    ];
+    var k = $('dash-kpis');
+    k.innerHTML = '';
+    kpis.forEach(function (t) {
+      var box = document.createElement('div');
+      box.className = 'kpi';
+      ['small', 'strong', 'span'].forEach(function (tag, i) {
+        var el = document.createElement(tag);
+        el.textContent = t[i];
+        box.appendChild(el);
+      });
+      k.appendChild(box);
+    });
+
+    var charts = $('dash-charts');
+    charts.innerHTML = '';
+    charts.appendChild(dayChart(d));
+    dashSections(d).forEach(function (sec) { charts.appendChild(barCard(sec[0], sec[1], sec[2], d.total)); });
+    $('dash-pdf').disabled = false;
+  }
+
+  function card(title, note, wide) {
+    var c = document.createElement('section');
+    c.className = 'dash-card' + (wide ? ' wide' : '');
+    var h = document.createElement('h2');
+    h.textContent = title;
+    c.appendChild(h);
+    var p = document.createElement('p');
+    p.className = 'muted';
+    p.textContent = note;
+    c.appendChild(p);
+    return c;
+  }
+
+  function barCard(title, note, items, total) {
+    var c = card(title, note);
+    var max = items.reduce(function (m, it) { return Math.max(m, it[1]); }, 0);
+    if (!total) {
+      var e = document.createElement('div');
+      e.className = 'empty-chart';
+      e.textContent = 'No applications yet.';
+      c.appendChild(e);
+      return c;
+    }
+    var bars = document.createElement('div');
+    bars.className = 'bars';
+    items.forEach(function (it) {
+      var row = document.createElement('div');
+      row.className = 'bar-row';
+      row.title = it[0] + ': ' + num(it[1]) + ' (' + pct(it[1], total) + ')';
+      var label = document.createElement('span');
+      label.className = 'bar-label';
+      label.textContent = it[0];
+      var track = document.createElement('span');
+      track.className = 'bar-track';
+      track.setAttribute('aria-hidden', 'true');
+      var fill = document.createElement('span');
+      fill.className = 'bar-fill' + (it[1] ? '' : ' none');
+      fill.style.display = 'block';
+      fill.style.width = (max ? it[1] / max * 100 : 0) + '%';
+      track.appendChild(fill);
+      var value = document.createElement('span');
+      value.className = 'bar-value';
+      value.textContent = num(it[1]) + ' ';
+      var share = document.createElement('span');
+      share.textContent = pct(it[1], total);
+      value.appendChild(share);
+      row.appendChild(label);
+      row.appendChild(track);
+      row.appendChild(value);
+      bars.appendChild(row);
+    });
+    c.appendChild(bars);
+    return c;
+  }
+
+  // Applications per day, as columns, with every day from the first to the last shown.
+  function dayFill(days) {
+    if (!days.length) return [];
+    var map = {};
+    days.forEach(function (it) { map[it[0]] = it[1]; });
+    var out = [];
+    var p = days[0][0].split('-').map(Number), end = days[days.length - 1][0];
+    var dt = new Date(Date.UTC(p[0], p[1] - 1, p[2]));
+    for (var guard = 0; guard < 400; guard++) {
+      var iso = dt.toISOString().slice(0, 10);
+      out.push([iso, map[iso] || 0]);
+      if (iso >= end) break;
+      dt.setUTCDate(dt.getUTCDate() + 1);
+    }
+    return out;
+  }
+
+  function dayChart(d) {
+    var c = card('Applications received per day', 'Paper applications count on the day they were handed in.', true);
+    var days = dayFill(d.days);
+    if (!days.length) {
+      var e = document.createElement('div');
+      e.className = 'empty-chart';
+      e.textContent = 'No applications yet.';
+      c.appendChild(e);
+      return c;
+    }
+    var max = days.reduce(function (m, it) { return Math.max(m, it[1]); }, 0);
+    var busiest = days.reduce(function (b, it) { return it[1] > b[1] ? it : b; }, days[0]);
+    var readout = document.createElement('p');
+    readout.className = 'col-readout';
+    var resting = 'Busiest day: ' + shortDay(busiest[0]) + ' with ' + num(busiest[1]) + '. Point at a column to see that day.';
+    readout.textContent = resting;
+    var cols = document.createElement('div');
+    cols.className = 'cols';
+    cols.setAttribute('role', 'list');
+    days.forEach(function (it) {
+      var col = document.createElement('div');
+      col.className = 'col';
+      col.tabIndex = 0;
+      col.setAttribute('role', 'listitem');
+      var text = shortDay(it[0]) + ': ' + num(it[1]) + ' application' + (it[1] === 1 ? '' : 's');
+      col.setAttribute('aria-label', text);
+      var bar = document.createElement('i');
+      bar.style.height = (max ? it[1] / max * 100 : 0) + '%';
+      if (!it[1]) bar.style.minHeight = '0';
+      col.appendChild(bar);
+      var show = function () { readout.textContent = text; };
+      col.addEventListener('mouseenter', show);
+      col.addEventListener('focus', show);
+      col.addEventListener('mouseleave', function () { readout.textContent = resting; });
+      col.addEventListener('blur', function () { readout.textContent = resting; });
+      cols.appendChild(col);
+    });
+    var axis = document.createElement('div');
+    axis.className = 'col-axis';
+    var first = document.createElement('span'), last = document.createElement('span');
+    first.textContent = shortDay(days[0][0]);
+    last.textContent = shortDay(days[days.length - 1][0]);
+    axis.appendChild(first);
+    if (days.length > 1) axis.appendChild(last);
+    c.appendChild(cols);
+    c.appendChild(axis);
+    c.appendChild(readout);
+    return c;
+  }
+
+  $('dash-district').addEventListener('change', function () { fillDashLocals(); loadDash(); });
+  $('dash-local').addEventListener('change', loadDash);
+
+  /* ---------- staff: dashboard as PDF ---------- */
+  // A small PDF writer (A4, the built-in Helvetica fonts), so the report is
+  // made in the browser and no figures are sent anywhere else.
+  var HELV = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+  var HELV_B = [278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584];
+  var PDF_W = 595.28, PDF_H = 841.89, PDF_M = 42;
+
+  function latin1(s) { var b = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) b[i] = s.charCodeAt(i) & 255; return b; }
+  function pdfSafe(s) {
+    return String(s).replace(/[–—]/g, '-').replace(/[‘’]/g, "'").replace(/[“”]/g, '"')
+      .replace(/[^\x20-\x7e\xa0-\xff]/g, '?');
+  }
+  function textWidth(s, size, bold) {
+    var t = bold ? HELV_B : HELV, w = 0;
+    for (var i = 0; i < s.length; i++) { var c = s.charCodeAt(i); w += c >= 32 && c <= 126 ? t[c - 32] : 556; }
+    return w * size / 1000;
+  }
+  function fitText(s, size, bold, max) {
+    s = pdfSafe(s);
+    if (textWidth(s, size, bold) <= max) return s;
+    while (s.length > 1 && textWidth(s + '...', size, bold) > max) s = s.slice(0, -1);
+    return s.replace(/\s+$/, '') + '...';
+  }
+  function rgb(hex) {
+    return [1, 3, 5].map(function (i) { return (parseInt(hex.substr(i, 2), 16) / 255).toFixed(3); }).join(' ');
+  }
+  function n2(v) { return (Math.round(v * 100) / 100).toString(); }
+
+  function pdfDoc() {
+    var doc = { pages: [], ops: null };
+    doc.newPage = function () { doc.ops = []; doc.pages.push(doc.ops); };
+    // y is measured from the top of the page, as on screen.
+    doc.rect = function (x, y, w, h, color) {
+      if (w <= 0 || h <= 0) return;
+      doc.ops.push(rgb(color) + ' rg ' + n2(x) + ' ' + n2(PDF_H - y - h) + ' ' + n2(w) + ' ' + n2(h) + ' re f');
+    };
+    doc.text = function (x, y, s, size, bold, color, align) {
+      s = pdfSafe(s);
+      if (align === 'right') x -= textWidth(s, size, bold);
+      doc.ops.push('BT /' + (bold ? 'F2' : 'F1') + ' ' + size + ' Tf ' + rgb(color || '#14261c') + ' rg ' + n2(x) + ' ' +
+        n2(PDF_H - y) + ' Td (' + s.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)') + ') Tj ET');
+    };
+    doc.image = function (x, y, w, h) {
+      doc.ops.push('q ' + n2(w) + ' 0 0 ' + n2(h) + ' ' + n2(x) + ' ' + n2(PDF_H - y - h) + ' cm /Im1 Do Q');
+    };
+    doc.newPage();
+    return doc;
+  }
+
+  function pdfBlob(doc, img) {
+    var chunks = [], offsets = [], length = 0;
+    function add(x) { var b = typeof x === 'string' ? latin1(x) : x; chunks.push(b); length += b.length; }
+    function obj(n, parts) { offsets[n] = length; add(n + ' 0 obj\n'); parts.forEach(add); add('\nendobj\n'); }
+    add('%PDF-1.4\n%\xe2\xe3\xcf\xd3\n');
+    var first = 6, count = doc.pages.length;
+    var kids = doc.pages.map(function (p, i) { return (first + i * 2) + ' 0 R'; }).join(' ');
+    obj(1, ['<< /Type /Catalog /Pages 2 0 R >>']);
+    obj(2, ['<< /Type /Pages /Kids [' + kids + '] /Count ' + count + ' >>']);
+    obj(3, ['<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>']);
+    obj(4, ['<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>']);
+    if (img) {
+      obj(5, ['<< /Type /XObject /Subtype /Image /Width ' + img.w + ' /Height ' + img.h +
+        ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + img.bytes.length + ' >>\nstream\n',
+        img.bytes, '\nendstream']);
+    } else {
+      obj(5, ['<< >>']);
+    }
+    doc.pages.forEach(function (ops, i) {
+      var content = ops.join('\n');
+      obj(first + i * 2, ['<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + PDF_W + ' ' + PDF_H + '] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>' +
+        (img ? ' /XObject << /Im1 5 0 R >>' : '') + ' >> /Contents ' + (first + i * 2 + 1) + ' 0 R >>']);
+      obj(first + i * 2 + 1, ['<< /Length ' + content.length + ' >>\nstream\n' + content + '\nendstream']);
+    });
+    var size = first + count * 2;
+    var xref = length;
+    var table = 'xref\n0 ' + size + '\n0000000000 65535 f \n';
+    for (var n = 1; n < size; n++) table += ('0000000000' + offsets[n]).slice(-10) + ' 00000 n \n';
+    add(table + 'trailer\n<< /Size ' + size + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF\n');
+    return new Blob(chunks, { type: 'application/pdf' });
+  }
+
+  // The department logo as a JPEG for the PDF, or null if it cannot be loaded.
+  function logoJpeg() {
+    return new Promise(function (resolve) {
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var c = document.createElement('canvas');
+          c.width = img.naturalWidth;
+          c.height = img.naturalHeight;
+          var g = c.getContext('2d');
+          g.fillStyle = '#ffffff';
+          g.fillRect(0, 0, c.width, c.height);
+          g.drawImage(img, 0, 0);
+          resolve({ bytes: latin1(atob(c.toDataURL('image/jpeg', 0.92).split(',')[1])), w: c.width, h: c.height });
+        } catch (e) { resolve(null); }
+      };
+      img.onerror = function () { resolve(null); };
+      img.src = 'assets/logo.png';
+    });
+  }
+
+  function buildDashPdf(d, logo, who) {
+    var doc = pdfDoc();
+    var green = '#0a6b3d', dark = '#06402b', muted = '#4d5f54', pale = '#f3f9f2', line = '#cfdcd1';
+    var right = PDF_W - PDF_M, bottom = PDF_H - 56;
+    var y = 34;
+    if (logo) {
+      var lh = 46, lw = lh * logo.w / logo.h;
+      doc.image(PDF_M, y, lw, lh);
+      y += lh + 14;
+    }
+    doc.rect(0, y, PDF_W, 4, '#ffd21f');
+    y += 24;
+    doc.text(PDF_M, y, 'EPWP General Worker applications: dashboard', 17, true, dark);
+    y += 20;
+    doc.text(PDF_M, y, fitText(d.scope, 12, true, right - PDF_M), 12, true);
+    y += 15;
+    doc.text(PDF_M, y, fitText('Figures as at ' + d.generated + '. Produced by ' + who + '.', 9, false, right - PDF_M), 9, false, muted);
+    y += 12;
+    doc.text(PDF_M, y, 'Online applications and paper applications captured by district offices. Counts only: no personal details.', 9, false, muted);
+    y += 16;
+
+    // Headline figures.
+    var women = countOf(d.gender, 'Female'), disabled = countOf(d.disability, 'Yes');
+    var online = countOf(d.channel, 'Online'), captured = countOf(d.channel, 'Captured');
+    var kpis = [['Applications', num(d.total), ''], ['Online', num(online), pct(online, d.total)],
+      ['Captured', num(captured), pct(captured, d.total)], ['Women', num(women), pct(women, d.total)],
+      ['With disabilities', num(disabled), pct(disabled, d.total)]];
+    var gap = 8, bw = (right - PDF_M - gap * (kpis.length - 1)) / kpis.length, bh = 56;
+    kpis.forEach(function (k, i) {
+      var x = PDF_M + i * (bw + gap);
+      doc.rect(x, y, bw, bh, pale);
+      doc.rect(x, y, 3, bh, green);
+      doc.text(x + 10, y + 15, k[0], 8.5, true, muted);
+      doc.text(x + 10, y + 37, k[1], 19, true, dark);
+      if (k[2]) doc.text(x + 10, y + 49, k[2] + ' of all', 8, false, muted);
+    });
+    y += bh + 22;
+
+    var labelW = 170, barX = PDF_M + labelW + 8, valueW = 78, barMax = right - valueW - barX - 8, rowH = 15;
+    function section(title, note, items, total, labels) {
+      if (y + 24 + rowH * Math.min(items.length, 3) > bottom) { doc.newPage(); y = 50; }
+      doc.text(PDF_M, y, title, 12, true, dark);
+      if (note) doc.text(right, y, fitText(note, 8, false, right - PDF_M - textWidth(title, 12, true) - 16), 8, false, muted, 'right');
+      y += 6;
+      doc.rect(PDF_M, y, right - PDF_M, 0.8, line);
+      y += 8;
+      var max = items.reduce(function (m, it) { return Math.max(m, it[1]); }, 0);
+      if (!items.length || !total) { doc.text(PDF_M, y + 10, 'No applications yet.', 9, false, muted); y += rowH + 14; return; }
+      items.forEach(function (it, i) {
+        if (y + rowH > bottom) {
+          doc.newPage();
+          y = 50;
+          doc.text(PDF_M, y, title + ' (continued)', 12, true, dark);
+          y += 14;
+        }
+        if (i % 2 === 1) doc.rect(PDF_M, y, right - PDF_M, rowH, pale);
+        doc.text(PDF_M + 4, y + 10.5, fitText(labels ? labels(it[0]) : it[0], 9, false, labelW - 4), 9);
+        if (max && it[1]) doc.rect(barX, y + 3, Math.max(1.5, it[1] / max * barMax), 9, green);
+        doc.text(right - 44, y + 10.5, num(it[1]), 9, true, '#14261c', 'right');
+        doc.text(right - 2, y + 10.5, pct(it[1], total), 8.5, false, muted, 'right');
+        y += rowH;
+      });
+      y += 28;
+    }
+
+    dashSections(d).forEach(function (sec) { section(sec[0], sec[1], sec[2], d.total); });
+    section('Applications received per day', 'Paper applications count on the day they were handed in.',
+      dayFill(d.days), d.total, shortDay);
+
+    var pages = doc.pages.length;
+    doc.pages.forEach(function (ops, i) {
+      doc.ops = ops;
+      doc.rect(PDF_M, PDF_H - 40, right - PDF_M, 0.8, line);
+      doc.text(PDF_M, PDF_H - 27, fitText('Eastern Cape Department of Health - EPWP applications - ' + d.scope, 8, false, 380), 8, false, muted);
+      doc.text(right, PDF_H - 27, 'Page ' + (i + 1) + ' of ' + pages, 8, false, muted, 'right');
+    });
+    return doc;
+  }
+
+  function downloadDashPdf() {
+    var s = session(), d = dashData;
+    if (!s) return sessionEnded();
+    if (!d) return;
+    var btn = $('dash-pdf');
+    btn.disabled = true;
+    $('dash-pdf-label').textContent = 'Preparing PDF...';
+    logoJpeg().then(function (logo) {
+      var blob = pdfBlob(buildDashPdf(d, logo, s.name + ' (' + s.username + ')'), logo);
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'EPWP_Dashboard_' + d.scope.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '') + '_' + todayIso() + '.pdf';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+    }).catch(function () {
+      $('dash-alert').textContent = 'The PDF could not be made. Please try again.';
+      $('dash-alert').hidden = false;
+    }).then(function () {
+      btn.disabled = false;
+      $('dash-pdf-label').textContent = 'Download PDF';
+    });
+  }
+  $('dash-pdf').addEventListener('click', downloadDashPdf);
+
   /* ---------- show / hide password ---------- */
   function setPasswordVisible(btn, visible) {
     $(btn.getAttribute('data-for')).type = visible ? 'text' : 'password';
@@ -2035,6 +2569,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       hideAllPasswords();
       lookupKey = '';
       listLoaded = false;
+      clearDash();
       showView();
       if (location.hash === '#capture') $(form.hidden ? 'done' : 'ReceivedDate').focus({ preventScroll: true });
     }).catch(function (err) {
@@ -2055,6 +2590,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       : 'Your sign-in has ended. Please sign in again.');
     $('view-register').hidden = true;
     $('view-list').hidden = true;
+    $('view-dash').hidden = true;
     $('staff-nav').hidden = true;
     $('view-login').hidden = false;
     window.scrollTo(0, 0);
@@ -2068,6 +2604,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     sessionStorage.removeItem(SESSION_KEY);
     resetForm(true);
     clearList();
+    clearDash();
     showLoginAlert('');
     showView();
   });

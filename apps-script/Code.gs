@@ -22,7 +22,8 @@
  * only capture, view and download applications whose applicant lives in that
  * district, whether they applied online or on paper. A "Provincial (all
  * districts)" user can capture, view and download everything. Every download
- * is recorded in the "Downloads" tab.
+ * is recorded in the "Downloads" tab. The staff dashboard (counts only)
+ * follows the same rules.
  *
  * Supporting documents are saved to Google Drive, in a folder called
  * "EPWP Applications - Supporting Documents" next to this spreadsheet, with
@@ -838,7 +839,8 @@ function importPlace_(districtText, localText, facilityText) {
 /** Opening the Web App URL in a browser shows that it is alive. */
 function doGet() {
   // "uploads" and "capture" tell the website which features this version has.
-  return json_({ ok: true, service: 'EPWP general worker applications', uploads: true, capture: true, accountRequests: true });
+  return json_({ ok: true, service: 'EPWP general worker applications', uploads: true, capture: true, accountRequests: true,
+    download: true, dashboard: true });
 }
 
 function doPost(e) {
@@ -860,6 +862,7 @@ function doPost(e) {
       case 'capture': return json_(saveApplication_(data, sessionUser_(data.token)));
       case 'list': return json_(list_(data, sessionUser_(data.token)));
       case 'export': return json_(export_(data, sessionUser_(data.token)));
+      case 'stats': return json_(stats_(data, sessionUser_(data.token)));
       default: return json_(saveApplication_(data, null));
     }
   } catch (err) {
@@ -1438,6 +1441,95 @@ function logDownload_(user, scope, data, count) {
   } catch (err) {
     console.error(err);
   }
+}
+
+var AGE_BANDS = [[18, 24], [25, 29], [30, 34], [35, 39], [40, 45]];
+var TOP_FACILITIES = 15;
+var TOP_QUALIFICATIONS = 12;
+
+/**
+ * Counts for the dashboard: totals and breakdowns of the applications this
+ * staff member may see. Provincial users can narrow it to a district, and
+ * anyone can narrow it to a local municipality in their district. Only
+ * counts are returned, never personal details.
+ */
+function stats_(data, user) {
+  var f = filterApplications_({ district: data.district }, user);
+  var col = f.col, district = f.district;
+  var local = String(data.local || '').trim();
+  if (!district || !UNITS[district] || !UNITS[district][local]) local = '';
+  var rows = local ? f.matches.filter(function (r) { return String(r[col.LocalMunicipality]) === local; }) : f.matches;
+
+  var zero = function (keys) { var o = {}; keys.forEach(function (k) { o[k] = 0; }); return o; };
+  var add = function (o, k) { o[k] = (o[k] || 0) + 1; };
+  var bandName = function (b) { return b[0] + ' to ' + b[1]; };
+  var channel = zero(['Online', 'Captured']);
+  var gender = zero(['Female', 'Male']);
+  var disability = zero(['Yes', 'No']);
+  var ages = zero(AGE_BANDS.map(bandName));
+  var districts = district ? null : zero(DISTRICTS.map(function (d) { return d[0]; }));
+  var locals = !district || local ? null : zero(Object.keys(UNITS[district] || {}));
+  var facilities = {}, qualifications = {}, days = {};
+  var now = new Date();
+  var day = function (v) {
+    if (v instanceof Date) return Utilities.formatDate(v, TIME_ZONE, 'yyyy-MM-dd');
+    var m = /^(\d{4}-\d{2}-\d{2})/.exec(String(v || ''));
+    return m ? m[1] : '';
+  };
+
+  rows.forEach(function (r) {
+    var how = r[col.Channel] === 'Captured' ? 'Captured' : 'Online';
+    add(channel, how);
+    add(gender, String(r[col.Gender] || '').trim() || 'Not recorded');
+    var dis = String(r[col.DisabilityStatus] || '').trim();
+    add(disability, dis === 'Yes' || dis === 'No' ? dis : 'Not recorded');
+
+    var dob = day(r[col.DateOfBirth]) || idBirthDate_(String(r[col.SouthAfricanID]).replace(/\D/g, ''));
+    var band = 'Not recorded';
+    if (dob) {
+      var age = ageOn_(dob, now);
+      band = 'Other ages';
+      AGE_BANDS.forEach(function (b) { if (age >= b[0] && age <= b[1]) band = bandName(b); });
+    }
+    add(ages, band);
+
+    if (districts) add(districts, String(r[col.District] || '') || 'Not recorded');
+    if (locals) add(locals, String(r[col.LocalMunicipality] || '') || 'Not recorded');
+    add(facilities, String(r[col.NearestFacility] || '').trim() || 'Not recorded');
+    add(qualifications, String(r[col.HighestSchoolLevel] || '').trim() || 'Not recorded');
+
+    // Paper applications count on the day they were handed in, online ones on the day they arrived.
+    var when = (how === 'Captured' && day(r[col['Date Received']])) || day(r[col.Timestamp]);
+    if (when) add(days, when);
+  });
+
+  var list = function (o, sort, top, label) {
+    var items = Object.keys(o).map(function (k) { return [label ? label(k) : k, o[k]]; });
+    if (sort) items.sort(function (a, b) { return b[1] - a[1] || (a[0] < b[0] ? -1 : 1); });
+    if (top && items.length > top) {
+      var rest = items.slice(top).reduce(function (s, it) { return s + it[1]; }, 0);
+      items = items.slice(0, top).concat([['All others (' + (items.length - top) + ')', rest]]);
+    }
+    return items;
+  };
+  var scope = scopeName_(user, district) + (local ? ' - ' + local : '');
+  return {
+    ok: true,
+    scope: scope,
+    district: district,
+    local: local,
+    generated: Utilities.formatDate(now, TIME_ZONE, "d MMMM yyyy 'at' HH:mm"),
+    total: rows.length,
+    channel: list(channel),
+    gender: list(gender),
+    disability: list(disability),
+    ages: list(ages),
+    districts: districts ? list(districts, true, 0, displayDistrict_) : null,
+    locals: locals ? list(locals, true) : null,
+    facilities: list(facilities, true, TOP_FACILITIES),
+    qualifications: list(qualifications, true, TOP_QUALIFICATIONS),
+    days: Object.keys(days).sort().map(function (k) { return [k, days[k]]; })
+  };
 }
 
 /** The applications a staff member may see, newest first, after the filters. */

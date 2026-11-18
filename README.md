@@ -128,6 +128,25 @@ number that is already on the system: with the reference number and who
 captured it for their own district, or only "already on the system for an
 applicant in <district>" for another district.
 
+### Dashboard
+
+Signed-in staff choose **Dashboard** in the staff bar. It shows how many
+applications have been received and breaks them down by gender, disability,
+age group, how they applied (online or captured), qualification, nearest
+facility, and per day. It also shows them by district (for the whole province)
+or by local municipality (for one district).
+
+- District users only see their own district. They can narrow it to one of
+  their local municipalities.
+- Provincial users choose **All districts** or one district, and then
+  optionally a local municipality.
+- **Download PDF** saves the dashboard as it is shown, as an A4 report with the
+  department logo, the figures date and who produced it. The PDF is made in the
+  browser. It holds counts only, no names or ID numbers.
+
+The dashboard needs the latest Apps Script deployed (Deploy > Manage
+deployments > New version).
+
 ## Importing a list captured elsewhere (Import tab)
 
 When an office has captured applications in its own Excel list, the
