@@ -66,12 +66,22 @@ Staff at the District Offices capture paper applications on the same website:
 **https://boetav.github.io/ecdoh-epwp_applications/capture.html**
 (or use the link at the bottom of the public page).
 
-- **Accounts** are kept in the **Users** tab of the Sheet. Add one with
-  **EPWP > Add a capturing user**: enter a username, the person's full name,
-  and pick their access by number: one of the eight districts, or
-  **Provincial (all districts)**. The system makes a password and shows it
-  once; give it to the person. Passwords are stored in coded form, so nobody
-  can read them in the Sheet.
+- **Requesting an account:** capturers open the sign-in page and choose
+  **Request a capturer account**. They fill in their details, pick their
+  access (one district, or Provincial for Head Office) and choose their own
+  username and password. The request is added to the **Users** tab as
+  `Pending`, and the spreadsheet owner gets an email. A pending account
+  cannot sign in.
+- **Paper form for audit:** capturers must still print, sign and hand in the
+  [Capturer Registration Form](docs/EPWP_Capturer_Registration_Form.pdf),
+  approved by their supervisor. The request page links to it.
+- **Approving:** once the signed form is in, choose **EPWP > Approve account
+  requests**. Each waiting request is shown in turn: Yes approves it (records
+  "Paper form received", who approved and when), No declines it, Cancel
+  leaves it for later. Then let the capturer know they can sign in.
+- **Adding someone directly** is still possible with **EPWP > Add a
+  capturing user**; the system then makes a password and shows it once.
+- Passwords are stored in coded form, so nobody can read them in the Sheet.
 - **What each user can see:** a district user captures and sees only
   applicants who live in their district (online and captured). The District
   box on their capture form is fixed to their district. A provincial user

@@ -174,6 +174,10 @@ fieldset.group > legend b { display: grid; place-items: center; width: 28px; hei
 .login-card { margin-top: 22px; max-width: 460px; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; display: grid; gap: 16px; }
 .login-card .btn { width: 100%; }
 .login-card .hint { margin: 0; }
+.login-card .request-link { margin: 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 15px; }
+.steps-box { margin-top: 20px; background: var(--white); border: 1px solid var(--line); border-left: 8px solid var(--yellow); border-radius: var(--radius); padding: 16px 18px; }
+.steps-box h2 { font-size: 18px; color: var(--green-900); margin-bottom: 8px; }
+.steps-box ol { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
 .staff-nav { background: #0b2f20; color: #e3f1e4; font-size: 15px; }
 .staff-nav .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding-top: 8px; padding-bottom: 8px; }
 .staff-nav strong { color: var(--yellow); }
@@ -477,7 +481,143 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       <div class="alert" id="login-alert" role="alert" hidden></div>
       <button class="btn green" type="submit" id="login-btn">Sign in</button>
       <p class="hint">Forgot your password? Ask the EPWP administrator to reset it.</p>
+      <p class="request-link">No account yet? <a href="#request-account">Request a capturer account</a></p>
     </form>
+  </div>
+</main>
+
+<!-- ======================= STAFF: REQUEST AN ACCOUNT ======================= -->
+<main id="view-request" hidden>
+  <div class="form-head">
+    <div class="wrap form-wrap">
+      <a href="#capture">&larr; Back to sign in</a>
+      <h1>Request a capturer account</h1>
+      <p>For Department of Health staff who will capture paper EPWP applications.</p>
+    </div>
+  </div>
+  <div class="wrap form-wrap">
+    <section class="steps-box" aria-labelledby="req-steps">
+      <h2 id="req-steps">How it works</h2>
+      <ol>
+        <li>Fill in this request. You choose your own username and password.</li>
+        <li>Download the <a href="docs/EPWP_Capturer_Registration_Form.pdf" target="_blank" rel="noopener">Capturer Registration Form (PDF)</a>, read the guidelines on it, sign it, have your supervisor or EPWP District Coordinator approve it, and hand it in.</li>
+        <li>The EPWP administrator approves your account once the signed form is received. You can then sign in with the username and password you chose here.</li>
+      </ol>
+    </section>
+
+    <form id="request-form" novalidate autocomplete="on">
+      <fieldset class="group">
+        <legend><b>1</b> Your details</legend>
+        <div class="fields cols">
+          <div class="field" data-req="Title">
+            <label for="req-title">Title</label>
+            <select id="req-title"><option value="">Choose</option><option>Mr</option><option>Ms</option><option>Mrs</option><option>Dr</option></select>
+          </div>
+          <div class="field" data-req="Persal">
+            <label for="req-persal">Persal / employee number</label>
+            <input type="text" id="req-persal" maxlength="12" autocomplete="off">
+          </div>
+          <div class="field" data-req="FirstNames">
+            <label for="req-first">First name(s)</label>
+            <input type="text" id="req-first" maxlength="80" autocomplete="given-name">
+          </div>
+          <div class="field" data-req="Surname">
+            <label for="req-surname">Surname</label>
+            <input type="text" id="req-surname" maxlength="80" autocomplete="family-name">
+          </div>
+          <div class="field" data-req="JobTitle">
+            <label for="req-job">Job title / rank</label>
+            <input type="text" id="req-job" maxlength="100" autocomplete="organization-title">
+          </div>
+          <div class="field" data-req="Office">
+            <label for="req-office">Office or facility where you work</label>
+            <input type="text" id="req-office" maxlength="200">
+          </div>
+          <div class="field" data-req="Cellphone">
+            <label for="req-cell">Cellphone</label>
+            <input type="tel" id="req-cell" inputmode="numeric" maxlength="15" autocomplete="tel">
+          </div>
+          <div class="field" data-req="WorkPhone">
+            <label for="req-work">Work telephone <span class="opt">(optional)</span></label>
+            <input type="tel" id="req-work" inputmode="numeric" maxlength="15">
+          </div>
+          <div class="field full" data-req="Email">
+            <label for="req-email">Email address</label>
+            <input type="email" id="req-email" maxlength="120" autocomplete="email">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend><b>2</b> Access</legend>
+        <div class="fields">
+          <div class="field" data-req="Access">
+            <label for="req-access">Which applications will you capture?</label>
+            <span class="hint" id="req-access-hint">A district capturer only captures and sees applicants who live in that district. Provincial access is for Head Office only.</span>
+            <select id="req-access" aria-describedby="req-access-hint"><option value="">Choose</option></select>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend><b>3</b> Sign-in details</legend>
+        <div class="fields cols">
+          <div class="field full" data-req="Username">
+            <label for="req-username">Username you want</label>
+            <span class="hint" id="req-user-hint">Letters, numbers, dots or dashes, no spaces. For example: nomsa.dlamini</span>
+            <input type="text" id="req-username" maxlength="40" autocomplete="username" autocapitalize="none" spellcheck="false" aria-describedby="req-user-hint">
+          </div>
+          <div class="field" data-req="Password">
+            <label for="req-password">Password</label>
+            <span class="hint" id="req-pw-hint">At least 8 characters. Do not use your username.</span>
+            <input type="password" id="req-password" maxlength="100" autocomplete="new-password" aria-describedby="req-pw-hint">
+          </div>
+          <div class="field" data-req="Password2">
+            <label for="req-password2">Type the password again</label>
+            <span class="hint">&nbsp;</span>
+            <input type="password" id="req-password2" maxlength="100" autocomplete="new-password">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend><b>4</b> Declaration</legend>
+        <div class="fields">
+          <div class="field" data-req="Agree">
+            <div class="check">
+              <input type="checkbox" id="req-agree">
+              <label for="req-agree">I have read the guidelines on the Capturer Registration Form and will follow them. I will keep my password secret and keep applicants' personal information confidential (POPIA). I will hand in the signed paper form, approved by my supervisor.</label>
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="hp" aria-hidden="true">
+        <label for="req-website">Leave this field empty</label>
+        <input type="text" id="req-website" tabindex="-1" autocomplete="off">
+      </div>
+
+      <div class="submit-row">
+        <div class="alert" id="req-alert" role="alert" hidden></div>
+        <div class="buttons">
+          <button class="btn green" type="submit" id="req-btn">Send request</button>
+        </div>
+      </div>
+    </form>
+
+    <section class="done" id="req-done" hidden tabindex="-1" aria-live="polite">
+      <div class="badge" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+      </div>
+      <h2>Request sent</h2>
+      <div class="ref"><small>Your username</small><strong id="req-done-user"></strong></div>
+      <p><strong>Your account is not active yet.</strong></p>
+      <p>Now download the <a href="docs/EPWP_Capturer_Registration_Form.pdf" target="_blank" rel="noopener">Capturer Registration Form (PDF)</a>, sign it, have your supervisor or EPWP District Coordinator approve it, and hand it in. You can sign in with this username and the password you chose once the administrator has approved your account.</p>
+      <div class="actions">
+        <a class="btn green" href="docs/EPWP_Capturer_Registration_Form.pdf" target="_blank" rel="noopener">Download the form</a>
+        <a class="btn ghost" href="#capture">Back to sign in</a>
+      </div>
+    </section>
   </div>
 </main>
 
@@ -849,10 +989,13 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     var listing = hash === '#applications';
     var staff = capture || listing;
     var apply = hash === '#apply' || hash === '#register';
+    var requesting = hash === '#request-account';
     var s = session();
     mode = capture ? 'capture' : 'online';
 
-    $('view-home').hidden = apply || staff;
+    $('view-home').hidden = apply || staff || requesting;
+    $('view-request').hidden = !requesting;
+    if (requesting) openRequest();
     $('view-login').hidden = !(staff && !s);
     $('view-register').hidden = !(apply || (capture && s));
     $('view-list').hidden = !(listing && s);
@@ -1443,6 +1586,122 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     window.scrollTo(0, 0);
     $('done').focus({ preventScroll: true });
   }
+
+  /* ---------- staff: request an account ---------- */
+  var reqForm = $('request-form');
+  var REQ_FIELDS = {
+    Title: 'req-title', Persal: 'req-persal', FirstNames: 'req-first', Surname: 'req-surname', JobTitle: 'req-job',
+    Office: 'req-office', Cellphone: 'req-cell', WorkPhone: 'req-work', Email: 'req-email', Access: 'req-access',
+    Username: 'req-username', Password: 'req-password', Password2: 'req-password2', Agree: 'req-agree'
+  };
+  var ACCESS_CHOICES = ['Alfred Nzo District', 'Amathole District', 'Buffalo City Metro', 'Chris Hani District',
+    'Joe Gqabi District', 'Nelson Mandela Bay Metro', 'OR Tambo District', 'Sarah Baartman District',
+    'Provincial (all districts)'];
+
+  function openRequest() {
+    if ($('req-access').options.length === 1) {
+      ACCESS_CHOICES.forEach(function (c) { $('req-access').add(new Option(c, c)); });
+    }
+    $('req-done').hidden = true;
+    reqForm.hidden = false;
+  }
+
+  function reqVal(key) { return $(REQ_FIELDS[key]).value.replace(/\s+/g, ' ').trim(); }
+  function reqPhone(key) { return reqVal(key).replace(/[^\d+]/g, '').replace(/^\+27/, '0'); }
+
+  var reqChecks = {
+    Title: function () { return reqVal('Title') ? '' : 'Choose your title.'; },
+    Persal: function () { return /^[A-Za-z0-9]{5,12}$/.test(reqVal('Persal').replace(/\s/g, '')) ? '' : 'Enter your Persal or employee number.'; },
+    FirstNames: function () { return reqVal('FirstNames') ? '' : 'Enter your first name(s).'; },
+    Surname: function () { return reqVal('Surname') ? '' : 'Enter your surname.'; },
+    JobTitle: function () { return reqVal('JobTitle') ? '' : 'Enter your job title.'; },
+    Office: function () { return reqVal('Office') ? '' : 'Enter the office or facility where you work.'; },
+    Cellphone: function () { return /^0\d{9}$/.test(reqPhone('Cellphone')) ? '' : 'A cellphone number has 10 digits and starts with 0.'; },
+    WorkPhone: function () { var v = reqPhone('WorkPhone'); return !v || /^0\d{9}$/.test(v) ? '' : 'A phone number has 10 digits and starts with 0. Fix it or leave it empty.'; },
+    Email: function () { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reqVal('Email')) ? '' : 'Enter a valid email address.'; },
+    Access: function () { return reqVal('Access') ? '' : 'Choose which applications you will capture.'; },
+    Username: function () {
+      return /^[a-z0-9._-]{3,40}$/.test(reqVal('Username').toLowerCase()) ? '' : 'Use 3 to 40 letters, numbers, dots or dashes, with no spaces.';
+    },
+    Password: function () {
+      var pw = $('req-password').value;
+      if (pw.length < 8) return 'The password must have at least 8 characters.';
+      var u = reqVal('Username').toLowerCase();
+      return u && pw.toLowerCase().indexOf(u) !== -1 ? 'The password may not contain your username.' : '';
+    },
+    Password2: function () { return $('req-password2').value === $('req-password').value ? '' : 'The two passwords are not the same.'; },
+    Agree: function () { return $('req-agree').checked ? '' : 'Tick this box to confirm.'; }
+  };
+
+  function setReqError(key, message) {
+    var wrap = reqForm.querySelector('[data-req="' + key + '"]');
+    var el = wrap.querySelector('.error');
+    wrap.classList.toggle('invalid', !!message);
+    if (!message) { if (el) el.remove(); return; }
+    if (!el) { el = document.createElement('span'); el.className = 'error'; wrap.appendChild(el); }
+    el.textContent = message;
+  }
+
+  reqForm.addEventListener('focusout', function (e) {
+    var wrap = e.target.closest('[data-req]');
+    if (!wrap || e.target.type === 'checkbox') return;
+    var key = wrap.getAttribute('data-req');
+    if (e.target.value || wrap.classList.contains('invalid')) whenPointerUp(function () { setReqError(key, reqChecks[key]()); });
+  });
+  reqForm.addEventListener('change', function (e) {
+    var wrap = e.target.closest('[data-req]');
+    if (wrap && wrap.classList.contains('invalid')) { var key = wrap.getAttribute('data-req'); whenPointerUp(function () { setReqError(key, reqChecks[key]()); }); }
+  });
+
+  function showReqAlert(message) { $('req-alert').textContent = message; $('req-alert').hidden = !message; }
+
+  reqForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var btn = $('req-btn');
+    if (btn.disabled) return;
+    showReqAlert('');
+    var first = null;
+    Object.keys(reqChecks).forEach(function (key) {
+      var m = reqChecks[key]();
+      setReqError(key, m);
+      if (m && !first) first = key;
+    });
+    if (first) {
+      showReqAlert('Some answers are missing or not correct. Fix the fields marked in red, then send again.');
+      $(REQ_FIELDS[first]).focus();
+      return;
+    }
+    if (!connected()) { showReqAlert('The system is not connected yet. Please try again later.'); return; }
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Sending';
+    backendReady.then(function () {
+      return post({
+        action: 'request-account', Title: reqVal('Title'), FirstNames: reqVal('FirstNames'), Surname: reqVal('Surname'),
+        Persal: reqVal('Persal'), JobTitle: reqVal('JobTitle'), Office: reqVal('Office'), Cellphone: reqPhone('Cellphone'),
+        WorkPhone: reqPhone('WorkPhone'), Email: reqVal('Email'), Access: reqVal('Access'),
+        Username: reqVal('Username').toLowerCase(), Password: $('req-password').value, Agree: $('req-agree').checked,
+        website: $('req-website').value
+      });
+    }).then(function (out) {
+      if (out && out.ok) {
+        $('req-done-user').textContent = out.username || reqVal('Username').toLowerCase();
+        reqForm.reset();
+        reqForm.hidden = true;
+        $('req-done').hidden = false;
+        window.scrollTo(0, 0);
+        $('req-done').focus({ preventScroll: true });
+      } else {
+        var msg = (out && out.message) || 'Your request could not be sent. Please try again.';
+        if (/username/i.test(msg) && /taken/i.test(msg)) setReqError('Username', msg);
+        showReqAlert(msg);
+      }
+    }).catch(function () {
+      showReqAlert('Your request was not sent. Check your internet connection and try again.');
+    }).then(function () {
+      btn.disabled = false;
+      btn.textContent = 'Send request';
+    });
+  });
 
   /* ---------- staff: view applications ---------- */
   var listOffset = 0, listLoaded = false, listSeq = 0;

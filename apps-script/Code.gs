@@ -12,6 +12,12 @@
  *     Staff accounts are kept in the "Users" tab and managed from the EPWP
  *     menu in the spreadsheet (passwords are stored hashed, never as text).
  *
+ * Staff accounts: capturers request an account on the website and choose
+ * their own password. The request arrives in the Users tab as "Pending" and
+ * the spreadsheet owner gets an email. The administrator approves it with
+ * EPWP > Approve account requests once the signed paper Capturer
+ * Registration Form has been received; the approval is recorded for audit.
+ *
  * Staff access: a user with a district (for example "Amathole District") can
  * only capture and view applications whose applicant lives in that district,
  * whether they applied online or on paper. A "Provincial (all districts)"
@@ -80,7 +86,19 @@ var MAX_FILE_BYTES = 4 * 1024 * 1024;
 
 var HEADERS = ['Timestamp', 'Reference'].concat(FIELDS).concat(['Consent'])
   .concat(DOCUMENT_HEADERS).concat(CAPTURE_HEADERS);
-var USER_HEADERS = ['Username', 'Full name', 'District', 'Active', 'Password hash', 'Salt', 'Last sign-in'];
+// The first seven columns are used for signing in; the rest record the
+// account request and its approval.
+var USER_HEADERS = ['Username', 'Full name', 'District', 'Active', 'Password hash', 'Salt', 'Last sign-in',
+  'Title', 'Persal number', 'Job title', 'Office', 'Work phone', 'Cellphone', 'Email',
+  'Requested on', 'Paper form received', 'Approved by', 'Approved on'];
+var UCOL = {};
+USER_HEADERS.forEach(function (h, i) { UCOL[h] = i + 1; });
+var PENDING = 'Pending';
+var MAX_PENDING = 100;               // refuse new requests while this many are waiting
+var MIN_PASSWORD = 8;
+// Who is emailed about new account requests. Empty means the spreadsheet owner.
+var ADMIN_EMAIL = '';
+var SIGN_IN_PAGE = 'https://boetav.github.io/ecdoh-epwp_applications/capture.html';
 
 var REQUIRED = [
   'Title', 'Name', 'Surname', 'SouthAfricanID', 'DateOfBirth', 'Gender',
@@ -111,6 +129,7 @@ function onOpen() {
     .createMenu('EPWP')
     .addItem('Open supporting documents folder', 'showDocumentsFolder')
     .addSeparator()
+    .addItem('Approve account requests', 'approveRequests')
     .addItem('Add a capturing user', 'addUser')
     .addItem("Reset a user's password", 'resetPassword')
     .addToUi();
@@ -147,13 +166,81 @@ function addUser() {
 
   var password = newPassword_();
   var salt = Utilities.getUuid();
+  appendUser_({
+    'Username': username, 'Full name': safeCell_(fullName), 'District': safeCell_(district), 'Active': 'Yes',
+    'Password hash': hashPassword_(password, salt), 'Salt': salt,
+    'Approved by': adminName_() + ' (added by administrator)', 'Approved on': new Date()
+  });
+  showPassword_(ui, 'User added', username, password);
+}
+
+/** Menu: go through the account requests that are waiting, one at a time. */
+function approveRequests() {
+  var ui = SpreadsheetApp.getUi();
+  var sheet = getUsersSheet_();
+  var last = sheet.getLastRow();
+  var rows = last < 2 ? [] : sheet.getRange(2, 1, last - 1, USER_HEADERS.length).getDisplayValues();
+  var pending = [];
+  rows.forEach(function (r, i) { if (String(r[UCOL.Active - 1]).trim() === PENDING) pending.push({ row: i + 2, v: r }); });
+  if (!pending.length) {
+    ui.alert('Account requests', 'There are no account requests waiting for approval.', ui.ButtonSet.OK);
+    return;
+  }
+  var approved = 0, declined = 0;
+  for (var i = 0; i < pending.length; i++) {
+    var v = pending[i].v;
+    var get = function (h) { return v[UCOL[h] - 1]; };
+    var answer = ui.alert('Account request ' + (i + 1) + ' of ' + pending.length,
+      get('Title') + ' ' + get('Full name') + '\n' +
+      'Username: ' + get('Username') + '\n' +
+      'Access requested: ' + get('District') + '\n' +
+      'Persal number: ' + get('Persal number') + '\n' +
+      'Job title: ' + get('Job title') + '\n' +
+      'Office: ' + get('Office') + '\n' +
+      'Cellphone: ' + get('Cellphone') + '   Work phone: ' + (get('Work phone') || '-') + '\n' +
+      'Email: ' + get('Email') + '\n' +
+      'Requested on: ' + get('Requested on') + '\n\n' +
+      'Only approve once you have the signed paper Capturer Registration Form, approved by the supervisor.\n\n' +
+      'YES = approve (records that the paper form was received)\n' +
+      'NO = decline\n' +
+      'CANCEL = decide later',
+      ui.ButtonSet.YES_NO_CANCEL);
+    if (answer === ui.Button.CANCEL || answer === ui.Button.CLOSE) break;
+    var r = pending[i].row;
+    if (answer === ui.Button.YES) {
+      sheet.getRange(r, UCOL.Active).setValue('Yes');
+      sheet.getRange(r, UCOL['Paper form received']).setValue('Yes');
+      approved++;
+    } else {
+      sheet.getRange(r, UCOL.Active).setValue('No');
+      declined++;
+    }
+    sheet.getRange(r, UCOL['Approved by']).setValue(adminName_() + (answer === ui.Button.YES ? '' : ' (declined)'));
+    sheet.getRange(r, UCOL['Approved on']).setValue(new Date());
+  }
+  ui.alert('Account requests', approved + ' approved, ' + declined + ' declined. ' +
+    'Approved capturers can now sign in at ' + SIGN_IN_PAGE + ' with the username and password they chose. ' +
+    'Let them know they have been approved.', ui.ButtonSet.OK);
+}
+
+function adminName_() {
+  var email = '';
+  try { email = Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail(); } catch (err) { /* ignore */ }
+  return email || 'Administrator';
+}
+
+/** Adds a row to the Users tab from an object keyed by column heading. */
+function appendUser_(values) {
   var sheet = getUsersSheet_();
   var row = sheet.getLastRow() + 1;
   sheet.getRange(row, 1, 1, USER_HEADERS.length).setNumberFormat('@');
-  sheet.getRange(row, 1, 1, USER_HEADERS.length).setValues([[
-    username, safeCell_(fullName), safeCell_(district), 'Yes', hashPassword_(password, salt), salt, ''
-  ]]);
-  showPassword_(ui, 'User added', username, password);
+  [UCOL['Last sign-in'], UCOL['Requested on'], UCOL['Approved on']].forEach(function (c) {
+    sheet.getRange(row, c).setNumberFormat('yyyy-mm-dd hh:mm');
+  });
+  sheet.getRange(row, 1, 1, USER_HEADERS.length).setValues([USER_HEADERS.map(function (h) {
+    return values[h] === undefined ? '' : values[h];
+  })]);
+  return row;
 }
 
 /** Menu: give an existing user a new password (also unlocks the account). */
@@ -169,7 +256,7 @@ function resetPassword() {
   var password = newPassword_();
   var salt = Utilities.getUuid();
   var sheet = getUsersSheet_();
-  sheet.getRange(user.row, 5, 1, 2).setValues([[hashPassword_(password, salt), salt]]);
+  sheet.getRange(user.row, UCOL['Password hash'], 1, 2).setValues([[hashPassword_(password, salt), salt]]);
   CacheService.getScriptCache().remove('fail:' + user.username);
   showPassword_(ui, 'Password reset', user.username, password);
 }
@@ -204,6 +291,7 @@ function showPassword_(ui, title, username, password) {
     'Give these sign-in details to the user:\n\n' +
     'Username: ' + username + '\nPassword: ' + password + '\n\n' +
     'Write the password down now. It is stored in coded form and cannot be shown again. ' +
+    'The user signs in at ' + SIGN_IN_PAGE + '. ' +
     'If it is lost, use "Reset a user\'s password".\n\n' +
     'To stop someone signing in, change "Active" to No in the Users tab. ' +
     'To change what someone can see, pick a different District in the Users tab.',
@@ -217,7 +305,7 @@ function showPassword_(ui, title, username, password) {
 /** Opening the Web App URL in a browser shows that it is alive. */
 function doGet() {
   // "uploads" and "capture" tell the website which features this version has.
-  return json_({ ok: true, service: 'EPWP general worker applications', uploads: true, capture: true });
+  return json_({ ok: true, service: 'EPWP general worker applications', uploads: true, capture: true, accountRequests: true });
 }
 
 function doPost(e) {
@@ -233,6 +321,7 @@ function doPost(e) {
   try {
     switch (data.action) {
       case 'login': return json_(login_(data));
+      case 'request-account': return json_(requestAccount_(data));
       case 'logout': return json_(logout_(data));
       case 'lookup': return json_(lookup_(data));
       case 'capture': return json_(saveApplication_(data, sessionUser_(data.token)));
@@ -411,6 +500,9 @@ function login_(data) {
     cache.put(failKey, String(fails + 1), LOCK_SECONDS);
     return wrong;
   }
+  if (user.status === PENDING) {
+    return { ok: false, error: 'pending', message: 'Your account request has not been approved yet. Hand in your signed paper registration form to your EPWP District Coordinator. You can sign in once the administrator has approved it.' };
+  }
   if (!user.active) {
     return { ok: false, error: 'login', message: 'This account has been switched off. Contact the administrator.' };
   }
@@ -421,7 +513,7 @@ function login_(data) {
   cache.remove(failKey);
   var token = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '');
   cache.put('session:' + token, JSON.stringify({ username: user.username }), SESSION_SECONDS);
-  getUsersSheet_().getRange(user.row, 7).setValue(new Date());
+  getUsersSheet_().getRange(user.row, UCOL['Last sign-in']).setValue(new Date());
 
   return {
     ok: true,
@@ -434,6 +526,94 @@ function login_(data) {
     username: user.username,
     expires: Date.now() + SESSION_SECONDS * 1000
   };
+}
+
+/** A capturer asks for an account. It stays "Pending" until the administrator approves it. */
+function requestAccount_(data) {
+  if (data.website) return { ok: true };   // honeypot
+  var text = function (v, max) { return String(v === undefined || v === null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max); };
+  var phoneNo = function (v) { return text(v, 20).replace(/[^\d+]/g, '').replace(/^\+27/, '0'); };
+  var r = {
+    title: text(data.Title, 10),
+    first: text(data.FirstNames, 80),
+    surname: text(data.Surname, 80),
+    persal: text(data.Persal, 20).replace(/\s/g, ''),
+    job: text(data.JobTitle, 100),
+    office: text(data.Office, 200),
+    work: phoneNo(data.WorkPhone),
+    cell: phoneNo(data.Cellphone),
+    email: text(data.Email, 120),
+    access: text(data.Access, 40),
+    username: text(data.Username, 40).toLowerCase(),
+    password: String(data.Password || '')
+  };
+  var bad = function (message) { return { ok: false, error: 'invalid', message: message }; };
+  if (['Mr', 'Ms', 'Mrs', 'Dr'].indexOf(r.title) === -1) return bad('Choose your title.');
+  if (!r.first || !r.surname) return bad('Enter your first name(s) and surname.');
+  if (!/^[A-Za-z0-9]{5,12}$/.test(r.persal)) return bad('Enter your Persal or employee number (5 to 12 letters or numbers).');
+  if (!r.job) return bad('Enter your job title.');
+  if (!r.office) return bad('Enter the office or facility where you work.');
+  if (!/^0\d{9}$/.test(r.cell)) return bad('The cellphone number must have 10 digits and start with 0.');
+  if (r.work && !/^0\d{9}$/.test(r.work)) return bad('The work telephone number must have 10 digits and start with 0.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.email)) return bad('Enter a valid email address.');
+  var access = r.access.toLowerCase() === PROVINCIAL.toLowerCase() ? PROVINCIAL : displayDistrict_(districtCode_(r.access));
+  if (!access) return bad('Choose the district you capture for.');
+  if (!/^[a-z0-9._-]{3,40}$/.test(r.username)) return bad('The username can only use letters, numbers, dots or dashes (3 to 40, no spaces).');
+  if (r.password.length < MIN_PASSWORD) return bad('The password must have at least ' + MIN_PASSWORD + ' characters.');
+  if (r.password.toLowerCase().indexOf(r.username) !== -1) return bad('The password may not contain your username.');
+  if (data.Agree !== true) return bad('Tick the box to confirm the declaration.');
+
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(25000); } catch (err) {
+    return { ok: false, error: 'busy', message: 'The system is busy. Please try again in a minute.' };
+  }
+  try {
+    if (findUser_(r.username)) return bad('That username is already taken. Choose another one, for example by adding your initials.');
+    var sheet = getUsersSheet_();
+    var last = sheet.getLastRow();
+    var statuses = last < 2 ? [] : sheet.getRange(2, UCOL.Active, last - 1, 1).getDisplayValues();
+    var waiting = statuses.filter(function (row) { return row[0] === PENDING; }).length;
+    if (waiting >= MAX_PENDING) {
+      return { ok: false, error: 'busy', message: 'Too many requests are waiting for approval. Please try again later.' };
+    }
+    var salt = Utilities.getUuid();
+    var fullName = r.first + ' ' + r.surname;
+    appendUser_({
+      'Username': r.username, 'Full name': safeCell_(fullName), 'District': access, 'Active': PENDING,
+      'Password hash': hashPassword_(r.password, salt), 'Salt': salt,
+      'Title': r.title, 'Persal number': safeCell_(r.persal), 'Job title': safeCell_(r.job),
+      'Office': safeCell_(r.office), 'Work phone': r.work, 'Cellphone': r.cell, 'Email': safeCell_(r.email),
+      'Requested on': new Date(), 'Paper form received': 'No'
+    });
+    SpreadsheetApp.flush();
+  } finally {
+    lock.releaseLock();
+  }
+
+  notifyAdmin_(r, access);
+  return { ok: true, username: r.username };
+}
+
+/** Emails the administrator about a new account request. Never stops the request. */
+function notifyAdmin_(r, access) {
+  try {
+    var to = ADMIN_EMAIL || Session.getEffectiveUser().getEmail();
+    if (!to) return;
+    MailApp.sendEmail(to, 'EPWP: new capturer account request from ' + r.first + ' ' + r.surname,
+      'A new capturer account has been requested on the EPWP applications system.\n\n' +
+      'Name: ' + r.title + ' ' + r.first + ' ' + r.surname + '\n' +
+      'Username: ' + r.username + '\n' +
+      'Access requested: ' + access + '\n' +
+      'Persal number: ' + r.persal + '\n' +
+      'Job title: ' + r.job + '\n' +
+      'Office: ' + r.office + '\n' +
+      'Cellphone: ' + r.cell + '\n' +
+      'Email: ' + r.email + '\n\n' +
+      'When the signed paper Capturer Registration Form has been received, open the spreadsheet and choose ' +
+      'EPWP > Approve account requests.\n\n' + SpreadsheetApp.getActiveSpreadsheet().getUrl());
+  } catch (err) {
+    console.error(err);
+  }
 }
 
 function logout_(data) {
@@ -455,21 +635,25 @@ function sessionUser_(token) {
 
 function getUsersSheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(USERS_SHEET);
-  if (!sheet) {
-    sheet = ss.insertSheet(USERS_SHEET);
+  var sheet = ss.getSheetByName(USERS_SHEET) || ss.insertSheet(USERS_SHEET);
+  var width = sheet.getLastColumn();
+  var current = width ? sheet.getRange(1, 1, 1, width).getDisplayValues()[0].join('|') : '';
+  if (current !== USER_HEADERS.join('|')) {
+    // New sheet, or one from an earlier version: (re)write the headings.
+    // New columns are only ever added at the end, so existing rows stay valid.
     sheet.getRange(1, 1, 1, USER_HEADERS.length)
       .setValues([USER_HEADERS])
       .setFontWeight('bold')
       .setBackground('#0a6b3d')
       .setFontColor('#ffffff');
     sheet.setFrozenRows(1);
-    sheet.getRange(2, 7, sheet.getMaxRows() - 1, 1).setNumberFormat('yyyy-mm-dd hh:mm');
     var rows = sheet.getMaxRows() - 1;
-    sheet.getRange(2, 3, rows, 1).setDataValidation(SpreadsheetApp.newDataValidation()
+    sheet.getRange(2, UCOL.District, rows, 1).setDataValidation(SpreadsheetApp.newDataValidation()
       .requireValueInList(DISTRICTS.map(function (d) { return d[1]; }).concat([PROVINCIAL]), true)
       .setAllowInvalid(false).build());
-    sheet.getRange(2, 4, rows, 1).setDataValidation(SpreadsheetApp.newDataValidation()
+    sheet.getRange(2, UCOL.Active, rows, 1).setDataValidation(SpreadsheetApp.newDataValidation()
+      .requireValueInList([PENDING, 'Yes', 'No'], true).setAllowInvalid(false).build());
+    sheet.getRange(2, UCOL['Paper form received'], rows, 1).setDataValidation(SpreadsheetApp.newDataValidation()
       .requireValueInList(['Yes', 'No'], true).setAllowInvalid(false).build());
   }
   return sheet;
@@ -490,9 +674,10 @@ function findUser_(username) {
         district: access,
         provincial: access.toLowerCase() === PROVINCIAL.toLowerCase(),
         districtCode: districtCode_(access),
-        active: /^(yes|y|true)$/i.test(String(rows[i][3]).trim()),
-        hash: rows[i][4],
-        salt: rows[i][5]
+        status: String(rows[i][UCOL.Active - 1]).trim(),
+        active: /^(yes|y|true)$/i.test(String(rows[i][UCOL.Active - 1]).trim()),
+        hash: rows[i][UCOL['Password hash'] - 1],
+        salt: rows[i][UCOL.Salt - 1]
       };
     }
   }
