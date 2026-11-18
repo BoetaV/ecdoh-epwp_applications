@@ -67,10 +67,20 @@ Staff at the District Offices capture paper applications on the same website:
 (or use the link at the bottom of the public page).
 
 - **Accounts** are kept in the **Users** tab of the Sheet. Add one with
-  **EPWP > Add a capturing user**: enter a username, the person's full name
-  and their district. The system makes a password and shows it once; give it
-  to the person. Passwords are stored in coded form, so nobody can read them
-  in the Sheet.
+  **EPWP > Add a capturing user**: enter a username, the person's full name,
+  and pick their access by number: one of the eight districts, or
+  **Provincial (all districts)**. The system makes a password and shows it
+  once; give it to the person. Passwords are stored in coded form, so nobody
+  can read them in the Sheet.
+- **What each user can see:** a district user captures and sees only
+  applicants who live in their district (online and captured). The District
+  box on their capture form is fixed to their district. A provincial user
+  captures for any district and sees everyone. To change someone's access,
+  pick a different value in the **District** column of the Users tab.
+- **View applications:** signed-in staff can open **View applications** to
+  list, search and filter the applications they are allowed to see, newest
+  first, with links to uploaded documents. The document links open only for
+  people the Drive folder has been shared with.
 - **Forgotten password or locked out** (5 wrong tries locks an account for
   15 minutes): **EPWP > Reset a user's password** gives a new one.
 - **Stopping access:** change **Active** to `No` in the Users tab. It takes
@@ -96,9 +106,10 @@ If the surname does not match, they are only told that an application with
 that ID number exists and to contact their District Office, so nobody can look
 up someone else's reference number.
 
-Staff capturing a paper application see a warning (with the reference number
-and who captured it) as soon as they type an ID number that is already on the
-system.
+Staff capturing a paper application see a warning as soon as they type an ID
+number that is already on the system: with the reference number and who
+captured it for their own district, or only "already on the system for an
+applicant in <district>" for another district.
 
 ## Finding the supporting documents
 

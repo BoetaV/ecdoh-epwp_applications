@@ -12,6 +12,11 @@
  *     Staff accounts are kept in the "Users" tab and managed from the EPWP
  *     menu in the spreadsheet (passwords are stored hashed, never as text).
  *
+ * Staff access: a user with a district (for example "Amathole District") can
+ * only capture and view applications whose applicant lives in that district,
+ * whether they applied online or on paper. A "Provincial (all districts)"
+ * user can capture and view everything.
+ *
  * Supporting documents are saved to Google Drive, in a folder called
  * "EPWP Applications - Supporting Documents" next to this spreadsheet, with
  * one sub-folder per district. Each row in the sheet links to its files.
@@ -54,8 +59,22 @@ var DOCUMENT_FILE_LABELS = { IDCopy: 'ID', QualificationCopy: 'Results' };
 // version of the sheet, so these columns come last.
 var CAPTURE_HEADERS = ['Channel', 'Captured By', 'Captured By District', 'Date Received', 'Received At', 'Paper Documents'];
 
-// Display names for the districts (also used for the Drive folders).
-var DISTRICT_NAMES = { 'N Mandela Bay MM': 'Nelson Mandela Bay Metro' };
+// The districts, as stored in an application (the "District" column), with
+// the name people see. Staff accounts use the display name.
+var DISTRICTS = [
+  ['Alfred Nzo District', 'Alfred Nzo District'],
+  ['Amathole District', 'Amathole District'],
+  ['Buffalo City Metro', 'Buffalo City Metro'],
+  ['Chris Hani District', 'Chris Hani District'],
+  ['Joe Gqabi District', 'Joe Gqabi District'],
+  ['N Mandela Bay MM', 'Nelson Mandela Bay Metro'],
+  ['OR Tambo District', 'OR Tambo District'],
+  ['Sarah Baartman District', 'Sarah Baartman District']
+];
+var PROVINCIAL = 'Provincial (all districts)';
+var DISTRICT_NAMES = {};
+DISTRICTS.forEach(function (d) { DISTRICT_NAMES[d[0]] = d[1]; });
+var PAGE_SIZE = 50;
 var FILE_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'application/pdf': 'pdf' };
 var MAX_FILE_BYTES = 4 * 1024 * 1024;
 
@@ -123,8 +142,7 @@ function addUser() {
   }
   var fullName = askText_(ui, 'Add a capturing user (2 of 3)', 'Full name of the person. For example: Nomsa Dlamini');
   if (fullName === null) return;
-  var district = askText_(ui, 'Add a capturing user (3 of 3)',
-    'District office this person works at. For example: Amathole District, or Head Office');
+  var district = askDistrict_(ui);
   if (district === null) return;
 
   var password = newPassword_();
@@ -156,6 +174,23 @@ function resetPassword() {
   showPassword_(ui, 'Password reset', user.username, password);
 }
 
+/** Asks for one of the districts, or provincial access, by number. */
+function askDistrict_(ui) {
+  var choices = DISTRICTS.map(function (d) { return d[1]; }).concat([PROVINCIAL]);
+  var list = choices.map(function (name, i) { return (i + 1) + '. ' + name; }).join('\n');
+  var answer = askText_(ui, 'Add a capturing user (3 of 3)',
+    'Which applications may this person capture and see? Type the number:\n\n' + list +
+    '\n\nA district user only sees applicants who live in that district. ' +
+    'Provincial users (for example Head Office) see everyone.');
+  if (answer === null) return null;
+  var n = Number(answer);
+  if (!(n >= 1 && n <= choices.length && Math.floor(n) === n)) {
+    ui.alert('Please type a number from 1 to ' + choices.length + '. The user was not added.');
+    return null;
+  }
+  return choices[n - 1];
+}
+
 function askText_(ui, title, prompt) {
   var answer = ui.prompt(title, prompt, ui.ButtonSet.OK_CANCEL);
   if (answer.getSelectedButton() !== ui.Button.OK) return null;
@@ -170,7 +205,8 @@ function showPassword_(ui, title, username, password) {
     'Username: ' + username + '\nPassword: ' + password + '\n\n' +
     'Write the password down now. It is stored in coded form and cannot be shown again. ' +
     'If it is lost, use "Reset a user\'s password".\n\n' +
-    'To stop someone signing in, change "Active" to No in the Users tab.',
+    'To stop someone signing in, change "Active" to No in the Users tab. ' +
+    'To change what someone can see, pick a different District in the Users tab.',
     ui.ButtonSet.OK);
 }
 
@@ -200,6 +236,7 @@ function doPost(e) {
       case 'logout': return json_(logout_(data));
       case 'lookup': return json_(lookup_(data));
       case 'capture': return json_(saveApplication_(data, sessionUser_(data.token)));
+      case 'list': return json_(list_(data, sessionUser_(data.token)));
       default: return json_(saveApplication_(data, null));
     }
   } catch (err) {
@@ -230,6 +267,9 @@ function saveApplication_(data, user) {
 
   var record = clean_(data);
   var capture = captured ? cleanCapture_(data) : null;
+  if (captured && record.District && !canSee_(user, record.District)) {
+    return { ok: false, error: 'invalid', message: 'You can only capture applications from ' + user.district + '.' };
+  }
   var problem = validate_(record, data, captured) ||
     (captured ? validateCapture_(capture) : '') ||
     validateDocuments_(data.Documents, !captured);
@@ -240,7 +280,7 @@ function saveApplication_(data, user) {
   try {
     // Refuse a repeat application before spending time on the uploads.
     var early = findApplication_(getSheet_(), record.SouthAfricanID);
-    if (early) return duplicateReply_(early, record.Surname, captured);
+    if (early) return duplicateReply_(early, record.Surname, user);
 
     // Saving to Drive is slow, so it is done before taking the lock.
     saved = saveDocuments_(record, data.Documents);
@@ -258,7 +298,7 @@ function saveApplication_(data, user) {
     var duplicate = findApplication_(sheet, record.SouthAfricanID);
     if (duplicate) {
       trash_(saved);
-      return duplicateReply_(duplicate, record.Surname, captured);
+      return duplicateReply_(duplicate, record.Surname, user);
     }
 
     var lastRow = sheet.getLastRow();
@@ -307,19 +347,29 @@ function lookup_(data) {
   var user = data.token ? sessionUser_(data.token) : null;
   var found = findApplication_(getSheet_(), id);
   if (!found) return { ok: true, found: false };
-  var reply = duplicateReply_(found, String(data.Surname || ''), !!user);
+  var reply = duplicateReply_(found, String(data.Surname || ''), user);
   reply.ok = true;
   reply.found = true;
   return reply;
 }
 
-function duplicateReply_(found, surname, forStaff) {
+/**
+ * What to say about an existing application. staff is the signed-in user, or
+ * null for the public. Applicants only get details when the surname matches.
+ * Staff only get details for applicants in their own district; for another
+ * district they are told just that, so that nobody captures it twice.
+ */
+function duplicateReply_(found, surname, staff) {
   var reply = {
     ok: false,
     error: 'duplicate',
     message: 'An application with this ID number has already been received.'
   };
-  if (!forStaff && !sameSurname_(found.surname, surname)) return reply;
+  if (staff && !canSee_(staff, found.district)) {
+    reply.otherDistrict = displayDistrict_(found.district) || 'another district';
+    return reply;
+  }
+  if (!staff && !sameSurname_(found.surname, surname)) return reply;
 
   reply.ref = found.ref;
   reply.channel = found.channel;
@@ -329,7 +379,7 @@ function duplicateReply_(found, surname, forStaff) {
     reply.office = found.receivedAt || (district ? 'the ' + district + ' office' : '');
     reply.received = found.dateReceived;
   }
-  if (forStaff) {
+  if (staff) {
     reply.applicant = found.name + ' ' + found.surname;
     reply.capturedBy = found.capturedBy;
   }
@@ -364,6 +414,9 @@ function login_(data) {
   if (!user.active) {
     return { ok: false, error: 'login', message: 'This account has been switched off. Contact the administrator.' };
   }
+  if (!user.provincial && !user.districtCode) {
+    return { ok: false, error: 'login', message: 'Your account does not have a district yet. Ask the administrator to choose one in the Users tab.' };
+  }
 
   cache.remove(failKey);
   var token = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '');
@@ -375,6 +428,9 @@ function login_(data) {
     token: token,
     name: user.name,
     district: user.district,
+    districtCode: user.districtCode,
+    provincial: user.provincial,
+    districts: DISTRICTS.map(function (d) { return { code: d[0], name: d[1] }; }),
     username: user.username,
     expires: Date.now() + SESSION_SECONDS * 1000
   };
@@ -393,7 +449,7 @@ function sessionUser_(token) {
   if (!stored) fail();
   // Look the user up again so that switching an account off takes effect at once.
   var user = findUser_(JSON.parse(stored).username);
-  if (!user || !user.active) fail();
+  if (!user || !user.active || (!user.provincial && !user.districtCode)) fail();
   return user;
 }
 
@@ -409,6 +465,12 @@ function getUsersSheet_() {
       .setFontColor('#ffffff');
     sheet.setFrozenRows(1);
     sheet.getRange(2, 7, sheet.getMaxRows() - 1, 1).setNumberFormat('yyyy-mm-dd hh:mm');
+    var rows = sheet.getMaxRows() - 1;
+    sheet.getRange(2, 3, rows, 1).setDataValidation(SpreadsheetApp.newDataValidation()
+      .requireValueInList(DISTRICTS.map(function (d) { return d[1]; }).concat([PROVINCIAL]), true)
+      .setAllowInvalid(false).build());
+    sheet.getRange(2, 4, rows, 1).setDataValidation(SpreadsheetApp.newDataValidation()
+      .requireValueInList(['Yes', 'No'], true).setAllowInvalid(false).build());
   }
   return sheet;
 }
@@ -420,11 +482,14 @@ function findUser_(username) {
   var rows = sheet.getRange(2, 1, last - 1, USER_HEADERS.length).getDisplayValues();
   for (var i = 0; i < rows.length; i++) {
     if (String(rows[i][0]).trim().toLowerCase() === username) {
+      var access = String(rows[i][2]).trim();
       return {
         row: i + 2,
         username: String(rows[i][0]).trim().toLowerCase(),
         name: rows[i][1],
-        district: rows[i][2],
+        district: access,
+        provincial: access.toLowerCase() === PROVINCIAL.toLowerCase(),
+        districtCode: districtCode_(access),
         active: /^(yes|y|true)$/i.test(String(rows[i][3]).trim()),
         hash: rows[i][4],
         salt: rows[i][5]
@@ -498,6 +563,7 @@ function findApplication_(sheet, id) {
         ref: String(get('Reference')),
         name: String(get('Name')),
         surname: String(get('Surname')),
+        district: String(get('District')),
         // Rows saved before the Channel column existed were all online.
         channel: get('Channel') === 'Captured' ? 'Captured' : 'Online',
         capturedBy: String(get('Captured By') || ''),
@@ -539,6 +605,92 @@ function formatDay_(value) {
 
 function displayDistrict_(district) {
   return DISTRICT_NAMES[district] || district;
+}
+
+/** The application "District" value for a district name, or '' if it is not one. */
+function districtCode_(name) {
+  var n = String(name || '').trim().toLowerCase();
+  for (var i = 0; i < DISTRICTS.length; i++) {
+    if (DISTRICTS[i][0].toLowerCase() === n || DISTRICTS[i][1].toLowerCase() === n) return DISTRICTS[i][0];
+  }
+  return '';
+}
+
+/** May this staff member see (and capture) an applicant from this district? */
+function canSee_(user, applicantDistrict) {
+  if (user.provincial) return true;
+  return !!user.districtCode && districtCode_(applicantDistrict) === user.districtCode;
+}
+
+/**
+ * Applications this staff member may see, newest first, PAGE_SIZE at a time.
+ * Filters: district (provincial users only), channel and a search text.
+ */
+function list_(data, user) {
+  var sheet = getSheet_();
+  var last = sheet.getLastRow();
+  var values = last < 2 ? [] : sheet.getRange(2, 1, last - 1, HEADERS.length).getValues();
+  var col = {};
+  HEADERS.forEach(function (h, i) { col[h] = i; });
+
+  var district = user.provincial ? districtCode_(data.district) : user.districtCode;
+  var channel = data.channel === 'Online' || data.channel === 'Captured' ? data.channel : '';
+  var words = String(data.search || '').toLowerCase().replace(/[^a-z0-9 -]/g, ' ').split(/\s+/).filter(String);
+
+  var inScope = [];
+  for (var i = values.length - 1; i >= 0; i--) {
+    var row = values[i];
+    var rowDistrict = String(row[col.District]);
+    if (!canSee_(user, rowDistrict)) continue;
+    if (district && districtCode_(rowDistrict) !== district) continue;
+    inScope.push(row);
+  }
+
+  var counts = { all: inScope.length, online: 0, captured: 0 };
+  var matches = inScope.filter(function (row) {
+    var rowChannel = row[col.Channel] === 'Captured' ? 'Captured' : 'Online';
+    if (rowChannel === 'Captured') counts.captured++; else counts.online++;
+    if (channel && rowChannel !== channel) return false;
+    if (!words.length) return true;
+    var text = [row[col.Reference], row[col.Name], row[col.Surname], row[col.SouthAfricanID],
+      row[col.CellphoneNumber], row[col.LocalMunicipality], row[col.NearestFacility]].join(' ').toLowerCase();
+    return words.every(function (w) { return text.indexOf(w) !== -1; });
+  });
+
+  var offset = Math.max(0, Math.floor(Number(data.offset) || 0));
+  var page = matches.slice(offset, offset + PAGE_SIZE).map(function (row) {
+    var stamp = row[col.Timestamp];
+    var link = function (h) { var v = String(row[col[h]] || ''); return /^https:\/\/drive\.google\.com\//.test(v) ? v : ''; };
+    return {
+      ref: String(row[col.Reference]),
+      when: stamp instanceof Date ? Utilities.formatDate(stamp, TIME_ZONE, 'yyyy-MM-dd HH:mm') : String(stamp || ''),
+      name: String(row[col.Name]),
+      surname: String(row[col.Surname]),
+      id: String(row[col.SouthAfricanID]),
+      gender: String(row[col.Gender]),
+      cell: String(row[col.CellphoneNumber]),
+      district: displayDistrict_(String(row[col.District])),
+      local: String(row[col.LocalMunicipality]),
+      ward: String(row[col.MunicipalWardNo]),
+      facility: String(row[col.NearestFacility]),
+      qualification: String(row[col.HighestSchoolLevel]),
+      channel: row[col.Channel] === 'Captured' ? 'Captured' : 'Online',
+      capturedBy: String(row[col['Captured By']] || ''),
+      dateReceived: formatDay_(row[col['Date Received']]),
+      idDoc: link('ID Document (link)'),
+      resultsDoc: link('Proof of Results (link)')
+    };
+  });
+
+  return {
+    ok: true,
+    scope: user.provincial ? (district ? displayDistrict_(district) : 'All districts') : user.district,
+    counts: counts,
+    total: matches.length,
+    offset: offset,
+    pageSize: PAGE_SIZE,
+    rows: page
+  };
 }
 
 /* =====================================================================

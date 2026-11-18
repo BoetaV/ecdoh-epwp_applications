@@ -174,9 +174,30 @@ fieldset.group > legend b { display: grid; place-items: center; width: 28px; hei
 .login-card { margin-top: 22px; max-width: 460px; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; display: grid; gap: 16px; }
 .login-card .btn { width: 100%; }
 .login-card .hint { margin: 0; }
-.staff-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-bottom: 10px; padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,.12); font-size: 15px; }
-.staff-bar strong { color: var(--yellow); }
-.staff-bar button { margin-left: auto; font: inherit; font-weight: 700; font-size: 14px; color: var(--green-900); background: var(--yellow); border: 0; border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.staff-nav { background: #0b2f20; color: #e3f1e4; font-size: 15px; }
+.staff-nav .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding-top: 8px; padding-bottom: 8px; }
+.staff-nav strong { color: var(--yellow); }
+.staff-nav nav { display: flex; gap: 6px; flex-wrap: wrap; }
+.staff-nav nav a { color: var(--white); text-decoration: none; font-weight: 700; padding: 6px 12px; border-radius: 999px; }
+.staff-nav nav a[aria-current="page"] { background: var(--green-700); }
+.staff-nav button { margin-left: auto; font: inherit; font-weight: 700; font-size: 14px; color: var(--green-900); background: var(--yellow); border: 0; border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.list-wrap { max-width: 1440px; }
+.filters { margin-top: 20px; display: grid; gap: 12px; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+.filters .btn { min-height: 50px; }
+.summary { margin-top: 16px; font-weight: 700; color: var(--green-900); }
+.table-wrap { margin-top: 10px; overflow-x: auto; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); }
+.table-wrap table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.table-wrap th { position: sticky; top: 0; background: var(--green-700); color: var(--white); text-align: left; padding: 10px; white-space: nowrap; }
+.table-wrap td { padding: 9px 10px; border-top: 1px solid var(--line); vertical-align: top; }
+.table-wrap tr:nth-child(even) td { background: var(--green-50); }
+.table-wrap td.nowrap { white-space: nowrap; }
+.tag-chip { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; }
+.tag-chip.online { background: var(--green-100); color: var(--green-900); }
+.tag-chip.captured { background: var(--yellow-100); color: #6b5300; border: 1px solid var(--yellow); }
+.muted { color: var(--muted); font-size: 13px; }
+.pager { margin-top: 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.pager .btn { min-height: 44px; padding: 8px 18px; font-size: 15px; }
+.empty { padding: 24px; text-align: center; color: var(--muted); }
 .stop.info { background: var(--yellow-100); border-color: var(--yellow); color: var(--ink); }
 .site a { color: var(--yellow); }
 .card-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 15px; }
@@ -257,6 +278,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   .districts { grid-template-columns: repeat(4, 1fr); }
   .fields.cols { grid-template-columns: 1fr 1fr; }
   .fields .full { grid-column: 1 / -1; }
+  .filters { grid-template-columns: 2fr 1fr 1fr auto; align-items: end; }
   .submit-row .buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
   .submit-row .btn { width: auto; min-width: 220px; }
   .submit-row .btn.green { min-width: 280px; }
@@ -280,6 +302,17 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   <div class="wrap">
     <a class="home" href="#home"><img src="assets/logo.png" width="409" height="107" alt="Province of the Eastern Cape, Department of Health"></a>
     <div class="tag">Expanded Public Works Programme</div>
+  </div>
+</div>
+
+<div class="staff-nav" id="staff-nav" hidden>
+  <div class="wrap">
+    <span>Signed in as <strong id="staff-name"></strong> <span id="staff-district"></span></span>
+    <nav aria-label="Staff">
+      <a href="#capture" id="nav-capture">Capture an application</a>
+      <a href="#applications" id="nav-list">View applications</a>
+    </nav>
+    <button type="button" id="signout-btn">Sign out</button>
   </div>
 </div>
 
@@ -448,15 +481,60 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   </div>
 </main>
 
+<!-- ======================= STAFF: VIEW APPLICATIONS ======================= -->
+<main id="view-list" hidden>
+  <div class="form-head">
+    <div class="wrap list-wrap">
+      <h1>Applications</h1>
+      <p id="list-scope"></p>
+    </div>
+  </div>
+  <div class="wrap list-wrap">
+    <form class="filters" id="list-form" novalidate>
+      <div class="field">
+        <label for="list-search">Search</label>
+        <input type="text" id="list-search" placeholder="Name, surname, ID number, reference, cellphone or facility" maxlength="80">
+      </div>
+      <div class="field" id="list-district-wrap" hidden>
+        <label for="list-district">District</label>
+        <select id="list-district"><option value="">All districts</option></select>
+      </div>
+      <div class="field">
+        <label for="list-channel">How they applied</label>
+        <select id="list-channel">
+          <option value="">Online and captured</option>
+          <option value="Online">Online only</option>
+          <option value="Captured">Captured only</option>
+        </select>
+      </div>
+      <button class="btn green" type="submit" id="list-btn">Show</button>
+    </form>
+    <div class="alert" id="list-alert" role="alert" hidden style="margin-top:14px"></div>
+    <p class="summary" id="list-summary" aria-live="polite"></p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Reference</th><th>Received</th><th>Applicant</th><th>ID number</th><th>Cellphone</th>
+            <th>Where they live</th><th>Nearest facility</th><th>Qualification</th><th>How</th><th>Documents</th>
+          </tr>
+        </thead>
+        <tbody id="list-body"></tbody>
+      </table>
+    </div>
+    <div class="pager">
+      <button class="btn ghost" type="button" id="list-prev">Previous</button>
+      <button class="btn ghost" type="button" id="list-next">Next</button>
+      <span class="muted" id="list-page"></span>
+    </div>
+  </div>
+</main>
+
 <!-- ======================= APPLICATION FORM ======================= -->
 <main id="view-register" hidden>
   <div class="form-head">
     <div class="wrap form-wrap">
       <a href="#home" class="online-only">&larr; Back to the advertisement</a>
-      <div class="staff-bar capture-only" hidden>
-        <span>Signed in as <strong id="staff-name"></strong> <span id="staff-district"></span></span>
-        <button type="button" id="signout-btn">Sign out</button>
-      </div>
       <h1 id="form-title">EPWP General Worker application</h1>
       <p class="online-only">Fill in all the fields. Fields marked <em>optional</em> can be left empty.</p>
       <p class="capture-only" hidden>Type in the details exactly as they appear on the paper application form. Fields marked <em>optional</em> can be left empty.</p>
@@ -768,14 +846,21 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   function showView() {
     var hash = location.hash;
     var capture = hash === '#capture';
+    var listing = hash === '#applications';
+    var staff = capture || listing;
     var apply = hash === '#apply' || hash === '#register';
-    var signedIn = capture && !!session();
+    var s = session();
     mode = capture ? 'capture' : 'online';
 
-    $('view-home').hidden = apply || capture;
-    $('view-login').hidden = !(capture && !signedIn);
-    $('view-register').hidden = !(apply || signedIn);
+    $('view-home').hidden = apply || staff;
+    $('view-login').hidden = !(staff && !s);
+    $('view-register').hidden = !(apply || (capture && s));
+    $('view-list').hidden = !(listing && s);
+    $('staff-nav').hidden = !(staff && s);
+    $('nav-capture').setAttribute('aria-current', capture ? 'page' : 'false');
+    $('nav-list').setAttribute('aria-current', listing ? 'page' : 'false');
     setMode();
+    if (listing && s) openList();
     if (isClosed()) markClosed();
 
     // Coming back to the form always shows the form, not an earlier result.
@@ -809,9 +894,22 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('staff-name').textContent = s ? s.name : '';
     $('staff-district').textContent = s && s.district ? '(' + s.district + ')' : '';
     if (capture && !$('ReceivedDate').value) $('ReceivedDate').value = todayIso();
+    lockDistrict();
     $('ReceivedDate').max = todayIso();
     if (!button.disabled) setBusy(false);
     renumber();
+  }
+
+  // District staff capture only for their own district, so their district is
+  // chosen for them. Provincial staff and the public choose freely.
+  function lockDistrict() {
+    var s = session();
+    var code = mode === 'capture' && s && !s.provincial ? s.districtCode : '';
+    if (code && district.value !== code) {
+      district.value = code;
+      district.dispatchEvent(new Event('change'));
+    }
+    district.disabled = !!code;
   }
 
   // Number the visible sections 1, 2, 3...
@@ -949,6 +1047,13 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   function showDuplicate(out, id) {
     if (mode === 'capture') {
       dupFor = id;
+      if (out.otherDistrict) {
+        $('dup-text').textContent = 'This ID number is already on the system for an applicant in ' + out.otherDistrict +
+          '. Do not capture it again. Contact that district office if you need to check it.';
+        $('dup-stop').hidden = false;
+        setError('SouthAfricanID', '');
+        return;
+      }
       var how = out.channel === 'Captured'
         ? 'It was captured by ' + (out.capturedBy || 'another user') + ' on ' + out.submitted + '.'
         : 'The applicant applied online on ' + out.submitted + '.';
@@ -1296,7 +1401,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         } else if (out && out.error === 'duplicate') {
           if (mode === 'online' && out.ref) {
             showExisting(out);
-          } else if (mode === 'capture' && out.ref) {
+          } else if (mode === 'capture' && (out.ref || out.otherDistrict)) {
             showDuplicate(out, val('SouthAfricanID'));
             $('SouthAfricanID').scrollIntoView({ block: 'center' });
           } else {
@@ -1339,6 +1444,127 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('done').focus({ preventScroll: true });
   }
 
+  /* ---------- staff: view applications ---------- */
+  var listOffset = 0, listLoaded = false, listSeq = 0;
+
+  function openList() {
+    var s = session();
+    var provincial = !!(s && s.provincial);
+    $('list-district-wrap').hidden = !provincial;
+    if (provincial && $('list-district').options.length === 1) {
+      (s.districts || []).forEach(function (d) { $('list-district').add(new Option(d.name, d.code)); });
+    }
+    if (!listLoaded) loadList(0);
+  }
+
+  function clearList() {
+    listLoaded = false;
+    listOffset = 0;
+    $('list-body').innerHTML = '';
+    $('list-summary').textContent = '';
+    $('list-scope').textContent = '';
+    $('list-search').value = '';
+    $('list-channel').value = '';
+    while ($('list-district').options.length > 1) $('list-district').remove(1);
+  }
+
+  function loadList(offset) {
+    var s = session();
+    if (!s) return sessionEnded();
+    var seq = ++listSeq;
+    $('list-alert').hidden = true;
+    $('list-btn').disabled = true;
+    $('list-summary').textContent = 'Loading...';
+    post({
+      action: 'list', token: s.token, offset: offset,
+      search: $('list-search').value.trim(), channel: $('list-channel').value, district: $('list-district').value
+    }).then(function (out) {
+      if (seq !== listSeq) return;
+      if (out && out.error === 'auth') return sessionEnded();
+      if (!out || !out.ok) throw new Error((out && out.message) || 'failed');
+      listLoaded = true;
+      listOffset = out.offset;
+      renderList(out);
+    }).catch(function () {
+      if (seq !== listSeq) return;
+      $('list-summary').textContent = '';
+      $('list-alert').textContent = 'The applications could not be loaded. Check your internet connection and press Show again.';
+      $('list-alert').hidden = false;
+    }).then(function () { $('list-btn').disabled = false; });
+  }
+
+  function addCell(tr, text, sub, nowrap) {
+    var td = document.createElement('td');
+    if (nowrap) td.className = 'nowrap';
+    td.textContent = text || '';
+    if (sub) {
+      var small = document.createElement('div');
+      small.className = 'muted';
+      small.textContent = sub;
+      td.appendChild(small);
+    }
+    tr.appendChild(td);
+    return td;
+  }
+
+  function renderList(out) {
+    var c = out.counts;
+    $('list-scope').textContent = 'Showing: ' + out.scope;
+    var filtered = out.total !== c.all;
+    $('list-summary').textContent = c.all + ' application' + (c.all === 1 ? '' : 's') + ' (' + c.online + ' online, ' + c.captured + ' captured)' +
+      (filtered ? '. ' + out.total + ' match your search.' : '.');
+    var body = $('list-body');
+    body.innerHTML = '';
+    if (!out.rows.length) {
+      var tr = document.createElement('tr');
+      var td = document.createElement('td');
+      td.colSpan = 10;
+      td.className = 'empty';
+      td.textContent = c.all ? 'No applications match your search.' : 'There are no applications yet.';
+      tr.appendChild(td);
+      body.appendChild(tr);
+    }
+    out.rows.forEach(function (r) {
+      var tr = document.createElement('tr');
+      addCell(tr, r.ref, '', true);
+      addCell(tr, r.when, r.channel === 'Captured' && r.dateReceived ? 'Paper form: ' + r.dateReceived : '', true);
+      addCell(tr, r.name + ' ' + r.surname, r.gender);
+      addCell(tr, r.id, '', true);
+      addCell(tr, r.cell, '', true);
+      addCell(tr, r.local, (out.scope === r.district ? '' : r.district + ', ') + 'Ward ' + r.ward);
+      addCell(tr, r.facility);
+      addCell(tr, r.qualification);
+      var how = addCell(tr, '', r.channel === 'Captured' ? r.capturedBy : '');
+      var chip = document.createElement('span');
+      chip.className = 'tag-chip ' + r.channel.toLowerCase();
+      chip.textContent = r.channel;
+      how.insertBefore(chip, how.firstChild);
+      var docs = addCell(tr, '');
+      [['ID', r.idDoc], ['Results', r.resultsDoc]].forEach(function (d) {
+        if (!d[1]) return;
+        var a = document.createElement('a');
+        a.href = d[1];
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = d[0];
+        if (docs.firstChild) docs.appendChild(document.createTextNode(' · '));
+        docs.appendChild(a);
+      });
+      if (!docs.firstChild) docs.textContent = '-';
+      body.appendChild(tr);
+    });
+    var first = out.total ? out.offset + 1 : 0, lastShown = out.offset + out.rows.length;
+    $('list-page').textContent = out.total ? first + ' to ' + lastShown + ' of ' + out.total : '';
+    $('list-prev').disabled = out.offset === 0;
+    $('list-next').disabled = lastShown >= out.total;
+  }
+
+  $('list-form').addEventListener('submit', function (e) { e.preventDefault(); loadList(0); });
+  $('list-channel').addEventListener('change', function () { loadList(0); });
+  $('list-district').addEventListener('change', function () { loadList(0); });
+  $('list-prev').addEventListener('click', function () { loadList(Math.max(0, listOffset - 50)); });
+  $('list-next').addEventListener('click', function () { loadList(listOffset + 50); });
+
   /* ---------- staff sign in / out ---------- */
   var loginForm = $('login-form'), loginAlert = $('login-alert'), loginBtn = $('login-btn');
 
@@ -1362,12 +1588,14 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     }).then(function (out) {
       if (!out || !out.ok) { showLoginAlert((out && out.message) || 'The username or password is not correct.'); return; }
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-        token: out.token, name: out.name, district: out.district, username: out.username, expires: out.expires
+        token: out.token, name: out.name, district: out.district, username: out.username, expires: out.expires,
+        districtCode: out.districtCode, provincial: !!out.provincial, districts: out.districts || []
       }));
       $('login-pass').value = '';
       lookupKey = '';
+      listLoaded = false;
       showView();
-      $(form.hidden ? 'done' : 'ReceivedDate').focus({ preventScroll: true });
+      if (location.hash === '#capture') $(form.hidden ? 'done' : 'ReceivedDate').focus({ preventScroll: true });
     }).catch(function (err) {
       showLoginAlert(err && err.message === 'not set up'
         ? 'Staff sign-in is not switched on yet. The administrator must update the Apps Script.'
@@ -1381,8 +1609,12 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   // The sign-in ran out while capturing: sign in again, the answers stay on the form.
   function sessionEnded() {
     sessionStorage.removeItem(SESSION_KEY);
-    showLoginAlert('Your sign-in has ended. Sign in again. The application you were capturing is still filled in; save it again after signing in.');
+    showLoginAlert(location.hash === '#capture'
+      ? 'Your sign-in has ended. Sign in again. The application you were capturing is still filled in; save it again after signing in.'
+      : 'Your sign-in has ended. Please sign in again.');
     $('view-register').hidden = true;
+    $('view-list').hidden = true;
+    $('staff-nav').hidden = true;
     $('view-login').hidden = false;
     window.scrollTo(0, 0);
     $('login-user').focus({ preventScroll: true });
@@ -1394,6 +1626,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     if (s && connected()) post({ action: 'logout', token: s.token }).catch(function () {});
     sessionStorage.removeItem(SESSION_KEY);
     resetForm(true);
+    clearList();
     showLoginAlert('');
     showView();
   });
@@ -1429,6 +1662,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       $('ReceivedAt').value = keepAt;
     }
     if (mode === 'capture' && !$('ReceivedDate').value) $('ReceivedDate').value = todayIso();
+    lockDistrict();
   }
 
   function clearForm() {
