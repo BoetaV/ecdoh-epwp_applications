@@ -173,6 +173,15 @@ fieldset.group > legend b { display: grid; place-items: center; width: 28px; hei
 .hint { display: block; font-size: 14px; color: var(--muted); margin-bottom: 6px; font-weight: 400; }
 .login-card { margin-top: 22px; max-width: 460px; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; display: grid; gap: 16px; }
 .login-card .btn { width: 100%; }
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 84px; }
+.pw-toggle {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  min-height: 38px; min-width: 66px; padding: 0 12px;
+  font: inherit; font-size: 14px; font-weight: 700; color: var(--green-700);
+  background: var(--green-50); border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
+}
+.pw-toggle:hover { background: var(--green-100); }
 .login-card .hint { margin: 0; }
 .login-card .request-link { margin: 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 15px; }
 .steps-box { margin-top: 20px; background: var(--white); border: 1px solid var(--line); border-left: 8px solid var(--yellow); border-radius: var(--radius); padding: 16px 18px; }
@@ -476,7 +485,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       </div>
       <div class="field">
         <label for="login-pass">Password</label>
-        <input type="password" id="login-pass" autocomplete="current-password" maxlength="100">
+        <div class="pw-wrap"><input type="password" id="login-pass" autocomplete="current-password" maxlength="100"><button type="button" class="pw-toggle" data-for="login-pass" aria-controls="login-pass" aria-pressed="false" aria-label="Show password">Show</button></div>
       </div>
       <div class="alert" id="login-alert" role="alert" hidden></div>
       <button class="btn green" type="submit" id="login-btn">Sign in</button>
@@ -570,12 +579,12 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
           <div class="field" data-req="Password">
             <label for="req-password">Password</label>
             <span class="hint" id="req-pw-hint">At least 8 characters. Do not use your username.</span>
-            <input type="password" id="req-password" maxlength="100" autocomplete="new-password" aria-describedby="req-pw-hint">
+            <div class="pw-wrap"><input type="password" id="req-password" maxlength="100" autocomplete="new-password" aria-describedby="req-pw-hint"><button type="button" class="pw-toggle" data-for="req-password" aria-controls="req-password" aria-pressed="false" aria-label="Show password">Show</button></div>
           </div>
           <div class="field" data-req="Password2">
             <label for="req-password2">Type the password again</label>
             <span class="hint">&nbsp;</span>
-            <input type="password" id="req-password2" maxlength="100" autocomplete="new-password">
+            <div class="pw-wrap"><input type="password" id="req-password2" maxlength="100" autocomplete="new-password"><button type="button" class="pw-toggle" data-for="req-password2" aria-controls="req-password2" aria-pressed="false" aria-label="Show password">Show</button></div>
           </div>
         </div>
       </fieldset>
@@ -1686,6 +1695,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       if (out && out.ok) {
         $('req-done-user').textContent = out.username || reqVal('Username').toLowerCase();
         reqForm.reset();
+        hideAllPasswords();
         reqForm.hidden = true;
         $('req-done').hidden = false;
         window.scrollTo(0, 0);
@@ -1824,6 +1834,21 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   $('list-prev').addEventListener('click', function () { loadList(Math.max(0, listOffset - 50)); });
   $('list-next').addEventListener('click', function () { loadList(listOffset + 50); });
 
+  /* ---------- show / hide password ---------- */
+  function setPasswordVisible(btn, visible) {
+    $(btn.getAttribute('data-for')).type = visible ? 'text' : 'password';
+    btn.textContent = visible ? 'Hide' : 'Show';
+    btn.setAttribute('aria-pressed', visible ? 'true' : 'false');
+    btn.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
+  }
+  each('.pw-toggle', function (btn) {
+    btn.addEventListener('click', function () {
+      setPasswordVisible(btn, $(btn.getAttribute('data-for')).type === 'password');
+      $(btn.getAttribute('data-for')).focus();
+    });
+  });
+  function hideAllPasswords() { each('.pw-toggle', function (btn) { setPasswordVisible(btn, false); }); }
+
   /* ---------- staff sign in / out ---------- */
   var loginForm = $('login-form'), loginAlert = $('login-alert'), loginBtn = $('login-btn');
 
@@ -1851,6 +1876,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         districtCode: out.districtCode, provincial: !!out.provincial, districts: out.districts || []
       }));
       $('login-pass').value = '';
+      hideAllPasswords();
       lookupKey = '';
       listLoaded = false;
       showView();
