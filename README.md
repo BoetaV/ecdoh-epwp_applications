@@ -63,7 +63,7 @@ the Applications tab and the page should show a reference number
 
 Staff at the District Offices capture paper applications on the same website:
 
-**https://boetav.github.io/ecdoh-epwp-registration/capture.html**
+**https://boetav.github.io/ecdoh-epwp_applications/capture.html**
 (or use the link at the bottom of the public page).
 
 - **Accounts** are kept in the **Users** tab of the Sheet. Add one with
