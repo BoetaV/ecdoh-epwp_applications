@@ -1957,7 +1957,15 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       search: listFilters.search || '', channel: listFilters.channel || '', district: listFilters.district || ''
     }).then(function (out) {
       if (out && out.error === 'auth') return sessionEnded();
-      if (!out || !out.ok) throw new Error((out && out.message) || 'failed');
+      if (!out || !out.ok) {
+        // An older Apps Script treats "export" as an online application and asks for missing fields.
+        var msg = (!out || out.error === 'invalid' || !out.message)
+          ? 'Download to Excel is not switched on yet. The administrator must update the Apps Script (Deploy > Manage deployments > New version).'
+          : out.message;
+        $('list-alert').textContent = msg;
+        $('list-alert').hidden = false;
+        return;
+      }
       var blob = buildXlsx(out);
       var name = 'EPWP_Applications_' + out.scope.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '') + '_' + todayIso() + '.xlsx';
       var a = document.createElement('a');
