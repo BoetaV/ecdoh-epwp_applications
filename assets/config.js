@@ -1,7 +1,7 @@
 // Paste the Google Apps Script Web App URL here (it ends in /exec).
 // See README.md, step 1, for how to get it.
 window.EPWP_CONFIG = {
-  ENDPOINT: "https://script.google.com/macros/s/AKfycbzFg7hX18Iex2diNiUttVqDvY5a_N6clGW7doOC7cOmGfo9kO0tds9w8Dzr3uESCgFu/exec",
+  ENDPOINT: "https://script.google.com/macros/s/AKfycbxJixn2WQ_uHxqWYEdsyAJXcQohxgs4bF3-kY3jP-cqciAkWxoGUigkyn0zViTt9Mb-/exec",
 
   // Age range allowed to apply.
   MIN_AGE: 18,
