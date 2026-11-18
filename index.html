@@ -171,6 +171,14 @@ fieldset.group > legend b { display: grid; place-items: center; width: 28px; hei
 .field label, .field .label { display: block; font-weight: 700; margin-bottom: 5px; }
 .opt { font-weight: 400; color: var(--muted); font-size: 14px; }
 .hint { display: block; font-size: 14px; color: var(--muted); margin-bottom: 6px; font-weight: 400; }
+.login-card { margin-top: 22px; max-width: 460px; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; display: grid; gap: 16px; }
+.login-card .btn { width: 100%; }
+.login-card .hint { margin: 0; }
+.staff-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-bottom: 10px; padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,.12); font-size: 15px; }
+.staff-bar strong { color: var(--yellow); }
+.staff-bar button { margin-left: auto; font: inherit; font-weight: 700; font-size: 14px; color: var(--green-900); background: var(--yellow); border: 0; border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.stop.info { background: var(--yellow-100); border-color: var(--yellow); color: var(--ink); }
+.site a { color: var(--yellow); }
 .card-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 15px; }
 input[type=file] {
   display: block; width: 100%; padding: 12px; font: inherit; font-size: 15px; color: var(--ink);
@@ -180,7 +188,7 @@ input[type=file]::file-selector-button {
   font: inherit; font-weight: 700; color: var(--white); background: var(--green-700);
   border: 0; border-radius: 999px; padding: 9px 16px; margin-right: 12px; cursor: pointer;
 }
-input[type=text], input[type=tel], input[type=email], input[type=date], input[type=number], select, textarea {
+input[type=text], input[type=password], input[type=tel], input[type=email], input[type=date], input[type=number], select, textarea {
   display: block; width: 100%; min-height: 50px; padding: 11px 13px;
   font: inherit; color: var(--ink); background: var(--white);
   border: 2px solid #8fa697; border-radius: 10px; appearance: none; -webkit-appearance: none;
@@ -414,18 +422,65 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   </div>
 </main>
 
+<!-- ======================= STAFF SIGN IN ======================= -->
+<main id="view-login" hidden>
+  <div class="form-head">
+    <div class="wrap form-wrap">
+      <a href="#home">&larr; Back to the advertisement</a>
+      <h1>District office sign in</h1>
+      <p>For Department of Health staff who capture paper applications.</p>
+    </div>
+  </div>
+  <div class="wrap form-wrap">
+    <form id="login-form" class="login-card" novalidate>
+      <div class="field">
+        <label for="login-user">Username</label>
+        <input type="text" id="login-user" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="40">
+      </div>
+      <div class="field">
+        <label for="login-pass">Password</label>
+        <input type="password" id="login-pass" autocomplete="current-password" maxlength="100">
+      </div>
+      <div class="alert" id="login-alert" role="alert" hidden></div>
+      <button class="btn green" type="submit" id="login-btn">Sign in</button>
+      <p class="hint">Forgot your password? Ask the EPWP administrator to reset it.</p>
+    </form>
+  </div>
+</main>
+
 <!-- ======================= APPLICATION FORM ======================= -->
 <main id="view-register" hidden>
   <div class="form-head">
     <div class="wrap form-wrap">
-      <a href="#home">&larr; Back to the advertisement</a>
-      <h1>EPWP General Worker application</h1>
-      <p>Fill in all the fields. Fields marked <em>optional</em> can be left empty.</p>
+      <a href="#home" class="online-only">&larr; Back to the advertisement</a>
+      <div class="staff-bar capture-only" hidden>
+        <span>Signed in as <strong id="staff-name"></strong> <span id="staff-district"></span></span>
+        <button type="button" id="signout-btn">Sign out</button>
+      </div>
+      <h1 id="form-title">EPWP General Worker application</h1>
+      <p class="online-only">Fill in all the fields. Fields marked <em>optional</em> can be left empty.</p>
+      <p class="capture-only" hidden>Type in the details exactly as they appear on the paper application form. Fields marked <em>optional</em> can be left empty.</p>
     </div>
   </div>
 
   <div class="wrap form-wrap">
     <form id="reg-form" novalidate autocomplete="on">
+
+      <fieldset class="group capture-only" id="capture-group" hidden>
+        <legend><b>1</b> Paper application</legend>
+        <div class="fields cols">
+          <div class="field" data-field="ReceivedDate">
+            <label for="ReceivedDate">Date the application was received</label>
+            <span class="hint" id="rd-hint">The date the applicant handed in the paper form.</span>
+            <input type="date" id="ReceivedDate" name="ReceivedDate" aria-describedby="rd-hint">
+          </div>
+          <div class="field" data-field="ReceivedAt">
+            <label for="ReceivedAt">Where it was handed in <span class="opt">(optional)</span></label>
+            <span class="hint" id="ra-hint">Office or facility, for example Walton Building, Room C15.</span>
+            <input type="text" id="ReceivedAt" name="ReceivedAt" maxlength="120" aria-describedby="ra-hint">
+          </div>
+        </div>
+      </fieldset>
 
       <fieldset class="group">
         <legend><b>1</b> Personal details</legend>
@@ -459,6 +514,10 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
             <div class="stop" id="age-stop" hidden>
               <p>This person does not qualify, because these positions are for people aged 18 to 45.</p>
               <button class="btn ghost" type="button" id="age-clear-btn">Clear form and start again</button>
+            </div>
+            <div class="stop info" id="dup-stop" hidden>
+              <p id="dup-text"></p>
+              <button class="btn ghost" type="button" id="dup-clear-btn">Clear form and capture the next one</button>
             </div>
           </div>
           <div class="field" data-field="DateOfBirth">
@@ -555,28 +614,42 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       <fieldset class="group" id="docs-group">
         <legend><b>5</b> Supporting documents</legend>
         <div class="fields">
-          <p class="hint" style="margin:0">Attach a clear photo or a PDF of each document. You can take the photo with your phone. Make sure all the writing can be read.</p>
+          <p class="hint online-only" style="margin:0">Attach a clear photo or a PDF of each document. You can take the photo with your phone. Make sure all the writing can be read.</p>
+          <div class="field capture-only" data-field="PaperDocuments" hidden>
+            <span class="label" id="paper-label">Documents attached to the paper application</span>
+            <span class="hint">Tick what the applicant handed in. Attaching scans below is optional.</span>
+            <div class="choices" role="group" aria-labelledby="paper-label">
+              <label class="choice"><input type="checkbox" id="PaperID"><span>ID copy</span></label>
+              <label class="choice"><input type="checkbox" id="PaperResults"><span>Results copy</span></label>
+            </div>
+          </div>
           <div class="field" data-field="IDCopy">
-            <label for="IDCopy">Certified copy of your RSA ID document</label>
+            <label for="IDCopy">Certified copy of your RSA ID document <span class="opt capture-only" hidden>(optional scan)</span></label>
             <input type="file" id="IDCopy" name="IDCopy" accept="image/*,application/pdf">
           </div>
           <div class="field" data-field="QualificationCopy">
-            <label for="QualificationCopy">Proof of results: certified copy of your latest school results or qualification certificate</label>
+            <label for="QualificationCopy">Proof of results: certified copy of your latest school results or qualification certificate <span class="opt capture-only" hidden>(optional scan)</span></label>
             <input type="file" id="QualificationCopy" name="QualificationCopy" accept="image/*,application/pdf">
           </div>
         </div>
       </fieldset>
 
       <fieldset class="group">
-        <legend><b id="decl-no">6</b> Declaration</legend>
+        <legend><b>6</b> Declaration</legend>
         <div class="fields">
-          <div class="field" data-field="Declaration">
+          <div class="field online-only" data-field="Declaration">
             <div class="check">
               <input type="checkbox" id="Declaration" name="Declaration">
               <label for="Declaration">I declare that the information I have given is true and correct, and that I am currently unemployed.</label>
             </div>
           </div>
-          <div class="field" data-field="Consent">
+          <div class="field capture-only" data-field="SignedOnPaper" hidden>
+            <div class="check">
+              <input type="checkbox" id="SignedOnPaper" name="SignedOnPaper">
+              <label for="SignedOnPaper">The applicant signed the declaration and the POPIA consent on the paper application form.</label>
+            </div>
+          </div>
+          <div class="field online-only" data-field="Consent">
             <div class="check">
               <input type="checkbox" id="Consent" name="Consent">
               <label for="Consent">I agree that the Eastern Cape Department of Health may keep and use my personal information to process my application and to contact me about EPWP opportunities, in line with the Protection of Personal Information Act (POPIA).</label>
@@ -609,13 +682,26 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       <div class="badge" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
       </div>
-      <h2>Application received</h2>
-      <div class="ref"><small>Your reference number</small><strong id="done-ref"></strong><span class="when" id="done-when"></span></div>
-      <p><strong>Write this number down or take a screenshot.</strong></p>
-      <p>Your application for an EPWP General Worker position has been received. Only applicants who meet the minimum requirements and submit the required supporting documents will be considered.</p>
+      <h2 id="done-title">Application received</h2>
+      <div class="ref"><small>Reference number</small><strong id="done-ref"></strong><span class="when" id="done-when"></span></div>
+      <p><strong id="done-note">Write this number down or take a screenshot.</strong></p>
+      <p id="done-text">Your application for an EPWP General Worker position has been received. Only applicants who meet the minimum requirements and submit the required supporting documents will be considered.</p>
       <div class="actions">
         <button class="btn green" type="button" id="another-btn">Apply for another person</button>
-        <a class="btn ghost" href="#home">Back to the advertisement</a>
+        <a class="btn ghost online-only" href="#home">Back to the advertisement</a>
+      </div>
+    </section>
+
+    <section class="done" id="existing" hidden tabindex="-1" aria-live="polite">
+      <div class="badge" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+      </div>
+      <h2 id="existing-title">Your application has already been received</h2>
+      <div class="ref" id="existing-refbox"><small>Your reference number</small><strong id="existing-ref"></strong><span class="when" id="existing-when"></span></div>
+      <p id="existing-text"></p>
+      <div class="actions">
+        <a class="btn green" href="#home">Back to the advertisement</a>
+        <button class="btn ghost" type="button" id="existing-other-btn">Apply for a different person</button>
       </div>
     </section>
   </div>
@@ -624,7 +710,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 <footer class="site">
   <div class="wrap">
     <strong>Eastern Cape Department of Health</strong> &middot; Expanded Public Works Programme (EPWP)<br>
-    Applying is free. The information you give is used only to process your application and to contact you about EPWP opportunities.
+    Applying is free. The information you give is used only to process your application and to contact you about EPWP opportunities.<br>
+    <a href="#capture">District office staff: sign in to capture paper applications</a>
   </div>
 </footer>
 
@@ -646,26 +733,102 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 
   var $ = function (id) { return document.getElementById(id); };
   var form = $('reg-form');
+  function each(selector, fn) { Array.prototype.forEach.call(document.querySelectorAll(selector), fn); }
+
+  // "online": applicants apply themselves. "capture": signed-in District Office
+  // staff type in paper applications.
+  var mode = 'online';
+  var uploadsOn = true;
+  var captureOn = false;
+
+  /* ---------- staff session ---------- */
+  var SESSION_KEY = 'epwpStaffSession';
+  // Kept for this browser tab only, so closing the tab signs the person out.
+  function session() {
+    try {
+      var s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
+      if (s && s.token && s.expires > Date.now()) return s;
+    } catch (e) { /* ignore */ }
+    sessionStorage.removeItem(SESSION_KEY);
+    return null;
+  }
+
+  function post(payload) {
+    // text/plain keeps this a "simple" request, which Apps Script web apps accept cross-origin.
+    return fetch(CONFIG.ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      redirect: 'follow'
+    }).then(function (res) { return res.json(); });
+  }
+  function connected() { return /^https:\/\/script\.google\.com\//.test(CONFIG.ENDPOINT || ''); }
 
   /* ---------- views ---------- */
   function showView() {
-    var apply = location.hash === '#apply' || location.hash === '#register';
-    $('view-home').hidden = apply;
-    $('view-register').hidden = !apply;
-    applyClosedState();
+    var hash = location.hash;
+    var capture = hash === '#capture';
+    var apply = hash === '#apply' || hash === '#register';
+    var signedIn = capture && !!session();
+    mode = capture ? 'capture' : 'online';
+
+    $('view-home').hidden = apply || capture;
+    $('view-login').hidden = !(capture && !signedIn);
+    $('view-register').hidden = !(apply || signedIn);
+    setMode();
+    if (isClosed()) markClosed();
+
+    // Coming back to the form always shows the form, not an earlier result.
+    $('done').hidden = true;
+    $('existing').hidden = true;
+    var closedNow = mode === 'online' && isClosed();
+    $('closed').hidden = !closedNow;
+    form.hidden = closedNow;
     window.scrollTo(0, 0);
   }
-  function applyClosedState() {
-    if (!isClosed()) return;
+  function markClosed() {
     document.body.classList.add('closed');
     $('notice-title').textContent = 'Applications are closed';
     $('notice-text').textContent = 'The closing date was Friday, 20 November 2026 at 23h59. Online applications can no longer be submitted.';
+  }
+  function applyClosedState() {
+    markClosed();
     form.hidden = true;
     $('done').hidden = true;
+    $('existing').hidden = true;
     $('closed').hidden = false;
   }
-  window.addEventListener('hashchange', showView);
-  showView();
+
+  function setMode() {
+    var capture = mode === 'capture';
+    each('.capture-only', function (el) { el.hidden = !capture; });
+    each('.online-only', function (el) { el.hidden = capture; });
+    $('docs-group').hidden = !uploadsOn && !capture;
+    $('form-title').textContent = capture ? 'Capture a paper application' : 'EPWP General Worker application';
+    var s = session();
+    $('staff-name').textContent = s ? s.name : '';
+    $('staff-district').textContent = s && s.district ? '(' + s.district + ')' : '';
+    if (capture && !$('ReceivedDate').value) $('ReceivedDate').value = todayIso();
+    $('ReceivedDate').max = todayIso();
+    if (!button.disabled) setBusy(false);
+    renumber();
+  }
+
+  // Number the visible sections 1, 2, 3...
+  function renumber() {
+    var n = 0;
+    each('#reg-form fieldset.group', function (fs) {
+      if (fs.hidden) return;
+      n += 1;
+      var b = fs.querySelector('legend b');
+      if (b) b.textContent = n;
+    });
+  }
+
+  function todayIso() {
+    var d = new Date();
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
 
   // The list uses a short name for this one metro; show the full name to applicants.
   var DISTRICT_NAMES = { 'N Mandela Bay MM': 'Nelson Mandela Bay Metro' };
@@ -748,12 +911,85 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('DateOfBirth').value = info ? info.dob : '';
     var age = info ? ageFrom(info.dob) : null;
     $('age-stop').hidden = !(info && (age < MIN_AGE || age > MAX_AGE));
+    if (dupFor && dupFor !== idInput.value) clearDuplicate();
     if (info) {
       if (!$('Gender').value) $('Gender').value = info.gender;
       setError('SouthAfricanID', validators.SouthAfricanID());
       setError('DateOfBirth', '');
+      checkExisting();
     }
   });
+  $('Surname').addEventListener('change', checkExisting);
+
+  /* ---------- has this person already applied? ---------- */
+  var lookupKey = '', lookupSeq = 0, dupFor = '';
+
+  function checkExisting() {
+    if (!captureOn || !connected()) return;
+    var id = val('SouthAfricanID'), info = parseId(id);
+    if (!info) return;
+    var age = ageFrom(info.dob);
+    if (age < MIN_AGE || age > MAX_AGE) return;
+    var surname = val('Surname');
+    if (mode === 'online' && surname.length < 2) return;
+    var key = mode + '|' + id + '|' + surname.toLowerCase();
+    if (key === lookupKey) return;
+    lookupKey = key;
+    var seq = ++lookupSeq;
+    var payload = { action: 'lookup', SouthAfricanID: id, Surname: surname };
+    var s = session();
+    if (mode === 'capture' && s) payload.token = s.token;
+    post(payload).then(function (out) {
+      if (seq !== lookupSeq || val('SouthAfricanID') !== id) return;
+      if (out && out.error === 'auth') { lookupKey = ''; return sessionEnded(); }
+      if (out && out.found) showDuplicate(out, id);
+    }).catch(function () { lookupKey = ''; });
+  }
+
+  function showDuplicate(out, id) {
+    if (mode === 'capture') {
+      dupFor = id;
+      var how = out.channel === 'Captured'
+        ? 'It was captured by ' + (out.capturedBy || 'another user') + ' on ' + out.submitted + '.'
+        : 'The applicant applied online on ' + out.submitted + '.';
+      $('dup-text').textContent = 'This applicant is already on the system' +
+        (out.applicant ? ' (' + out.applicant + ')' : '') + ', reference ' + out.ref + '. ' + how + ' Do not capture it again.';
+      $('dup-stop').hidden = false;
+      setError('SouthAfricanID', '');
+      return;
+    }
+    showExisting(out);
+  }
+
+  function clearDuplicate() {
+    dupFor = '';
+    $('dup-stop').hidden = true;
+  }
+
+  function showExisting(out) {
+    var hasRef = !!out.ref;
+    $('existing-title').textContent = hasRef ? 'Your application has already been received'
+      : 'An application with this ID number has already been received';
+    $('existing-refbox').hidden = !hasRef;
+    $('existing-ref').textContent = out.ref || '';
+    $('existing-when').textContent = !hasRef ? '' :
+      (out.channel === 'Captured' ? 'Captured on ' : 'Submitted on ') + out.submitted;
+    var text;
+    if (!hasRef) {
+      text = 'If you did not apply, or you think this is a mistake, please contact your nearest District Office and take your ID document with you.';
+    } else if (out.channel === 'Captured') {
+      text = 'Your paper application was received' + (out.received ? ' on ' + out.received : '') +
+        ' at ' + (out.office || 'a District Office') + ', and it has been captured on the system. You do not need to apply again.';
+    } else {
+      text = 'You have already applied online. You do not need to apply again.';
+    }
+    $('existing-text').textContent = text;
+    form.hidden = true;
+    $('done').hidden = true;
+    $('existing').hidden = false;
+    window.scrollTo(0, 0);
+    $('existing').focus({ preventScroll: true });
+  }
   ['CellphoneNumber', 'AlternativeNumber', 'MunicipalWardNo'].forEach(function (id) {
     $(id).addEventListener('input', function () {
       var keepPlus = id !== 'MunicipalWardNo' && this.value.charAt(0) === '+';
@@ -765,27 +1001,23 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   var DOCS = ['IDCopy', 'QualificationCopy'];
   var MAX_FILE = 4 * 1024 * 1024;   // largest file the backend accepts
   var MAX_SIDE = 1600;              // photos are scaled down to this many pixels
-  var uploadsOn = true;
 
-  // Ask the backend whether it accepts documents. An older backend does not,
-  // and then the upload fields are hidden so that applications still go through.
-  var backendReady = /^https:\/\/script\.google\.com\//.test(CONFIG.ENDPOINT || '')
+  // Ask the backend which features it has. An older backend has no uploads or
+  // staff capturing; the page then hides those parts.
+  var backendReady = connected()
     ? fetch(CONFIG.ENDPOINT).then(function (res) { return res.json(); })
-        .then(function (info) { uploadsOn = !!(info && info.uploads); })
-        .catch(function () { uploadsOn = true; })
+        .then(function (info) { uploadsOn = !!(info && info.uploads); captureOn = !!(info && info.capture); })
+        .catch(function () { uploadsOn = true; captureOn = true; })
     : Promise.resolve();
-  backendReady.then(function () {
-    $('docs-group').hidden = !uploadsOn;
-    $('decl-no').textContent = uploadsOn ? '6' : '5';
-  });
+  backendReady.then(setMode);
 
   function isPdf(file) { return file.type === 'application/pdf' || /\.pdf$/i.test(file.name); }
   function isImage(file) { return /^image\//.test(file.type); }
 
   function checkFile(id, missing) {
-    if (!uploadsOn) return '';
+    if (!uploadsOn && mode !== 'capture') return '';
     var file = $(id).files[0];
-    if (!file) return missing;
+    if (!file) return mode === 'capture' ? '' : missing;
     if (isPdf(file)) return file.size <= MAX_FILE ? '' : 'This PDF is too big. Take a photo of the document instead.';
     return isImage(file) ? '' : 'Choose a photo or a PDF file.';
   }
@@ -835,9 +1067,12 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 
   function prepareDocuments() {
     if (!uploadsOn) return Promise.resolve(null);
-    return Promise.all(DOCS.map(prepareFile)).then(function (files) {
+    // Online both files are required; when capturing, only the scans that were attached are sent.
+    var ids = DOCS.filter(function (id) { return $(id).files.length > 0; });
+    if (!ids.length) return Promise.resolve(null);
+    return Promise.all(ids.map(prepareFile)).then(function (files) {
       var out = {};
-      DOCS.forEach(function (id, i) { out[id] = files[i]; });
+      ids.forEach(function (id, i) { out[id] = files[i]; });
       return out;
     });
   }
@@ -849,6 +1084,13 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   function need(id, msg) { return function () { return val(id) ? '' : msg; }; }
 
   var validators = {
+    ReceivedDate: function () {
+      if (mode !== 'capture') return '';
+      var v = $('ReceivedDate').value;
+      if (!v) return 'Enter the date the application was received.';
+      return v > todayIso() ? 'The date received cannot be in the future.' : '';
+    },
+    ReceivedAt: function () { return ''; },
     Title: need('Title', 'Choose your title.'),
     Gender: need('Gender', 'Choose your gender.'),
     Name: need('Name', 'Enter your first name.'),
@@ -861,6 +1103,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       if (!info) return 'This ID number is not valid. Check the digits and try again.';
       var age = ageFrom(info.dob);
       if (age < MIN_AGE || age > MAX_AGE) return 'These positions are for people aged ' + MIN_AGE + ' to ' + MAX_AGE + '. You cannot apply.';
+      if (mode === 'capture' && dupFor === v) return 'This applicant is already on the system. Do not capture it again.';
       return '';
     },
     DateOfBirth: function () { return ''; },
@@ -895,8 +1138,12 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     },
     IDCopy: function () { return checkFile('IDCopy', 'Attach a photo or PDF of your ID document.'); },
     QualificationCopy: function () { return checkFile('QualificationCopy', 'Attach a photo or PDF of your school results or certificate.'); },
-    Declaration: function () { return $('Declaration').checked ? '' : 'Tick this box to confirm.'; },
-    Consent: function () { return $('Consent').checked ? '' : 'Tick this box to agree. We cannot accept your application without it.'; }
+    PaperDocuments: function () { return ''; },
+    SignedOnPaper: function () {
+      return mode !== 'capture' || $('SignedOnPaper').checked ? '' : 'Tick to confirm that the applicant signed the paper form.';
+    },
+    Declaration: function () { return mode === 'capture' || $('Declaration').checked ? '' : 'Tick this box to confirm.'; },
+    Consent: function () { return mode === 'capture' || $('Consent').checked ? '' : 'Tick this box to agree. We cannot accept your application without it.'; }
   };
 
   function setError(name, message) {
@@ -963,7 +1210,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   }
   function setBusy(busy) {
     button.disabled = busy;
-    button.innerHTML = busy ? '<span class="spinner" aria-hidden="true"></span> Sending, please wait. This can take a minute.' : 'Submit application';
+    var label = mode === 'capture' ? 'Save captured application' : 'Submit application';
+    button.innerHTML = busy ? '<span class="spinner" aria-hidden="true"></span> Sending, please wait. This can take a minute.' : label;
   }
 
   function collect() {
@@ -982,15 +1230,24 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       District: district.value,
       LocalMunicipality: local.value,
       NearestFacility: facility.value,
-      // Also sent under the old names so that a backend that has not been updated yet still accepts the row.
-      Hospital: facility.value,
-      DriversLicence: 'N/A',
       MunicipalWardNo: String(Number(val('MunicipalWardNo'))),
       HighestSchoolLevel: val('HighestSchoolLevel'),
       PracticalSkills: selectedSkills().join(', '),
       OtherSkills: val('OtherSkills'),
-      Consent: true,
+      Consent: mode === 'online',
       website: $('website').value
+    };
+  }
+
+  function collectCapture() {
+    return {
+      action: 'capture',
+      token: (session() || {}).token,
+      ReceivedDate: $('ReceivedDate').value,
+      ReceivedAt: val('ReceivedAt'),
+      PaperID: $('PaperID').checked,
+      PaperResults: $('PaperResults').checked,
+      SignedOnPaper: $('SignedOnPaper').checked
     };
   }
 
@@ -1002,7 +1259,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 
   function submitApplication() {
     showAlert('');
-    if (isClosed()) { applyClosedState(); return; }
+    if (mode === 'online' && isClosed()) { applyClosedState(); return; }
+    if (mode === 'capture' && !session()) { sessionEnded(); return; }
 
     var firstBad = validateAll();
     if (firstBad) {
@@ -1028,43 +1286,117 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 
   function send(documents) {
     var payload = collect();
+    if (mode === 'capture') Object.assign(payload, collectCapture());
     if (documents) payload.Documents = documents;
-    // text/plain keeps this a "simple" request, which Apps Script web apps accept cross-origin.
-    fetch(CONFIG.ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload),
-      redirect: 'follow'
-    })
-      .then(function (res) { return res.json(); })
+    post(payload)
       .then(function (out) {
         setBusy(false);
         if (out && out.ok) {
-          $('done-ref').textContent = out.ref;
-          $('done-when').textContent = 'Submitted on ' + (out.submitted || new Date().toLocaleString('en-ZA', {
-            day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false
-          }).replace(',', ' at'));
-          form.reset();
-          resetDependents();
-          form.hidden = true;
-          $('done').hidden = false;
-          window.scrollTo(0, 0);
-          $('done').focus({ preventScroll: true });
+          showDone(out);
         } else if (out && out.error === 'duplicate') {
-          setError('SouthAfricanID', 'An application with this ID number has already been received' + (out.ref ? ' (reference ' + out.ref + ')' : '') + '.');
-          showAlert('An application with this ID number has already been received' + (out.ref ? ' (reference number ' + out.ref + ')' : '') + '. You do not need to apply again.');
+          if (mode === 'online' && out.ref) {
+            showExisting(out);
+          } else if (mode === 'capture' && out.ref) {
+            showDuplicate(out, val('SouthAfricanID'));
+            $('SouthAfricanID').scrollIntoView({ block: 'center' });
+          } else {
+            setError('SouthAfricanID', 'An application with this ID number has already been received.');
+            showAlert('An application with this ID number has already been received. If you think this is a mistake, contact your nearest District Office.');
+          }
+        } else if (out && out.error === 'auth') {
+          sessionEnded();
         } else if (out && out.error === 'closed') {
           CLOSING = 0;
           applyClosedState();
         } else {
-          showAlert((out && out.message) || 'Your application could not be saved. Please try again.');
+          showAlert((out && out.message) || 'The application could not be saved. Please try again.');
         }
       })
       .catch(function () {
         setBusy(false);
-        showAlert('Your application was not sent. Check your internet or data connection, then press Submit again. Your answers are still on this page.');
+        showAlert('The application was not sent. Check your internet or data connection, then press the button again. The answers are still on this page.');
       });
   }
+
+  function showDone(out) {
+    var capture = mode === 'capture';
+    var s = session();
+    $('done-ref').textContent = out.ref;
+    $('done-when').textContent = (capture ? 'Captured on ' : 'Submitted on ') + (out.submitted || new Date().toLocaleString('en-ZA', {
+      day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false
+    }).replace(',', ' at'));
+    $('done-title').textContent = capture ? 'Application captured' : 'Application received';
+    $('done-note').textContent = capture ? 'Write this reference number on the paper application form.'
+      : 'Write this number down or take a screenshot.';
+    $('done-text').textContent = capture
+      ? 'The application has been saved and is marked as captured by ' + (s ? s.name : 'you') + '.'
+      : 'Your application for an EPWP General Worker position has been received. Only applicants who meet the minimum requirements and submit the required supporting documents will be considered.';
+    $('another-btn').textContent = capture ? 'Capture the next application' : 'Apply for another person';
+    resetForm();
+    form.hidden = true;
+    $('done').hidden = false;
+    window.scrollTo(0, 0);
+    $('done').focus({ preventScroll: true });
+  }
+
+  /* ---------- staff sign in / out ---------- */
+  var loginForm = $('login-form'), loginAlert = $('login-alert'), loginBtn = $('login-btn');
+
+  function showLoginAlert(message) {
+    loginAlert.textContent = message;
+    loginAlert.hidden = !message;
+  }
+
+  loginForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (loginBtn.disabled) return;
+    var username = $('login-user').value.trim(), password = $('login-pass').value;
+    if (!username || !password) { showLoginAlert('Enter your username and password.'); return; }
+    if (!connected()) { showLoginAlert('The system is not connected yet. Please try again later.'); return; }
+    showLoginAlert('');
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Signing in';
+    backendReady.then(function () {
+      if (!captureOn) throw new Error('not set up');
+      return post({ action: 'login', username: username, password: password });
+    }).then(function (out) {
+      if (!out || !out.ok) { showLoginAlert((out && out.message) || 'The username or password is not correct.'); return; }
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+        token: out.token, name: out.name, district: out.district, username: out.username, expires: out.expires
+      }));
+      $('login-pass').value = '';
+      lookupKey = '';
+      showView();
+      $(form.hidden ? 'done' : 'ReceivedDate').focus({ preventScroll: true });
+    }).catch(function (err) {
+      showLoginAlert(err && err.message === 'not set up'
+        ? 'Staff sign-in is not switched on yet. The administrator must update the Apps Script.'
+        : 'Could not sign in. Check your internet connection and try again.');
+    }).then(function () {
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'Sign in';
+    });
+  });
+
+  // The sign-in ran out while capturing: sign in again, the answers stay on the form.
+  function sessionEnded() {
+    sessionStorage.removeItem(SESSION_KEY);
+    showLoginAlert('Your sign-in has ended. Sign in again. The application you were capturing is still filled in; save it again after signing in.');
+    $('view-register').hidden = true;
+    $('view-login').hidden = false;
+    window.scrollTo(0, 0);
+    $('login-user').focus({ preventScroll: true });
+  }
+
+  $('signout-btn').addEventListener('click', function () {
+    var s = session();
+    if (hasAnswers() && !window.confirm('Sign out? The application on the form has not been saved and will be cleared.')) return;
+    if (s && connected()) post({ action: 'logout', token: s.token }).catch(function () {});
+    sessionStorage.removeItem(SESSION_KEY);
+    resetForm(true);
+    showLoginAlert('');
+    showView();
+  });
 
   function resetDependents() {
     fill(local, [], 'Choose a district first'); local.disabled = true;
@@ -1076,17 +1408,33 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 
   function hasAnswers() {
     return Array.prototype.some.call(form.elements, function (el) {
-      if (el.id === 'website' || el.type === 'button' || el.type === 'submit') return false;
+      if (el.id === 'website' || el.id === 'ReceivedDate' || el.id === 'ReceivedAt' || el.type === 'button' || el.type === 'submit') return false;
       if (el.type === 'checkbox' || el.type === 'radio') return el.checked;
       if (el.type === 'file') return el.files.length > 0;
       return !!el.value;
     });
   }
 
-  function clearForm() {
+  // Clears the applicant's answers. When capturing, the date received and the
+  // office are kept, because a batch of paper forms usually shares them.
+  function resetForm(everything) {
+    var keepDate = $('ReceivedDate').value, keepAt = $('ReceivedAt').value;
     form.reset();
     resetDependents();
     $('age-stop').hidden = true;
+    clearDuplicate();
+    lookupKey = '';
+    if (mode === 'capture' && !everything) {
+      $('ReceivedDate').value = keepDate;
+      $('ReceivedAt').value = keepAt;
+    }
+    if (mode === 'capture' && !$('ReceivedDate').value) $('ReceivedDate').value = todayIso();
+  }
+
+  function clearForm() {
+    resetForm();
+    form.hidden = false;
+    $('existing').hidden = true;
     $('view-register').scrollIntoView();
     $('Title').focus({ preventScroll: true });
   }
@@ -1095,6 +1443,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     if (!hasAnswers() || window.confirm('Clear all the answers on this form and start again?')) clearForm();
   });
   $('age-clear-btn').addEventListener('click', clearForm);
+  $('dup-clear-btn').addEventListener('click', clearForm);
+  $('existing-other-btn').addEventListener('click', clearForm);
 
   $('another-btn').addEventListener('click', function () {
     $('done').hidden = true;
@@ -1102,9 +1452,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     window.scrollTo(0, 0);
     $('Title').focus({ preventScroll: true });
   });
-  window.addEventListener('hashchange', function () {
-    if (location.hash === '#apply' && !$('done').hidden) { $('done').hidden = true; form.hidden = false; }
-  });
+  window.addEventListener('hashchange', showView);
+  showView();
 })();
 </script>
 </body>
