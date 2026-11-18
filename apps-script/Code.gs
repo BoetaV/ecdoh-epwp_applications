@@ -336,7 +336,8 @@ function showPassword_(ui, title, username, password) {
  *  - ID numbers that are not valid are rejected, as are people outside the
  *    age range, and anyone whose ID number is already in Applications or
  *    earlier in the same list.
- *  - Gender F/M becomes Female/Male.
+ *  - Gender F/M becomes Female/Male. A missing gender is taken from the ID
+ *    number (digits 7 to 10: 0000-4999 female, 5000-9999 male).
  *  - The local municipality comes from a municipality column, or else from
  *    the institution (facility) in the facility list.
  *  - The qualification is kept as captured (tidied up). It is not checked
@@ -649,7 +650,7 @@ function importRow_(get, now, receivedDate) {
   var gender = /^(f|female|fem)$/.test(g) ? 'Female' : /^(m|male)$/.test(g) ? 'Male' : /prefer/.test(g) ? 'Prefer not to say' : '';
   if (!gender) {
     gender = idGender;
-    notes.push(g ? 'Gender "' + g + '" not recognised; taken from the ID number' : 'No gender; taken from the ID number');
+    notes.push((g ? 'Gender "' + g + '" not recognised' : 'No gender in the list') + '; ' + idGender + ' taken from the ID number');
   } else if (gender !== 'Prefer not to say' && gender !== idGender) {
     notes.push('Gender in the list is ' + gender + ' but the ID number is for a ' + idGender.toLowerCase());
   }

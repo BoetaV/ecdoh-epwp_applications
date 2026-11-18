@@ -185,8 +185,10 @@ other columns are ignored. The rules:
   rejected, as is anyone outside the age range 18 to 45.
 - **Duplicates** are left out: an ID number already in Applications (online or
   captured), or repeated in the same list.
-- **Gender** F/M becomes Female/Male; a gender that does not match the ID
-  number is noted.
+- **Gender** F/M becomes Female/Male. When the gender is blank, not
+  recognised, or the list has no Gender column, it is taken from the ID number
+  (digits 7 to 10: 0000-4999 is female, 5000-9999 is male) and this is noted.
+  A gender that does not match the ID number is noted.
 - **District and local municipality:** the district comes from a District or
   Municipality column (for example "CHRIS HANI"). The local municipality comes
   from a municipality column when it holds one (for example "EMALAHLENI"),
