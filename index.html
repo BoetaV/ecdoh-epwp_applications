@@ -307,7 +307,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 .bar-fill.none { min-width: 0; }
 .bar-value { white-space: nowrap; font-weight: 700; font-variant-numeric: tabular-nums; }
 .bar-value span { color: var(--muted); font-weight: 400; }
-.cols { display: flex; align-items: flex-end; gap: 2px; height: 170px; padding-top: 6px; border-bottom: 1px solid var(--line); }
+.day-cols { display: flex; align-items: flex-end; gap: 2px; height: 170px; padding-top: 6px; border-bottom: 1px solid var(--line); }
 .col { flex: 1 1 0; min-width: 3px; display: flex; align-items: flex-end; height: 100%; cursor: default; }
 .col i { display: block; width: 100%; min-height: 2px; background: var(--green-700); border-radius: 4px 4px 0 0; }
 .col:hover i, .col:focus i { background: var(--green-900); }
@@ -2282,7 +2282,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     var resting = 'Busiest day: ' + shortDay(busiest[0]) + ' with ' + num(busiest[1]) + '. Point at a column to see that day.';
     readout.textContent = resting;
     var cols = document.createElement('div');
-    cols.className = 'cols';
+    cols.className = 'day-cols';
     cols.setAttribute('role', 'list');
     days.forEach(function (it) {
       var col = document.createElement('div');
