@@ -128,6 +128,59 @@ number that is already on the system: with the reference number and who
 captured it for their own district, or only "already on the system for an
 applicant in <district>" for another district.
 
+## Importing a list captured elsewhere (Import tab)
+
+When an office has captured applications in its own Excel list, the
+administrator can bring them into Applications from the Sheet, so they get
+reference numbers and are checked like any other application.
+
+1. **Get the list into the Sheet without Excel spoiling the numbers.** In the
+   Sheet choose **File > Import > Upload**, pick the office's **.xlsx** file
+   (not a .csv: a CSV saved by Excel has ID numbers cut short, for example
+   `9,41019E+12`, and they cannot be recovered), and choose **Insert new
+   sheet(s)**. Then copy the rows, headings included, into the **Import**
+   tab (**EPWP > Import a list > 1. Open the Import tab** creates it).
+2. **EPWP > Import a list > 2. Check the list.** This changes nothing in
+   Applications. It fills in the result columns at the right of the Import tab:
+   *Import status* (Ready, Rejected or Duplicate), the ID number and cellphone
+   number as they will be saved, the district, local municipality and facility,
+   and *Notes* explaining every change or problem.
+3. Fix rows in the list if needed and check again.
+4. **EPWP > Import a list > 3. Import the ready rows into Applications.** You are
+   asked for the date the paper applications were received (unless the list has
+   a *Date Received* column). Each ready row gets a reference number, shown in
+   the Import tab, and becomes *Imported*. Running it again never adds a row
+   twice.
+5. When done, **EPWP > Import a list > Clear the Import tab for a new list**.
+
+Columns are recognised by their heading (Name, Surname, Identity No., Age,
+Gender, Contact No., Disability, Address, District, Municipality or Local
+Municipality, Institution, Ward, Qualification, Qualification Attached, ...);
+other columns are ignored. The rules:
+
+- **Cellphone numbers** with 9 digits get their leading 0 back.
+- **ID numbers** with 11 or 12 digits (people born 2000 to 2009, whose leading
+  0 Excel dropped) get the 0 back, but only if the result is a valid ID and the
+  age in the list agrees with the date of birth in the ID.
+- **Invalid ID numbers** (wrong length, wrong check digit or date) are
+  rejected, as is anyone outside the age range 18 to 45.
+- **Duplicates** are left out: an ID number already in Applications (online or
+  captured), or repeated in the same list.
+- **Gender** F/M becomes Female/Male; a gender that does not match the ID
+  number is noted.
+- **District and local municipality:** the district comes from a District or
+  Municipality column (for example "CHRIS HANI"). The local municipality comes
+  from a municipality column when it holds one (for example "EMALAHLENI"),
+  otherwise from the institution's place on the facility list.
+- **Qualification** is kept as captured, tidied up (for example "GRADE 12"
+  becomes "Grade 12"). It is not checked against the qualifications on the
+  online form, and the online form is not changed.
+
+Imported rows are saved as *Captured* applications ("Imported by
+<administrator>"), so district users see them, and an imported person who
+then tries to apply online is told they are already captured, with their
+reference number.
+
 ## Finding the supporting documents
 
 Applicants upload two documents: a copy of their ID and their proof of results
@@ -147,7 +200,9 @@ Reference numbers look like `EPWP-20261117-1432-000123`: the date and time
 
 ## Updating the district / municipality / hospital lists
 
-Edit `docs/EC_EPWP.csv`, then run `python tools/build_units.py` and push.
+Edit `docs/EC_EPWP.csv`, then run `python tools/build_units.py` and push. The
+script also updates the list inside `apps-script/Code.gs` used by the Import
+tab, so paste the new Code.gs into Apps Script as well.
 
 ## Looking after the data
 
