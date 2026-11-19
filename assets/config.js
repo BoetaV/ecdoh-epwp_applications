@@ -8,5 +8,5 @@ window.EPWP_CONFIG = {
   MAX_AGE: 45,
 
   // Closing date and time (South African time). The form closes itself after this.
-  CLOSING: "2026-11-20T23:59:59+02:00"
+  CLOSING: "2026-11-24T23:59:59+02:00"
 };

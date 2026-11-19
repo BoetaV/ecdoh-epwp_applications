@@ -41,7 +41,7 @@ var MIN_AGE = 18;
 var MAX_AGE = 45;
 // Closing date and time (South African time) for ONLINE applications.
 // Capturing of paper applications by staff is not affected.
-var CLOSING = '2026-11-20T23:59:59+02:00';
+var CLOSING = '2026-11-24T23:59:59+02:00';
 var QUALIFICATIONS = ['Grade 10', 'N2', 'NC(V) Level 2'];
 
 // Staff sign-in.
