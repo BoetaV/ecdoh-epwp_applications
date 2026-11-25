@@ -834,6 +834,16 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         </table>
       </div>
       <p class="muted" style="margin-top:8px">Applications: people who chose the institution as their nearest facility on the form. Youth: 18 to 35 years.</p>
+      <div id="sel-reserved-wrap" hidden>
+        <h2 class="sel-h2">Posts reserved for further allocation</h2>
+        <p class="muted">These posts are part of the total but are not at an institution yet, so nobody can be selected for them. They will be given to institutions later.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>District</th><th class="num">Posts</th><th>Why they are reserved</th><th>Status</th></tr></thead>
+            <tbody id="sel-reserved"></tbody>
+          </table>
+        </div>
+      </div>
       <div id="sel-others-wrap" hidden>
         <h2 class="sel-h2">Facilities chosen on the form that have no posts</h2>
         <p class="muted">These applicants can still be selected for an institution in their district: open the institution and choose <em>Everyone living in the district</em>.</p>
@@ -2949,9 +2959,13 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     var posts = sum(out.institutions, 'posts'), apps = sum(out.institutions, 'applications');
     var selected = sum(out.institutions, 'selected');
     var otherApps = sum(out.others, 'applications');
+    var reserved = (out.reserved || []).filter(function (r) { return !r.allocatedTo; });
+    var kept = sum(reserved, 'posts');
     var kp = $('sel-kpis');
     kp.innerHTML = '';
-    kp.appendChild(kpi('Posts', num(posts), out.institutions.length + ' institution' + (out.institutions.length === 1 ? '' : 's')));
+    kp.appendChild(kpi('Posts', num(posts + kept), num(posts) + ' at ' + out.institutions.length + ' institution' +
+      (out.institutions.length === 1 ? '' : 's') + (kept ? ', ' + num(kept) + ' reserved' : '') +
+      (out.totalPosts && out.totalPosts !== posts + kept ? '. Should be ' + num(out.totalPosts) + ': check the Allocations tab' : '')));
     kp.appendChild(kpi('Applications', num(apps + otherApps), perPost(apps + otherApps, posts) + ' per post'));
     kp.appendChild(kpi('Selected', num(selected), pct(selected, posts) + ' of the posts'));
     kp.appendChild(kpi('Still open', num(sum(out.institutions, 'open')), num(sum(out.institutions, 'reserve')) + ' on reserve'));
@@ -3006,6 +3020,20 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       body.appendChild(tr);
     });
 
+    var res = $('sel-reserved');
+    res.innerHTML = '';
+    $('sel-reserved-wrap').hidden = !(out.reserved || []).length;
+    (out.reserved || []).forEach(function (r) {
+      var tr = document.createElement('tr');
+      addCell(tr, r.district);
+      numCell(tr, num(r.posts), true);
+      addCell(tr, r.removed ? 'Duplicate line "' + r.removed + '" removed from the allocation list' + (r.sameAs ? ' (same hospital as ' + r.sameAs + ')' : '') + '.' : r.reason,
+        r.removed ? r.reason.replace(/^Duplicate line removed\. ?/, '') : '');
+      var st = addCell(tr, '');
+      st.appendChild(r.allocatedTo ? chip('Allocated to ' + r.allocatedTo + (r.allocatedOn ? ' on ' + r.allocatedOn : ''), 'Shortlisted') : chip('Reserved', 'Reserve'));
+      res.appendChild(tr);
+    });
+
     var others = $('sel-others');
     others.innerHTML = '';
     $('sel-others-wrap').hidden = !out.others.length;
@@ -3036,7 +3064,10 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     var rows = out.institutions.map(function (i) {
       return [i.district, i.name, i.local, i.posts, i.applications, perPost(i.applications, i.posts), i.women, i.youth, i.disabled,
         i.shortlisted, i.selected, i.reserve, i.notSuitable, i.withdrawn, i.open, i.onForm ? 'Yes' : 'No'];
-    }).concat(out.others.map(function (o) {
+    }).concat((out.reserved || []).map(function (r) {
+      return [r.district, 'Reserved for further allocation' + (r.removed ? ' (duplicate line "' + r.removed + '" removed)' : ''),
+        r.allocatedTo ? 'Allocated to ' + r.allocatedTo : '', r.allocatedTo ? 0 : r.posts, '', '', '', '', '', '', '', '', '', '', '', '-'];
+    })).concat(out.others.map(function (o) {
       return [o.district, o.facility, '', 0, o.applications, '-', '', '', '', '', '', '', '', '', '', 'Yes (no posts)'];
     }));
     downloadBlob(buildXlsx({

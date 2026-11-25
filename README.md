@@ -151,8 +151,9 @@ deployments > New version).
 ## Selection (HR)
 
 Once applications have closed, HR selects the candidates on the **Selection**
-screen (staff bar > **Selection**). The posts per institution come from
-`docs/allocation per institution.csv` (611 posts at 116 institutions).
+screen (staff bar > **Selection**). There are **611 posts**: 599 at 114
+institutions, from `docs/allocation per institution.csv`, and 12 reserved for
+further allocation (see *Reserved posts* below).
 
 **Kept apart from the master list.** Selection never changes the Applications
 tab. It uses three tabs of its own in the Sheet:
@@ -201,12 +202,33 @@ The rules the system enforces:
 
 Institutions in the allocation list that applicants could not choose on the form
 (so nobody applied for them directly): Cecilia Makiwane, Frere, Mjanyana, Dora
-Nginza, Elizabeth Donkin, Livingstone (both lines), Mthatha Regional, Nelson
-Mandela Academic and Fort England. HR fills those from the whole district.
+Nginza, Elizabeth Donkin, Livingstone, PE Provincial, Mthatha Regional, Nelson
+Mandela Academic and Fort England. They are listed with their posts like any
+other institution; HR fills them from applicants at nearby institutions
+(**Applicants: Everyone living in the district**).
 
 If the allocation list changes, correct the Allocations tab directly, or update
 the CSV and run `python tools/build_allocations.py` (this only affects a Sheet
-that does not have an Allocations tab yet).
+that does not have an Allocations tab yet). The script stops if the
+institutions and the reserved posts do not add up to 611.
+
+### Reserved posts
+
+Two lines of the original allocation list were duplicates of another line, so
+they were taken out of the institutions. Their posts were not dropped: they are
+kept for further allocation, so the total stays 611.
+
+| District | Posts | Duplicate line removed | Same hospital as |
+|---|---|---|---|
+| Alfred Nzo District | 6 | Taylor Bequest Matatiele Hospital | Tayler Bequest Matatiele Hospital |
+| Joe Gqabi District | 6 | Emplisweni Hospital | Empilisweni Hospital |
+
+These 12 posts are kept apart from the selection process: they are listed in
+`docs/reserved posts.csv`, in the **Reserved Posts** tab of the Sheet, and in
+their own section of the Selection screen, and nobody can be selected for them.
+To allocate them later, add the posts to the institution in the **Allocations**
+tab and fill in **Allocated to** and **Allocated on** in the Reserved Posts tab
+(a filled-in line no longer counts as reserved).
 
 ## Importing a list captured elsewhere (Import tab)
 
