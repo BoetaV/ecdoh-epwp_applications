@@ -316,6 +316,41 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 .col-readout { margin: 8px 0 0; min-height: 1.4em; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .empty-chart { color: var(--muted); padding: 12px 0; }
 
+/* Staff selection */
+.filters.sel-filters { display: flex; flex-wrap: wrap; align-items: flex-end; }
+.sel-filters .field { flex: 1 1 260px; }
+.sel-filters .btn { min-height: 50px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.table-wrap th.num, .table-wrap td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.table-wrap td.num.strong { font-weight: 800; }
+.sel-table td:first-child { min-width: 220px; }
+.sel-open { min-height: 36px; padding: 4px 14px; font-size: 14px; }
+.sel-h2 { margin: 28px 0 4px; font-size: 19px; color: var(--green-900); }
+.sel-note { margin: 16px 0 0; padding: 12px 14px; border-radius: var(--radius); background: var(--green-50); border: 1px solid var(--line); color: var(--green-900); font-weight: 600; }
+.sel-warn { margin-top: 14px; padding: 12px 14px; border-radius: var(--radius); background: var(--yellow-100); border: 1px solid var(--yellow); color: #4d3c00; font-weight: 600; }
+.link-back { margin-top: 18px; padding: 0; border: 0; background: none; color: var(--green-700); font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.sel-inst { margin: 8px 0 2px; font-size: 26px; color: var(--green-900); }
+.sel-inst:focus { outline: none; }
+.st { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; white-space: nowrap; background: #eef1ef; color: var(--muted); }
+.st.Selected, .st.full { background: var(--green-700); color: var(--white); }
+.st.Shortlisted { background: var(--green-100); color: var(--green-900); }
+.st.Reserve { background: var(--yellow-100); color: #6b5300; box-shadow: inset 0 0 0 1px var(--yellow); }
+.st.Not-suitable { background: #fde8e6; color: #7a1610; }
+.st.Withdrawn { background: #e9e9e9; color: #444; }
+.flag { display: block; margin-top: 2px; color: #7a1610; font-size: 12px; font-weight: 700; }
+.sel-status { min-width: 220px; }
+.sel-status select, .sel-status input { width: 100%; min-height: 36px; padding: 4px 8px; font-size: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); font-family: inherit; }
+.sel-status input { margin-top: 6px; }
+.sel-status .row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin-top: 6px; }
+.sel-status .btn { min-height: 34px; padding: 4px 14px; font-size: 14px; }
+.sel-status .err { color: var(--red); font-size: 12px; font-weight: 700; }
+.sel-status .ok { color: var(--green-700); font-size: 12px; font-weight: 700; }
+.sel-status .st { margin-bottom: 4px; }
+.sel-status select.is-Selected { background: var(--green-700); color: var(--white); font-weight: 700; }
+.sel-status select.is-Shortlisted { background: var(--green-100); font-weight: 700; }
+.sel-status select.is-Reserve { background: var(--yellow-100); font-weight: 700; }
+.sel-status select.is-Not-suitable, .sel-status select.is-Withdrawn { background: #fde8e6; }
+
 @media (min-width: 720px) {
   .dash-filters { grid-template-columns: 1fr 1fr auto; align-items: end; }
 }
@@ -365,6 +400,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       <a href="#capture" id="nav-capture">Capture an application</a>
       <a href="#applications" id="nav-list">View applications</a>
       <a href="#dashboard" id="nav-dash">Dashboard</a>
+      <a href="#selection" id="nav-sel">Selection</a>
     </nav>
     <button type="button" id="signout-btn">Sign out</button>
   </div>
@@ -756,6 +792,120 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   </div>
 </main>
 
+<!-- ======================= STAFF: SELECTION ======================= -->
+<main id="view-sel" hidden>
+  <div class="form-head">
+    <div class="wrap list-wrap">
+      <h1>Selection</h1>
+      <p id="sel-scope"></p>
+    </div>
+  </div>
+  <div class="wrap list-wrap">
+    <div class="alert" id="sel-alert" role="alert" hidden style="margin-top:14px"></div>
+    <p class="sel-note" id="sel-readonly" hidden>You can look at the selection lists. Only staff with selection access (HR) can change a status. Ask the administrator if you need it.</p>
+
+    <section id="sel-overview">
+      <div class="filters sel-filters">
+        <div class="field" id="sel-district-wrap" hidden>
+          <label for="sel-district">District</label>
+          <select id="sel-district"><option value="">All districts</option></select>
+        </div>
+        <div class="field">
+          <label for="sel-find">Find an institution</label>
+          <input type="text" id="sel-find" maxlength="60" placeholder="Name of the hospital or clinic" autocomplete="off">
+        </div>
+        <button class="btn ghost" type="button" id="sel-export" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg>
+          <span id="sel-export-label">Download to Excel</span>
+        </button>
+      </div>
+      <p class="summary" id="sel-status" aria-live="polite" style="margin-top:14px"></p>
+      <div class="kpis" id="sel-kpis"></div>
+      <div class="table-wrap sel-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Institution</th><th class="num">Posts</th><th class="num">Applications</th><th class="num">Per post</th>
+              <th class="num">Women</th><th class="num">Youth</th><th class="num">Disability</th>
+              <th class="num">Shortlisted</th><th class="num">Selected</th><th class="num">Reserve</th><th class="num">Still open</th><th><span class="sr-only">Open</span></th>
+            </tr>
+          </thead>
+          <tbody id="sel-body"></tbody>
+        </table>
+      </div>
+      <p class="muted" style="margin-top:8px">Applications: people who chose the institution as their nearest facility on the form. Youth: 18 to 35 years.</p>
+      <div id="sel-others-wrap" hidden>
+        <h2 class="sel-h2">Facilities chosen on the form that have no posts</h2>
+        <p class="muted">These applicants can still be selected for an institution in their district: open the institution and choose <em>Everyone living in the district</em>.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>District</th><th>Facility</th><th class="num">Applications</th></tr></thead>
+            <tbody id="sel-others"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="sel-detail" hidden>
+      <button type="button" class="link-back" id="sel-back">&larr; All institutions</button>
+      <h2 class="sel-inst" id="sel-inst-name" tabindex="-1"></h2>
+      <p class="muted" id="sel-inst-where"></p>
+      <div class="kpis" id="sel-inst-kpis"></div>
+      <div class="sel-warn" id="sel-inst-warn" hidden></div>
+      <form class="filters sel-pool-filters" id="sel-pool-form" novalidate>
+        <div class="field">
+          <label for="sel-search">Search</label>
+          <input type="text" id="sel-search" placeholder="Name, surname, ID number, reference, ward or cellphone" maxlength="80">
+        </div>
+        <div class="field">
+          <label for="sel-from">Applicants</label>
+          <select id="sel-from">
+            <option value="institution">Applied for this institution</option>
+            <option value="district">Everyone living in the district</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="sel-filter">Status</label>
+          <select id="sel-filter">
+            <option value="">All</option>
+            <option value="none">Not reviewed</option>
+            <option value="Shortlisted">Shortlisted</option>
+            <option value="Selected">Selected</option>
+            <option value="Reserve">Reserve</option>
+            <option value="Not suitable">Not suitable</option>
+            <option value="Withdrawn">Withdrawn</option>
+            <option value="elsewhere">Has a status at another institution</option>
+          </select>
+        </div>
+        <button class="btn green" type="submit" id="sel-pool-btn">Show</button>
+      </form>
+      <div class="summary-row">
+        <p class="summary" id="sel-pool-summary" aria-live="polite"></p>
+        <button class="btn ghost" type="button" id="sel-pool-export" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg>
+          <span id="sel-pool-export-label">Download to Excel</span>
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Reference</th><th>Applicant</th><th>ID number</th><th>Cellphone</th><th>Where they live</th>
+              <th>Applied for</th><th>Qualification</th><th>Documents</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="sel-pool-body"></tbody>
+        </table>
+      </div>
+      <div class="pager">
+        <button class="btn ghost" type="button" id="sel-prev">Previous</button>
+        <button class="btn ghost" type="button" id="sel-next">Next</button>
+        <span class="muted" id="sel-page"></span>
+      </div>
+    </section>
+  </div>
+</main>
+
 <!-- ======================= APPLICATION FORM ======================= -->
 <main id="view-register" hidden>
   <div class="form-head">
@@ -1074,7 +1224,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     var capture = hash === '#capture';
     var listing = hash === '#applications';
     var dashboard = hash === '#dashboard';
-    var staff = capture || listing || dashboard;
+    var selecting = hash === '#selection';
+    var staff = capture || listing || dashboard || selecting;
     var apply = hash === '#apply' || hash === '#register';
     var requesting = hash === '#request-account';
     var s = session();
@@ -1087,13 +1238,16 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('view-register').hidden = !(apply || (capture && s));
     $('view-list').hidden = !(listing && s);
     $('view-dash').hidden = !(dashboard && s);
+    $('view-sel').hidden = !(selecting && s);
     $('staff-nav').hidden = !(staff && s);
     $('nav-capture').setAttribute('aria-current', capture ? 'page' : 'false');
     $('nav-list').setAttribute('aria-current', listing ? 'page' : 'false');
     $('nav-dash').setAttribute('aria-current', dashboard ? 'page' : 'false');
+    $('nav-sel').setAttribute('aria-current', selecting ? 'page' : 'false');
     setMode();
     if (listing && s) openList();
     if (dashboard && s) openDash();
+    if (selecting && s) openSel();
     if (isClosed()) markClosed();
 
     // Coming back to the form always shows the form, not an earlier result.
@@ -1967,6 +2121,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 
   function buildXlsx(out) {
     var headers = out.headers, rows = out.rows, links = out.links || [];
+    var numeric = out.numeric || [];
+    var sheetName = /^[A-Za-z]{1,30}$/.test(out.sheet || '') ? out.sheet : 'Applications';
     var lastCol = colName(headers.length - 1), lastRow = rows.length + 1;
     var widths = headers.map(function (h, c) {
       var w = h.length;
@@ -1988,6 +2144,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
           hyperlinks.push('<hyperlink ref="' + ref + '" r:id="' + id + '"/>');
           return cell(ref, 'Open', 2);
         }
+        if (numeric[c] && /^-?\d+(\.\d+)?$/.test(String(v))) return '<c r="' + ref + '"><v>' + v + '</v></c>';
         return cell(ref, v, 0);
       }).join('') + '</row>';
     });
@@ -2004,8 +2161,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     var files = [
       { name: '[Content_Types].xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>' },
       { name: '_rels/.rels', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>' },
-      { name: 'docProps/core.xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>' + xmlText('EPWP applications - ' + out.scope) + '</dc:title><dc:creator>Eastern Cape Department of Health EPWP system</dc:creator></cp:coreProperties>' },
-      { name: 'xl/workbook.xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Applications" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">Applications!$A$1:$' + lastCol + '$' + lastRow + '</definedName></definedNames></workbook>' },
+      { name: 'docProps/core.xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>' + xmlText((out.title || 'EPWP applications') + ' - ' + out.scope) + '</dc:title><dc:creator>Eastern Cape Department of Health EPWP system</dc:creator></cp:coreProperties>' },
+      { name: 'xl/workbook.xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="' + sheetName + '" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">' + sheetName + '!$A$1:$' + lastCol + '$' + lastRow + '</definedName></definedNames></workbook>' },
       { name: 'xl/_rels/workbook.xml.rels', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>' },
       { name: 'xl/styles.xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><u/><sz val="11"/><color rgb="FF0563C1"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF0A6B3D"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>' },
       { name: 'xl/worksheets/sheet1.xml', text: sheet }
@@ -2563,13 +2720,15 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       if (!out || !out.ok) { showLoginAlert((out && out.message) || 'The username or password is not correct.'); return; }
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({
         token: out.token, name: out.name, district: out.district, username: out.username, expires: out.expires,
-        districtCode: out.districtCode, provincial: !!out.provincial, districts: out.districts || []
+        districtCode: out.districtCode, provincial: !!out.provincial, districts: out.districts || [],
+        canSelect: !!out.canSelect
       }));
       $('login-pass').value = '';
       hideAllPasswords();
       lookupKey = '';
       listLoaded = false;
       clearDash();
+      clearSel();
       showView();
       if (location.hash === '#capture') $(form.hidden ? 'done' : 'ReceivedDate').focus({ preventScroll: true });
     }).catch(function (err) {
@@ -2591,6 +2750,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('view-register').hidden = true;
     $('view-list').hidden = true;
     $('view-dash').hidden = true;
+    $('view-sel').hidden = true;
     $('staff-nav').hidden = true;
     $('view-login').hidden = false;
     window.scrollTo(0, 0);
@@ -2605,6 +2765,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     resetForm(true);
     clearList();
     clearDash();
+    clearSel();
     showLoginAlert('');
     showView();
   });
@@ -2664,6 +2825,524 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     window.scrollTo(0, 0);
     $('Title').focus({ preventScroll: true });
   });
+  /* ---------- staff: selection ---------- */
+  // Posts per institution, how many applied for each, and HR's choice of
+  // candidates. The statuses are kept in their own tabs of the Sheet, apart
+  // from the Applications master list.
+  var SEL_STATUSES = ['Shortlisted', 'Selected', 'Reserve', 'Not suitable', 'Withdrawn'];
+  var SEL_NEEDS_REASON = { 'Not suitable': 1, 'Withdrawn': 1 };
+  var SEL_FIELD = { Shortlisted: 'shortlisted', Selected: 'selected', Reserve: 'reserve', 'Not suitable': 'notSuitable', Withdrawn: 'withdrawn' };
+  var selSeq = 0, selData = null, selLoaded = false, selChanged = false;
+  var selInst = null, selOffset = 0, poolSeq = 0, selPoolFilters = {}, selCanChange = false;
+
+  function selDistrict() {
+    var s = session();
+    return s && !s.provincial ? s.districtCode : $('sel-district').value;
+  }
+  function selAlert(msg) {
+    $('sel-alert').textContent = msg || '';
+    $('sel-alert').hidden = !msg;
+  }
+  function notSwitchedOn(out) {
+    return !out || (out.error === 'invalid' && !out.institutions && !out.rows);
+  }
+  var SEL_OLD = 'Selection is not switched on yet. The administrator must update the Apps Script (Deploy > Manage deployments > New version).';
+
+  function openSel() {
+    var s = session();
+    var provincial = !!(s && s.provincial);
+    $('sel-district-wrap').hidden = !provincial;
+    if (provincial && $('sel-district').options.length === 1) {
+      (s.districts || []).forEach(function (d) { $('sel-district').add(new Option(d.name, d.code)); });
+    }
+    if (!selLoaded || (selChanged && !selInst)) loadSel();
+  }
+
+  function clearSel() {
+    selLoaded = false;
+    selChanged = false;
+    selData = null;
+    selInst = null;
+    selSeq++;
+    poolSeq++;
+    $('sel-body').innerHTML = '';
+    $('sel-kpis').innerHTML = '';
+    $('sel-others').innerHTML = '';
+    $('sel-pool-body').innerHTML = '';
+    $('sel-status').textContent = '';
+    $('sel-scope').textContent = '';
+    $('sel-find').value = '';
+    $('sel-export').disabled = true;
+    $('sel-readonly').hidden = true;
+    $('sel-overview').hidden = false;
+    $('sel-detail').hidden = true;
+    selAlert('');
+    while ($('sel-district').options.length > 1) $('sel-district').remove(1);
+  }
+
+  function loadSel() {
+    var s = session();
+    if (!s) return sessionEnded();
+    var seq = ++selSeq;
+    selAlert('');
+    $('sel-export').disabled = true;
+    $('sel-status').textContent = 'Loading... Counting every application takes a few seconds.';
+    post({ action: 'institutions', token: s.token, district: selDistrict() }).then(function (out) {
+      if (seq !== selSeq) return;
+      if (out && out.error === 'auth') return sessionEnded();
+      if (notSwitchedOn(out) || !out.ok) {
+        $('sel-status').textContent = '';
+        selAlert(notSwitchedOn(out) ? SEL_OLD : out.message);
+        return;
+      }
+      selLoaded = true;
+      selChanged = false;
+      selData = out;
+      selCanChange = !!out.canSelect;
+      renderSel();
+    }).catch(function () {
+      if (seq !== selSeq) return;
+      $('sel-status').textContent = '';
+      selAlert('The selection lists could not be loaded. Check your internet connection and try again.');
+    });
+  }
+
+  function kpi(label, value, note) {
+    var div = document.createElement('div');
+    div.className = 'kpi';
+    var small = document.createElement('small');
+    small.textContent = label;
+    var strong = document.createElement('strong');
+    strong.textContent = value;
+    div.appendChild(small);
+    div.appendChild(strong);
+    if (note) {
+      var span = document.createElement('span');
+      span.textContent = note;
+      div.appendChild(span);
+    }
+    return div;
+  }
+  function numCell(tr, value, strong) {
+    var td = addCell(tr, value);
+    td.className = 'num' + (strong ? ' strong' : '');
+    return td;
+  }
+  function perPost(apps, posts) { return posts ? (Math.round(apps / posts * 10) / 10).toFixed(1) : '-'; }
+  function chip(text, cls) {
+    var span = document.createElement('span');
+    span.className = 'st ' + (cls || '');
+    span.textContent = text;
+    return span;
+  }
+
+  function renderSel() {
+    var out = selData;
+    if (!out) return;
+    $('sel-scope').textContent = 'Showing: ' + out.scope + '. Figures of ' + out.generated + '.';
+    $('sel-readonly').hidden = selCanChange;
+    var find = $('sel-find').value.trim().toLowerCase();
+    var list = out.institutions.filter(function (i) {
+      return !find || (i.name + ' ' + i.local + ' ' + i.district).toLowerCase().indexOf(find) !== -1;
+    });
+    var sum = function (items, k) { return items.reduce(function (t, i) { return t + i[k]; }, 0); };
+    var posts = sum(out.institutions, 'posts'), apps = sum(out.institutions, 'applications');
+    var selected = sum(out.institutions, 'selected');
+    var otherApps = sum(out.others, 'applications');
+    var kp = $('sel-kpis');
+    kp.innerHTML = '';
+    kp.appendChild(kpi('Posts', num(posts), out.institutions.length + ' institution' + (out.institutions.length === 1 ? '' : 's')));
+    kp.appendChild(kpi('Applications', num(apps + otherApps), perPost(apps + otherApps, posts) + ' per post'));
+    kp.appendChild(kpi('Selected', num(selected), pct(selected, posts) + ' of the posts'));
+    kp.appendChild(kpi('Still open', num(sum(out.institutions, 'open')), num(sum(out.institutions, 'reserve')) + ' on reserve'));
+    $('sel-status').textContent = find ? list.length + ' of ' + out.institutions.length + ' institutions match "' + $('sel-find').value.trim() + '".' : '';
+
+    var body = $('sel-body');
+    body.innerHTML = '';
+    if (!list.length) {
+      var tr0 = document.createElement('tr');
+      var td0 = document.createElement('td');
+      td0.colSpan = 12;
+      td0.className = 'empty';
+      td0.textContent = out.institutions.length ? 'No institution matches.' : 'There are no posts for this district.';
+      tr0.appendChild(td0);
+      body.appendChild(tr0);
+    }
+    var all = !selDistrict();
+    list.forEach(function (i) {
+      var tr = document.createElement('tr');
+      var name = addCell(tr, i.name, [i.local.replace(/ (Local|Metropolitan) Municipality$/, ''), all ? i.district : ''].filter(String).join(', '));
+      name.firstChild.nodeValue = '';
+      var b = document.createElement('strong');
+      b.textContent = i.name;
+      name.insertBefore(b, name.firstChild);
+      if (!i.onForm) {
+        var f = document.createElement('span');
+        f.className = 'flag';
+        f.textContent = 'Not on the application form';
+        name.appendChild(f);
+      }
+      numCell(tr, num(i.posts), true);
+      numCell(tr, num(i.applications));
+      numCell(tr, perPost(i.applications, i.posts));
+      numCell(tr, pct(i.women, i.applications));
+      numCell(tr, pct(i.youth, i.applications));
+      numCell(tr, num(i.disabled));
+      numCell(tr, num(i.shortlisted));
+      numCell(tr, num(i.selected), true);
+      numCell(tr, num(i.reserve));
+      var open = numCell(tr, '');
+      if (i.posts && !i.open) open.appendChild(chip('Filled', 'full'));
+      else open.textContent = num(i.open);
+      var td = document.createElement('td');
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn ghost sel-open';
+      btn.textContent = 'Open';
+      btn.setAttribute('aria-label', 'Open ' + i.name);
+      btn.addEventListener('click', function () { openInstitution(i); });
+      td.appendChild(btn);
+      tr.appendChild(td);
+      body.appendChild(tr);
+    });
+
+    var others = $('sel-others');
+    others.innerHTML = '';
+    $('sel-others-wrap').hidden = !out.others.length;
+    out.others.forEach(function (o) {
+      var tr = document.createElement('tr');
+      addCell(tr, o.district);
+      addCell(tr, o.facility);
+      numCell(tr, num(o.applications));
+      others.appendChild(tr);
+    });
+    $('sel-export').disabled = !out.institutions.length;
+  }
+
+  function downloadBlob(blob, name) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  }
+  function fileSafe(s) { return String(s).replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, ''); }
+
+  // Applications per institution and the posts, as shown (the whole scope, not only the search).
+  function exportSel() {
+    var out = selData;
+    if (!out) return;
+    var rows = out.institutions.map(function (i) {
+      return [i.district, i.name, i.local, i.posts, i.applications, perPost(i.applications, i.posts), i.women, i.youth, i.disabled,
+        i.shortlisted, i.selected, i.reserve, i.notSuitable, i.withdrawn, i.open, i.onForm ? 'Yes' : 'No'];
+    }).concat(out.others.map(function (o) {
+      return [o.district, o.facility, '', 0, o.applications, '-', '', '', '', '', '', '', '', '', '', 'Yes (no posts)'];
+    }));
+    downloadBlob(buildXlsx({
+      sheet: 'Institutions', title: 'EPWP posts and applications per institution', scope: out.scope,
+      headers: ['District', 'Institution', 'Local municipality', 'Posts', 'Applications', 'Applications per post', 'Women',
+        'Youth (18 to 35)', 'With a disability', 'Shortlisted', 'Selected', 'Reserve', 'Not suitable', 'Withdrawn',
+        'Posts still open', 'On the application form'],
+      numeric: [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+      rows: rows.map(function (r) { return r.map(String); })
+    }), 'EPWP_Posts_and_applications_' + fileSafe(out.scope) + '_' + todayIso() + '.xlsx');
+  }
+
+  function openInstitution(inst) {
+    selInst = inst;
+    $('sel-overview').hidden = true;
+    $('sel-detail').hidden = false;
+    $('sel-search').value = '';
+    $('sel-filter').value = '';
+    $('sel-from').value = inst.onForm ? 'institution' : 'district';
+    $('sel-pool-body').innerHTML = '';
+    renderInstHead();
+    window.scrollTo(0, 0);
+    $('sel-inst-name').focus({ preventScroll: true });
+    loadPool(0);
+  }
+
+  function renderInstHead() {
+    var i = selInst;
+    $('sel-inst-name').textContent = i.name;
+    $('sel-inst-where').textContent = [i.local, i.district].filter(String).join(', ');
+    var kp = $('sel-inst-kpis');
+    kp.innerHTML = '';
+    kp.appendChild(kpi('Posts', num(i.posts), perPost(i.applications, i.posts) + ' applicants per post'));
+    kp.appendChild(kpi('Selected', num(i.selected), i.posts && !i.open ? 'All posts filled' : num(i.open) + ' still open'));
+    kp.appendChild(kpi('Reserve', num(i.reserve), 'In case someone declines'));
+    kp.appendChild(kpi('Shortlisted', num(i.shortlisted), num(i.applications) + ' applied for this institution'));
+    var warn = $('sel-inst-warn');
+    warn.hidden = i.onForm;
+    warn.textContent = i.onForm ? '' : 'Applicants could not choose ' + i.name + ' on the application form, so nobody applied for it directly. ' +
+      'Choose from everyone living in the district.';
+  }
+
+  function backToOverview() {
+    selInst = null;
+    poolSeq++;
+    $('sel-detail').hidden = true;
+    $('sel-overview').hidden = false;
+    if (selChanged) loadSel(); else renderSel();
+    window.scrollTo(0, 0);
+  }
+
+  function poolFilters() {
+    return { search: $('sel-search').value.trim(), from: $('sel-from').value, status: $('sel-filter').value };
+  }
+
+  function loadPool(offset) {
+    var s = session();
+    if (!s) return sessionEnded();
+    var seq = ++poolSeq;
+    var f = poolFilters();
+    selAlert('');
+    $('sel-pool-btn').disabled = true;
+    $('sel-pool-export').disabled = true;
+    $('sel-pool-summary').textContent = 'Loading...';
+    post({ action: 'pool', token: s.token, institution: selInst.id, offset: offset, search: f.search, from: f.from, status: f.status })
+      .then(function (out) {
+        if (seq !== poolSeq) return;
+        if (out && out.error === 'auth') return sessionEnded();
+        if (notSwitchedOn(out) || !out.ok) {
+          $('sel-pool-summary').textContent = '';
+          selAlert(notSwitchedOn(out) ? SEL_OLD : out.message);
+          return;
+        }
+        selPoolFilters = f;
+        selOffset = out.offset;
+        selCanChange = !!out.canSelect;
+        $('sel-readonly').hidden = selCanChange;
+        renderPool(out);
+      }).catch(function () {
+        if (seq !== poolSeq) return;
+        $('sel-pool-summary').textContent = '';
+        selAlert('The applicants could not be loaded. Check your internet connection and press Show again.');
+      }).then(function () { $('sel-pool-btn').disabled = false; });
+  }
+
+  function renderPool(out) {
+    var c = out.counts;
+    var parts = [];
+    if (c.none) parts.push(num(c.none) + ' not reviewed');
+    SEL_STATUSES.forEach(function (st) { if (c[st]) parts.push(num(c[st]) + ' ' + st.toLowerCase()); });
+    if (c.elsewhere) parts.push(num(c.elsewhere) + ' with a status at another institution');
+    var who = out.from === 'district' ? 'living in ' + out.institution.district : 'applied for ' + out.institution.name;
+    $('sel-pool-summary').textContent = num(c.all) + ' applicant' + (c.all === 1 ? '' : 's') + ' ' + who +
+      (parts.length ? ': ' + parts.join(', ') : '') + '.' + (out.total !== c.all ? ' ' + num(out.total) + ' match.' : '');
+    var body = $('sel-pool-body');
+    body.innerHTML = '';
+    if (!out.rows.length) {
+      var tr0 = document.createElement('tr');
+      var td0 = document.createElement('td');
+      td0.colSpan = 9;
+      td0.className = 'empty';
+      td0.textContent = c.all ? 'Nobody matches the search or status.' : 'Nobody applied for this institution. Choose "Everyone living in the district".';
+      tr0.appendChild(td0);
+      body.appendChild(tr0);
+    }
+    out.rows.forEach(function (r) { body.appendChild(poolRow(r)); });
+    $('sel-pool-export').disabled = !out.total;
+    var first = out.total ? out.offset + 1 : 0, lastShown = out.offset + out.rows.length;
+    $('sel-page').textContent = out.total ? num(first) + ' to ' + num(lastShown) + ' of ' + num(out.total) : '';
+    $('sel-prev').disabled = out.offset === 0;
+    $('sel-next').disabled = lastShown >= out.total;
+  }
+
+  function poolRow(r) {
+    var tr = document.createElement('tr');
+    addCell(tr, r.ref, r.channel === 'Captured' ? 'Paper application' : 'Online', true);
+    addCell(tr, r.name + ' ' + r.surname, [r.gender, r.age !== null ? r.age + ' years' : '', r.disability === 'Yes' ? 'Disability' : '']
+      .filter(String).join(', '));
+    addCell(tr, r.id, '', true);
+    addCell(tr, r.cell, '', true);
+    addCell(tr, r.local.replace(/ (Local|Metropolitan) Municipality$/, ''), 'Ward ' + r.ward);
+    addCell(tr, r.facility);
+    var q = addCell(tr, r.qualification);
+    if (!r.qualificationListed) {
+      var f = document.createElement('span');
+      f.className = 'flag';
+      f.textContent = 'Not one of the advertised qualifications';
+      q.appendChild(f);
+    }
+    var docs = addCell(tr, '');
+    [['ID', r.idDoc], ['Results', r.resultsDoc]].forEach(function (d) {
+      if (!d[1]) return;
+      var a = document.createElement('a');
+      a.href = d[1];
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = d[0];
+      if (docs.firstChild) docs.appendChild(document.createTextNode(' · '));
+      docs.appendChild(a);
+    });
+    if (!docs.firstChild) docs.textContent = r.paperDocs ? 'Paper: ' + r.paperDocs : '-';
+    var td = document.createElement('td');
+    td.className = 'sel-status';
+    fillStatus(td, r);
+    tr.appendChild(td);
+    return tr;
+  }
+
+  function statusChip(st) { return chip(st || 'Not reviewed', st ? st.replace(/ /g, '-') : ''); }
+
+  function fillStatus(td, r) {
+    td.innerHTML = '';
+    var here = r.elsewhere ? '' : r.status;
+    if (r.elsewhere) {
+      td.appendChild(chip(r.status + ' at ' + r.elsewhere, r.status.replace(/ /g, '-')));
+    }
+    var info = function () {
+      if (!here || !r.statusBy) return null;
+      var m = document.createElement('div');
+      m.className = 'muted';
+      m.textContent = (r.reason ? r.reason + '. ' : '') + 'By ' + r.statusBy.replace(/ \(.*\)$/, '') + ', ' + r.statusOn;
+      return m;
+    };
+    if (!selCanChange) {
+      if (!r.elsewhere) td.appendChild(statusChip(here));
+      var m0 = info();
+      if (m0) td.appendChild(m0);
+      return;
+    }
+    var sel = document.createElement('select');
+    sel.setAttribute('aria-label', 'Status of ' + r.name + ' ' + r.surname);
+    sel.add(new Option('Not reviewed', ''));
+    SEL_STATUSES.forEach(function (st) { sel.add(new Option(st, st)); });
+    sel.value = here;
+    sel.className = here ? 'is-' + here.replace(/ /g, '-') : '';
+    var reason = document.createElement('input');
+    reason.type = 'text';
+    reason.maxLength = 300;
+    reason.placeholder = 'Reason';
+    reason.setAttribute('aria-label', 'Reason for the status of ' + r.name + ' ' + r.surname);
+    reason.value = here ? r.reason : '';
+    var row = document.createElement('div');
+    row.className = 'row';
+    var save = document.createElement('button');
+    save.type = 'button';
+    save.className = 'btn green';
+    save.textContent = 'Save';
+    var msg = document.createElement('span');
+    row.appendChild(save);
+    row.appendChild(msg);
+    var sync = function () {
+      var needs = !!SEL_NEEDS_REASON[sel.value];
+      reason.hidden = !needs && !reason.value;
+      reason.placeholder = needs ? 'Reason (required)' : 'Reason or note (optional)';
+      var changed = sel.value !== here || (reason.value.trim() !== (here ? r.reason : '') && sel.value);
+      row.hidden = !changed;
+      if (changed) { msg.textContent = ''; msg.className = ''; }
+    };
+    sel.addEventListener('change', function () { sync(); if (!reason.hidden && SEL_NEEDS_REASON[sel.value]) reason.focus(); });
+    reason.addEventListener('input', sync);
+    save.addEventListener('click', function () {
+      if (SEL_NEEDS_REASON[sel.value] && !reason.value.trim()) {
+        msg.className = 'err';
+        msg.textContent = 'Give a reason first.';
+        reason.focus();
+        return;
+      }
+      saveStatus(r, sel.value, reason.value.trim(), td, save, msg);
+    });
+    td.appendChild(sel);
+    td.appendChild(reason);
+    var m = info();
+    if (m) td.appendChild(m);
+    td.appendChild(row);
+    sync();
+  }
+
+  function saveStatus(r, status, reason, td, btn, msg) {
+    var s = session();
+    if (!s) return sessionEnded();
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    post({ action: 'select', token: s.token, institution: selInst.id, ref: r.ref, status: status, reason: reason })
+      .then(function (out) {
+        if (out && out.error === 'auth') return sessionEnded();
+        if (!out || !out.ok) {
+          btn.disabled = false;
+          btn.textContent = 'Save';
+          msg.className = 'err';
+          msg.textContent = (out && out.message) || 'Not saved. Try again.';
+          return;
+        }
+        // Keep the counts on screen up to date without reloading everything.
+        var before = r.elsewhere ? '' : r.status;
+        if (before && SEL_FIELD[before]) selInst[SEL_FIELD[before]]--;
+        if (status && SEL_FIELD[status]) selInst[SEL_FIELD[status]]++;
+        selInst.open = Math.max(0, selInst.posts - selInst.selected);
+        selChanged = true;
+        r.status = status;
+        r.reason = status ? reason : '';
+        r.statusBy = out.statusBy || '';
+        r.statusOn = out.statusOn || '';
+        r.elsewhere = '';
+        renderInstHead();
+        fillStatus(td, r);
+        var ok = document.createElement('div');
+        ok.className = 'ok';
+        ok.setAttribute('role', 'status');
+        ok.textContent = 'Saved';
+        td.appendChild(ok);
+        setTimeout(function () { ok.remove(); }, 2500);
+      }).catch(function () {
+        btn.disabled = false;
+        btn.textContent = 'Save';
+        msg.className = 'err';
+        msg.textContent = 'Not saved. Check your internet connection and try again.';
+      });
+  }
+
+  function exportPool() {
+    var s = session();
+    if (!s) return sessionEnded();
+    var btn = $('sel-pool-export');
+    btn.disabled = true;
+    $('sel-pool-export-label').textContent = 'Preparing file...';
+    selAlert('');
+    var f = selPoolFilters;
+    post({ action: 'pool', token: s.token, institution: selInst.id, all: true, search: f.search || '', from: f.from || '', status: f.status || '' })
+      .then(function (out) {
+        if (out && out.error === 'auth') return sessionEnded();
+        if (!out || !out.ok) { selAlert((out && out.message) || 'The download could not be prepared.'); return; }
+        var rows = out.rows.map(function (r) {
+          var here = r.elsewhere ? '' : r.status;
+          return [r.ref, here || 'Not reviewed', here ? r.reason : '', here ? r.statusBy : '', here ? r.statusOn : '',
+            r.elsewhere ? r.status + ' at ' + r.elsewhere : '', r.name, r.surname, r.id, r.gender, r.age === null ? '' : String(r.age),
+            r.disability, r.cell, r.district, r.local, r.ward, r.facility, r.qualification, r.qualificationListed ? 'Yes' : 'No',
+            r.channel, r.paperDocs, r.idDoc, r.resultsDoc];
+        });
+        downloadBlob(buildXlsx({
+          sheet: 'Applicants', title: 'EPWP selection - ' + out.institution.name, scope: out.institution.district,
+          headers: ['Reference', 'Status', 'Reason', 'Status set by', 'Status date', 'Status at another institution', 'First name(s)',
+            'Surname', 'ID number', 'Gender', 'Age', 'Disability', 'Cellphone', 'District', 'Local municipality', 'Ward',
+            'Applied for', 'Qualification', 'Advertised qualification', 'How applied', 'Paper documents', 'ID document', 'Proof of results'],
+          links: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+          numeric: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+          rows: rows
+        }), 'EPWP_Selection_' + fileSafe(out.institution.name) + (out.from === 'district' ? '_whole_district' : '') + '_' + todayIso() + '.xlsx');
+      }).catch(function () {
+        selAlert('The download could not be prepared. Check your internet connection and try again.');
+      }).then(function () {
+        btn.disabled = false;
+        $('sel-pool-export-label').textContent = 'Download to Excel';
+      });
+  }
+
+  $('sel-district').addEventListener('change', loadSel);
+  $('sel-find').addEventListener('input', renderSel);
+  $('sel-export').addEventListener('click', exportSel);
+  $('sel-back').addEventListener('click', backToOverview);
+  $('sel-pool-form').addEventListener('submit', function (e) { e.preventDefault(); loadPool(0); });
+  $('sel-from').addEventListener('change', function () { loadPool(0); });
+  $('sel-filter').addEventListener('change', function () { loadPool(0); });
+  $('sel-prev').addEventListener('click', function () { loadPool(Math.max(0, selOffset - 50)); });
+  $('sel-next').addEventListener('click', function () { loadPool(selOffset + 50); });
+  $('sel-pool-export').addEventListener('click', exportPool);
+
   window.addEventListener('hashchange', showView);
   showView();
 })();

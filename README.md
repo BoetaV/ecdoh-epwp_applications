@@ -11,6 +11,7 @@ assets/units.js         District > Municipality > Hospital lists (generated)
 assets/logo.png         Department of Health logo
 apps-script/Code.gs     Backend - paste into the Google Sheet's Apps Script
 tools/build_units.py    Rebuilds assets/units.js from docs/EC_EPWP.csv
+tools/build_allocations.py  Posts per institution into Code.gs
 docs/                   Source lists (reporting units, database fields)
 ```
 
@@ -146,6 +147,66 @@ or by local municipality (for one district).
 
 The dashboard needs the latest Apps Script deployed (Deploy > Manage
 deployments > New version).
+
+## Selection (HR)
+
+Once applications have closed, HR selects the candidates on the **Selection**
+screen (staff bar > **Selection**). The posts per institution come from
+`docs/allocation per institution.csv` (611 posts at 116 institutions).
+
+**Kept apart from the master list.** Selection never changes the Applications
+tab. It uses three tabs of its own in the Sheet:
+
+- **Allocations**: the posts per institution. It is filled in automatically the
+  first time the Selection screen is opened. After that the tab is what counts,
+  so the number of posts can be corrected there.
+- **Selections**: the current status of each applicant HR has dealt with.
+- **Selection History**: every change ever made, with who made it, when, and the
+  reason. Nothing is ever removed from it.
+
+**Who can do what.** Everyone signed in can see the Selection screen for their
+own district (provincial users: all districts). Only users with **Selection
+access** = `Yes` in the Users tab (a new column at the end) can change a status.
+Set it for the HR officials; capturers keep it empty.
+
+**The overview** lists each institution with its posts, how many applied for it
+(people who chose it as their nearest facility), applicants per post, the share
+of women and youth (18 to 35), people with a disability, and how many are
+shortlisted, selected, on reserve and still open. **Download to Excel** gives the
+same list. Facilities applicants chose that have no posts are listed below it.
+
+**An institution** (press **Open**) lists its applicants with their age, gender,
+disability, ward, qualification (flagged when it is not one of the advertised
+qualifications, as with some imported lists) and documents. For each applicant
+HR chooses a status and presses **Save**:
+
+| Status | Meaning |
+|---|---|
+| Not reviewed | Nothing decided yet (the starting point) |
+| Shortlisted | Meets the criteria, being considered |
+| Selected | Gets one of the posts |
+| Reserve | Next in line if a selected person declines |
+| Not suitable | Does not meet the criteria (a reason is required) |
+| Withdrawn | No longer available (a reason is required) |
+
+The rules the system enforces:
+
+- No more people can be **Selected** than the institution has posts.
+- An applicant can be shortlisted, selected or on reserve at only **one**
+  institution at a time. Clear the status there first to move them.
+- **Applicants: Everyone living in the district** shows all applicants of the
+  institution's district, not only those who chose it. Use it for institutions
+  that were not on the application form, or that had too few applicants.
+- **Download to Excel** on an institution gives its applicants with their status.
+
+Institutions in the allocation list that applicants could not choose on the form
+(so nobody applied for them directly): Cecilia Makiwane, Frere, Mjanyana, Dora
+Nginza, Elizabeth Donkin, Livingstone (both lines), Mthatha Regional, Nelson
+Mandela Academic and Fort England. HR fills those from the whole district.
+
+If the allocation list changes, correct the Allocations tab directly, or update
+the CSV and run `python tools/build_allocations.py` (this only affects a Sheet
+that does not have an Allocations tab yet).
 
 ## Importing a list captured elsewhere (Import tab)
 
