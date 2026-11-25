@@ -845,11 +845,11 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         </div>
       </div>
       <div id="sel-others-wrap" hidden>
-        <h2 class="sel-h2">Facilities chosen on the form that have no posts</h2>
+        <h2 class="sel-h2">Facilities applicants chose that have no posts</h2>
         <p class="muted">These applicants can still be selected for an institution in their district: open the institution and choose <em>Everyone living in the district</em>.</p>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>District</th><th>Facility</th><th class="num">Applications</th></tr></thead>
+            <thead><tr><th>District</th><th>Facility</th><th class="num">Online</th><th class="num">Paper (captured)</th><th class="num">Total</th></tr></thead>
             <tbody id="sel-others"></tbody>
           </table>
         </div>
@@ -3040,8 +3040,12 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     out.others.forEach(function (o) {
       var tr = document.createElement('tr');
       addCell(tr, o.district);
-      addCell(tr, o.facility);
-      numCell(tr, num(o.applications));
+      var fc = addCell(tr, o.facility + ' ');
+      var on = o.online || 0, cap = o.captured || 0;
+      fc.appendChild(chip(cap && on ? 'Online and paper' : cap ? 'Paper only' : 'Online only', cap && !on ? 'Reserve' : 'Shortlisted'));
+      numCell(tr, num(on));
+      numCell(tr, num(cap));
+      numCell(tr, num(o.applications), true);
       others.appendChild(tr);
     });
     $('sel-export').disabled = !out.institutions.length;
@@ -3068,7 +3072,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       return [r.district, 'Reserved for further allocation' + (r.removed ? ' (duplicate line "' + r.removed + '" removed)' : ''),
         r.allocatedTo ? 'Allocated to ' + r.allocatedTo : '', r.allocatedTo ? 0 : r.posts, '', '', '', '', '', '', '', '', '', '', '', '-'];
     })).concat(out.others.map(function (o) {
-      return [o.district, o.facility, '', 0, o.applications, '-', '', '', '', '', '', '', '', '', '', 'Yes (no posts)'];
+      return [o.district, o.facility + ' (no posts: ' + (o.online || 0) + ' online, ' + (o.captured || 0) + ' paper)', '', 0,
+        o.applications, '-', '', '', '', '', '', '', '', '', '', 'Yes (no posts)'];
     }));
     downloadBlob(buildXlsx({
       sheet: 'Institutions', title: 'EPWP posts and applications per institution', scope: out.scope,

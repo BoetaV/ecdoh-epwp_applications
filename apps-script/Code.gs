@@ -1747,8 +1747,9 @@ function institutions_(data, user) {
       if (!inScope(code)) return;
       var f = String(row[col.NearestFacility] || '').trim() || 'Not recorded';
       var k = code + '|' + f;
-      other[k] = other[k] || { district: displayDistrict_(code), facility: f, applications: 0 };
+      other[k] = other[k] || { district: displayDistrict_(code), facility: f, applications: 0, online: 0, captured: 0 };
       other[k].applications++;
+      if (row[col.Channel] === 'Captured') other[k].captured++; else other[k].online++;
     }
   });
 
