@@ -341,6 +341,25 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 .takes { display: block; margin-top: 2px; color: var(--green-700); font-size: 12px; font-weight: 700; }
 .st.elsewhere { display: block; width: fit-content; max-width: 100%; white-space: normal; margin-bottom: 6px; }
 .st.elsewhere.Selected { background: #7a1610; color: var(--white); }
+.sel-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+.sel-buttons .btn { min-height: 44px; padding: 8px 18px; font-size: 15px; }
+.sel-buttons .btn svg { width: 18px; height: 18px; }
+.sel-docs { min-width: 200px; }
+.sel-docs .doc-links { margin-bottom: 6px; }
+.sel-docs label { display: block; margin-top: 4px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.sel-docs select, .sel-docs input { width: 100%; min-height: 32px; padding: 3px 8px; font-size: 13px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); font-family: inherit; }
+.sel-docs select.is-Verified { background: var(--green-100); font-weight: 700; }
+.sel-docs select.is-Missing { background: #fde8e6; font-weight: 700; }
+.sel-docs input { margin-top: 6px; }
+.sel-docs .row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin-top: 6px; }
+.sel-docs .btn { min-height: 32px; padding: 3px 12px; font-size: 13px; }
+.sel-docs .err { color: var(--red); font-size: 12px; font-weight: 700; }
+.sel-docs .ok { color: var(--green-700); font-size: 12px; font-weight: 700; }
+.st.Verified { background: var(--green-100); color: var(--green-900); }
+.st.Missing { background: #fde8e6; color: #7a1610; }
+@media (min-width: 720px) {
+  .filters.sel-pool-filters { grid-template-columns: 2fr 1fr 1fr 1fr auto; }
+}
 .sel-status { min-width: 220px; }
 .sel-status select, .sel-status input { width: 100%; min-height: 36px; padding: 4px 8px; font-size: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); font-family: inherit; }
 .sel-status input { margin-top: 6px; }
@@ -890,15 +909,32 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
             <option value="elsewhere">Already has a status at another institution</option>
           </select>
         </div>
+        <div class="field">
+          <label for="sel-docs">Documents</label>
+          <select id="sel-docs">
+            <option value="">All</option>
+            <option value="unverified">Not yet verified</option>
+            <option value="verified">Both verified</option>
+            <option value="missing">A document is missing</option>
+          </select>
+        </div>
         <button class="btn green" type="submit" id="sel-pool-btn">Show</button>
       </form>
       <div class="summary-row">
         <p class="summary" id="sel-pool-summary" aria-live="polite"></p>
-        <button class="btn ghost" type="button" id="sel-pool-export" disabled>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg>
-          <span id="sel-pool-export-label">Download to Excel</span>
-        </button>
+        <div class="sel-buttons">
+          <button class="btn ghost" type="button" id="sel-pull" disabled title="Paper applicants who are shortlisted, on reserve or selected here, with where their paper file is">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg>
+            <span id="sel-pull-label">Paper files to pull</span>
+          </button>
+          <button class="btn ghost" type="button" id="sel-pool-export" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg>
+            <span id="sel-pool-export-label">Download to Excel</span>
+          </button>
+        </div>
       </div>
+      <p class="muted" style="margin:8px 0 0">Before anyone can be <strong>Selected</strong>, both documents must be verified:
+        for online applicants from the uploaded files, for paper applicants from the paper file at the HR office.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -3108,6 +3144,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('sel-detail').hidden = false;
     $('sel-search').value = '';
     $('sel-filter').value = '';
+    $('sel-docs').value = '';
     $('sel-from').value = inst.onForm || inst.takesFrom ? 'institution' : 'district';
     $('sel-pool-body').innerHTML = '';
     renderInstHead();
@@ -3126,6 +3163,10 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     kp.appendChild(kpi('Selected', num(i.selected), i.posts && !i.open ? 'All posts filled' : num(i.open) + ' still open'));
     kp.appendChild(kpi('Reserve', num(i.reserve), 'In case someone declines'));
     kp.appendChild(kpi('Shortlisted', num(i.shortlisted), num(i.applications) + ' applied for this institution'));
+    if (i.active !== undefined) {
+      kp.appendChild(kpi('Documents verified', num(i.verified) + ' of ' + num(i.active),
+        'Shortlisted, reserve and selected with both documents verified'));
+    }
     var warn = $('sel-inst-warn');
     var shared = i.sharesWith && i.sharesWith.length ? i.sharesWith.join(', ') : '';
     var msg = '';
@@ -3153,7 +3194,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   }
 
   function poolFilters() {
-    return { search: $('sel-search').value.trim(), from: $('sel-from').value, status: $('sel-filter').value };
+    return { search: $('sel-search').value.trim(), from: $('sel-from').value, status: $('sel-filter').value, docs: $('sel-docs').value };
   }
 
   function loadPool(offset) {
@@ -3164,8 +3205,10 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     selAlert('');
     $('sel-pool-btn').disabled = true;
     $('sel-pool-export').disabled = true;
+    $('sel-pull').disabled = true;
     $('sel-pool-summary').textContent = 'Loading...';
-    post({ action: 'pool', token: s.token, institution: selInst.id, offset: offset, search: f.search, from: f.from, status: f.status })
+    post({ action: 'pool', token: s.token, institution: selInst.id, offset: offset, search: f.search, from: f.from, status: f.status,
+      docs: f.docs })
       .then(function (out) {
         if (seq !== poolSeq) return;
         if (out && out.error === 'auth') return sessionEnded();
@@ -3208,6 +3251,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     }
     out.rows.forEach(function (r) { body.appendChild(poolRow(r)); });
     $('sel-pool-export').disabled = !out.total;
+    $('sel-pull').disabled = !c.all;
     var first = out.total ? out.offset + 1 : 0, lastShown = out.offset + out.rows.length;
     $('sel-page').textContent = out.total ? num(first) + ' to ' + num(lastShown) + ' of ' + num(out.total) : '';
     $('sel-prev').disabled = out.offset === 0;
@@ -3230,23 +3274,143 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       f.textContent = 'Not one of the advertised qualifications';
       q.appendChild(f);
     }
-    var docs = addCell(tr, '');
-    [['ID', r.idDoc], ['Results', r.resultsDoc]].forEach(function (d) {
-      if (!d[1]) return;
-      var a = document.createElement('a');
-      a.href = d[1];
-      a.target = '_blank';
-      a.rel = 'noopener';
-      a.textContent = d[0];
-      if (docs.firstChild) docs.appendChild(document.createTextNode(' · '));
-      docs.appendChild(a);
-    });
-    if (!docs.firstChild) docs.textContent = r.paperDocs ? 'Paper: ' + r.paperDocs : '-';
+    var docs = document.createElement('td');
+    docs.className = 'sel-docs';
+    tr.appendChild(docs);
     var td = document.createElement('td');
     td.className = 'sel-status';
+    r._statusTd = td;
+    fillDocs(docs, r);
     fillStatus(td, r);
     tr.appendChild(td);
     return tr;
+  }
+
+  function docsVerified(d) { return !!d && d.id === 'Verified' && d.results === 'Verified'; }
+  function isActiveHere(r) { return !r.elsewhere && (r.status === 'Shortlisted' || r.status === 'Reserve' || r.status === 'Selected'); }
+
+  // Links to the uploads (online) or what was handed in (paper), and HR's check of both documents.
+  function fillDocs(td, r) {
+    td.innerHTML = '';
+    var d = r.docs || { id: '', results: '', note: '' };
+    var links = document.createElement('div');
+    links.className = 'doc-links';
+    [['ID', r.idDoc], ['Results', r.resultsDoc]].forEach(function (x) {
+      if (!x[1]) return;
+      var a = document.createElement('a');
+      a.href = x[1];
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = x[0];
+      if (links.firstChild) links.appendChild(document.createTextNode(' · '));
+      links.appendChild(a);
+    });
+    if (!links.firstChild) {
+      links.textContent = r.channel === 'Captured'
+        ? 'Paper file' + (r.receivedAt ? ' at ' + r.receivedAt : '') + (r.paperDocs ? ' (' + r.paperDocs + ')' : '')
+        : 'No uploads';
+    }
+    td.appendChild(links);
+    var by = function (withNote) {
+      if (!d.by) return null;
+      var m = document.createElement('div');
+      m.className = 'muted';
+      m.textContent = (withNote && d.note ? d.note + '. ' : '') + 'Checked by ' + d.by.replace(/ \(.*\)$/, '') + ', ' + d.on;
+      return m;
+    };
+    if (!selCanChange) {
+      td.appendChild(chip('ID: ' + (d.id || 'not checked'), d.id));
+      td.appendChild(document.createTextNode(' '));
+      td.appendChild(chip('Results: ' + (d.results || 'not checked'), d.results));
+      var m0 = by(true);
+      if (m0) td.appendChild(m0);
+      return;
+    }
+    var pick = function (label, value) {
+      var l = document.createElement('label');
+      l.textContent = label;
+      var sel = document.createElement('select');
+      sel.setAttribute('aria-label', label + ' of ' + r.name + ' ' + r.surname);
+      [['', 'Not checked'], ['Verified', 'Verified'], ['Missing', 'Missing']].forEach(function (o) { sel.add(new Option(o[1], o[0])); });
+      sel.value = value || '';
+      sel.className = value ? 'is-' + value : '';
+      l.appendChild(sel);
+      td.appendChild(l);
+      return sel;
+    };
+    var idSel = pick('ID document', d.id);
+    var resSel = pick('Proof of results', d.results);
+    var note = document.createElement('input');
+    note.type = 'text';
+    note.maxLength = 300;
+    note.placeholder = r.channel === 'Captured' ? 'Note, e.g. certified copy seen at HR office' : 'Note (optional)';
+    note.setAttribute('aria-label', 'Note on the documents of ' + r.name + ' ' + r.surname);
+    note.value = d.note || '';
+    var row = document.createElement('div');
+    row.className = 'row';
+    var save = document.createElement('button');
+    save.type = 'button';
+    save.className = 'btn green';
+    save.textContent = 'Save check';
+    var msg = document.createElement('span');
+    row.appendChild(save);
+    row.appendChild(msg);
+    var sync = function () {
+      idSel.className = idSel.value ? 'is-' + idSel.value : '';
+      resSel.className = resSel.value ? 'is-' + resSel.value : '';
+      var changed = idSel.value !== (d.id || '') || resSel.value !== (d.results || '') || note.value.trim() !== (d.note || '');
+      row.hidden = !changed;
+      note.hidden = !changed && !d.note;
+      if (changed) { msg.textContent = ''; msg.className = ''; }
+    };
+    idSel.addEventListener('change', sync);
+    resSel.addEventListener('change', sync);
+    note.addEventListener('input', sync);
+    save.addEventListener('click', function () { saveDocs(r, idSel.value, resSel.value, note.value.trim(), td, save, msg); });
+    td.appendChild(note);
+    var m = by();
+    if (m) td.appendChild(m);
+    td.appendChild(row);
+    sync();
+  }
+
+  function saveDocs(r, idDoc, results, note, td, btn, msg) {
+    var s = session();
+    if (!s) return sessionEnded();
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    post({ action: 'verify', token: s.token, institution: selInst.id, ref: r.ref, id: idDoc, results: results, note: note })
+      .then(function (out) {
+        if (out && out.error === 'auth') return sessionEnded();
+        if (!out || !out.ok) {
+          btn.disabled = false;
+          btn.textContent = 'Save check';
+          msg.className = 'err';
+          msg.textContent = (out && out.message) || 'Not saved. Try again.';
+          return;
+        }
+        var was = docsVerified(r.docs);
+        if (out.docs) r.docs = out.docs;
+        var now = docsVerified(r.docs);
+        if (isActiveHere(r) && was !== now && selInst.verified !== undefined) {
+          selInst.verified += now ? 1 : -1;
+          renderInstHead();
+        }
+        selChanged = true;
+        fillDocs(td, r);
+        if (r._statusTd) fillStatus(r._statusTd, r);
+        var ok = document.createElement('div');
+        ok.className = 'ok';
+        ok.setAttribute('role', 'status');
+        ok.textContent = 'Saved';
+        td.appendChild(ok);
+        setTimeout(function () { ok.remove(); }, 2500);
+      }).catch(function () {
+        btn.disabled = false;
+        btn.textContent = 'Save check';
+        msg.className = 'err';
+        msg.textContent = 'Not saved. Check your internet connection and try again.';
+      });
   }
 
   function statusChip(st) { return chip(st || 'Not reviewed', st ? st.replace(/ /g, '-') : ''); }
@@ -3310,6 +3474,11 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         reason.focus();
         return;
       }
+      if (sel.value === 'Selected' && here !== 'Selected' && !docsVerified(r.docs)) {
+        msg.className = 'err';
+        msg.textContent = 'Verify both documents first (Documents column).';
+        return;
+      }
       saveStatus(r, sel.value, reason.value.trim(), td, save, msg);
     });
     td.appendChild(sel);
@@ -3337,8 +3506,14 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         }
         // Keep the counts on screen up to date without reloading everything.
         var before = r.elsewhere ? '' : r.status;
+        var wasActive = isActiveHere(r);
         if (before && SEL_FIELD[before]) selInst[SEL_FIELD[before]]--;
         if (status && SEL_FIELD[status]) selInst[SEL_FIELD[status]]++;
+        var nowActive = status === 'Shortlisted' || status === 'Reserve' || status === 'Selected';
+        if (selInst.active !== undefined && wasActive !== nowActive) {
+          selInst.active += nowActive ? 1 : -1;
+          if (docsVerified(r.docs)) selInst.verified += nowActive ? 1 : -1;
+        }
         selInst.open = Math.max(0, selInst.posts - selInst.selected);
         selChanged = true;
         r.status = status;
@@ -3370,7 +3545,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('sel-pool-export-label').textContent = 'Preparing file...';
     selAlert('');
     var f = selPoolFilters;
-    post({ action: 'pool', token: s.token, institution: selInst.id, all: true, search: f.search || '', from: f.from || '', status: f.status || '' })
+    post({ action: 'pool', token: s.token, institution: selInst.id, all: true, search: f.search || '', from: f.from || '', status: f.status || '',
+      docs: f.docs || '' })
       .then(function (out) {
         if (out && out.error === 'auth') return sessionEnded();
         if (!out || !out.ok) { selAlert((out && out.message) || 'The download could not be prepared.'); return; }
@@ -3379,13 +3555,17 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
           return [r.ref, here || 'Not reviewed', here ? r.reason : '', here ? r.statusBy : '', here ? r.statusOn : '',
             r.elsewhere ? 'Already ' + r.status.toLowerCase() + ' at ' + r.elsewhere : '', r.name, r.surname, r.id, r.gender, r.age === null ? '' : String(r.age),
             r.disability, r.cell, r.district, r.local, r.ward, r.facility, r.qualification, r.qualificationListed ? 'Yes' : 'No',
-            r.channel, r.paperDocs, r.idDoc, r.resultsDoc];
+            r.channel, r.paperDocs, r.idDoc, r.resultsDoc,
+            (r.docs && r.docs.id) || 'Not checked', (r.docs && r.docs.results) || 'Not checked', (r.docs && r.docs.note) || '',
+            (r.docs && r.docs.by) || '', (r.docs && r.docs.on) || '', r.receivedAt || '', r.dateReceived || ''];
         });
         downloadBlob(buildXlsx({
           sheet: 'Applicants', title: 'EPWP selection - ' + out.institution.name, scope: out.institution.district,
           headers: ['Reference', 'Status', 'Reason', 'Status set by', 'Status date', 'Status at another institution', 'First name(s)',
             'Surname', 'ID number', 'Gender', 'Age', 'Disability', 'Cellphone', 'District', 'Local municipality', 'Ward',
-            'Applied for', 'Qualification', 'Advertised qualification', 'How applied', 'Paper documents', 'ID document', 'Proof of results'],
+            'Applied for', 'Qualification', 'Advertised qualification', 'How applied', 'Paper documents', 'ID document', 'Proof of results',
+            'ID document check', 'Proof of results check', 'Check note', 'Checked by', 'Checked on', 'Paper form handed in at',
+            'Paper form received on'],
           links: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
           numeric: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
           rows: rows
@@ -3408,6 +3588,46 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   $('sel-prev').addEventListener('click', function () { loadPool(Math.max(0, selOffset - 50)); });
   $('sel-next').addEventListener('click', function () { loadPool(selOffset + 50); });
   $('sel-pool-export').addEventListener('click', exportPool);
+  $('sel-docs').addEventListener('change', function () { loadPool(0); });
+  $('sel-pull').addEventListener('click', exportPull);
+
+  // The paper applicants HR is considering here, with where their paper file is,
+  // so the files can be fetched for the document check.
+  function exportPull() {
+    var s = session();
+    if (!s) return sessionEnded();
+    var btn = $('sel-pull');
+    btn.disabled = true;
+    $('sel-pull-label').textContent = 'Preparing file...';
+    selAlert('');
+    var f = selPoolFilters;
+    post({ action: 'pool', token: s.token, institution: selInst.id, all: true, from: f.from || '' })
+      .then(function (out) {
+        if (out && out.error === 'auth') return sessionEnded();
+        if (!out || !out.ok) { selAlert((out && out.message) || 'The list could not be prepared.'); return; }
+        var list = out.rows.filter(function (r) { return r.channel === 'Captured' && isActiveHere(r); });
+        if (!list.length) {
+          selAlert('No paper applicants are shortlisted, on reserve or selected at ' + out.institution.name + ' yet.');
+          return;
+        }
+        var order = { Selected: 0, Reserve: 1, Shortlisted: 2 };
+        list.sort(function (a, b) { return (a.receivedAt < b.receivedAt ? -1 : a.receivedAt > b.receivedAt ? 1 : 0) || order[a.status] - order[b.status]; });
+        downloadBlob(buildXlsx({
+          sheet: 'Files', title: 'EPWP paper files to pull - ' + out.institution.name, scope: out.institution.district,
+          headers: ['Paper form handed in at', 'Received on', 'Reference', 'First name(s)', 'Surname', 'ID number', 'Status',
+            'Documents handed in (as captured)', 'ID document check', 'Proof of results check', 'Note'],
+          rows: list.map(function (r) {
+            return [r.receivedAt, r.dateReceived, r.ref, r.name, r.surname, r.id, r.status, r.paperDocs,
+              (r.docs && r.docs.id) || 'Not checked', (r.docs && r.docs.results) || 'Not checked', (r.docs && r.docs.note) || ''];
+          })
+        }), 'EPWP_Paper_files_' + fileSafe(out.institution.name) + '_' + todayIso() + '.xlsx');
+      }).catch(function () {
+        selAlert('The list could not be prepared. Check your internet connection and try again.');
+      }).then(function () {
+        btn.disabled = false;
+        $('sel-pull-label').textContent = 'Paper files to pull';
+      });
+  }
 
   window.addEventListener('hashchange', showView);
   showView();

@@ -199,6 +199,29 @@ The rules the system enforces:
   that were not on the application form, or that had too few applicants.
 - **Download to Excel** on an institution gives its applicants with their status.
 
+**Checking the documents (online and paper alike).** Paper applicants'
+documents are not in the system; they stay in the paper file at the HR office.
+So every applicant is checked the same way, in the **Documents** column of an
+institution's list:
+
+- **ID document** and **Proof of results**: *Verified*, *Missing* or *Not
+  checked*, with a note (for example "Certified copies seen at Komani HR
+  office"). For online applicants HR opens the uploaded files; for paper
+  applicants HR checks the paper file.
+- Nobody can be **Selected** until both documents are *Verified*. A selected
+  applicant's documents cannot be changed to *Missing*; change the status first.
+- **Paper files to pull** downloads the paper applicants who are shortlisted,
+  on reserve or selected at that institution, with where and when their form was
+  handed in, so the files can be fetched before the check.
+- The **Documents** filter shows who is not yet verified, verified, or missing
+  a document; the **Documents verified** figure shows how many of the
+  shortlisted, reserve and selected applicants are fully checked.
+- Every check is saved in the **Document Checks** tab and logged in
+  **Selection History** (who, when, what changed).
+
+Originals or certified copies should still be seen at appointment for everyone:
+an uploaded photo can be unclear or false too.
+
 **Institutions that were not on the application form.** Nobody could choose
 them, so the allocation list names a nearby facility for each (the last column,
 *Application from*). The Selection screen shows "Will take applications from

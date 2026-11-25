@@ -853,7 +853,7 @@ function importPlace_(districtText, localText, facilityText) {
 function doGet() {
   // "uploads" and "capture" tell the website which features this version has.
   return json_({ ok: true, service: 'EPWP general worker applications', uploads: true, capture: true, accountRequests: true,
-    download: true, dashboard: true, selection: true });
+    download: true, dashboard: true, selection: true, verification: true });
 }
 
 function doPost(e) {
@@ -879,6 +879,7 @@ function doPost(e) {
       case 'institutions': return json_(institutions_(data, sessionUser_(data.token)));
       case 'pool': return json_(pool_(data, sessionUser_(data.token)));
       case 'select': return json_(select_(data, sessionUser_(data.token)));
+      case 'verify': return json_(verify_(data, sessionUser_(data.token)));
       default: return json_(saveApplication_(data, null));
     }
   } catch (err) {
@@ -1565,6 +1566,10 @@ function stats_(data, user) {
  *     applicants of a nearby facility (last column).
  *   - "Selections": one row per applicant HR has given a status to.
  *   - "Selection History": every change, with who made it, when and why.
+ *   - "Document Checks": whether HR has verified each applicant's ID document
+ *     and proof of results (from the upload for online applicants, from the
+ *     paper file at the HR office for paper applicants). Nobody can be
+ *     Selected until both are Verified.
  *   - "Reserved Posts": posts not given to an institution yet, kept for
  *     further allocation (filled from RESERVED_POSTS the first time). They
  *     are shown apart from the institutions; with them the total is TOTAL_POSTS.
@@ -1589,6 +1594,10 @@ var SEL_ACTIVE = { Shortlisted: 1, Selected: 1, Reserve: 1 };
 var SEL_NEEDS_REASON = { 'Not suitable': 1, 'Withdrawn': 1 };
 var SEL_ORDER = { Selected: 0, Reserve: 1, Shortlisted: 2, '': 3, 'Not suitable': 4, Withdrawn: 5 };
 var YOUTH_MAX_AGE = 35;
+var DOC_SHEET = 'Document Checks';
+var DOC_HEADERS = ['Reference', 'Applicant', 'ID number', 'How applied', 'ID document', 'Proof of results', 'Note',
+  'Checked by', 'Checked on'];
+var DOC_VALUES = ['Verified', 'Missing'];
 
 function headedSheet_(name, headers) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -1730,6 +1739,29 @@ function reservedPosts_() {
   });
 }
 
+/** The document checks HR has recorded, by reference number. */
+function documentChecks_() {
+  var sheet = headedSheet_(DOC_SHEET, DOC_HEADERS);
+  var last = sheet.getLastRow();
+  var rows = last < 2 ? [] : sheet.getRange(2, 1, last - 1, DOC_HEADERS.length).getValues();
+  var map = {};
+  rows.forEach(function (r, i) {
+    var ref = String(r[0]).trim();
+    if (!ref) return;
+    var on = r[8];
+    map[ref] = {
+      row: i + 2, id: String(r[4] || '').trim(), results: String(r[5] || '').trim(), note: String(r[6] || ''),
+      by: String(r[7] || ''),
+      on: on instanceof Date ? Utilities.formatDate(on, TIME_ZONE, 'yyyy-MM-dd HH:mm') : String(on || '')
+    };
+  });
+  return map;
+}
+
+function docsVerified_(d) {
+  return !!d && d.id === 'Verified' && d.results === 'Verified';
+}
+
 /** The current status of everyone HR has looked at, by reference number. */
 function selections_() {
   var sheet = headedSheet_(SEL_SHEET, SEL_HEADERS);
@@ -1779,7 +1811,7 @@ function institutions_(data, user) {
   allocs.forEach(function (a) {
     if (!inScope(a.district)) return;
     stats[a.id] = { applications: 0, women: 0, youth: 0, disabled: 0, Shortlisted: 0, Selected: 0, Reserve: 0,
-      'Not suitable': 0, Withdrawn: 0 };
+      'Not suitable': 0, Withdrawn: 0, active: 0, verified: 0 };
   });
 
   var sheet = getSheet_();
@@ -1817,9 +1849,15 @@ function institutions_(data, user) {
   });
 
   var sel = selections_();
+  var docs = documentChecks_();
   Object.keys(sel).forEach(function (ref) {
-    var s = sel[ref];
-    if (stats[s.institution] && stats[s.institution][s.status] !== undefined) stats[s.institution][s.status]++;
+    var s = sel[ref], st = stats[s.institution];
+    if (!st || st[s.status] === undefined) return;
+    st[s.status]++;
+    if (SEL_ACTIVE[s.status]) {
+      st.active++;
+      if (docsVerified_(docs[ref])) st.verified++;
+    }
   });
 
   var list = allocs.filter(function (a) { return stats[a.id]; }).map(function (a) {
@@ -1828,7 +1866,7 @@ function institutions_(data, user) {
       id: a.id, district: displayDistrict_(a.district), name: a.name, local: a.local, posts: a.posts,
       onForm: !!a.facility, takesFrom: a.takesFrom, sharesWith: sharesWith_(a, allocs), applications: st.applications, women: st.women, youth: st.youth, disabled: st.disabled,
       shortlisted: st.Shortlisted, selected: st.Selected, reserve: st.Reserve, notSuitable: st['Not suitable'],
-      withdrawn: st.Withdrawn, open: Math.max(0, a.posts - st.Selected)
+      withdrawn: st.Withdrawn, open: Math.max(0, a.posts - st.Selected), active: st.active, verified: st.verified
     };
   });
   list.sort(function (x, y) { return x.district < y.district ? -1 : x.district > y.district ? 1 : x.name < y.name ? -1 : 1; });
@@ -1867,7 +1905,9 @@ function pool_(data, user) {
   var fromDistrict = data.from === 'district';
   var match = institutionMatcher_(allocs);
   var sel = selections_();
+  var docs = documentChecks_();
   var statusFilter = String(data.status || '');
+  var docsFilter = String(data.docs || '');
   var words = String(data.search || '').toLowerCase().replace(/[^a-z0-9 -]/g, ' ').split(/\s+/).filter(String);
 
   var sheet = getSheet_();
@@ -1889,6 +1929,11 @@ function pool_(data, user) {
     var key = elsewhere ? 'elsewhere' : (status || 'none');
     counts[key] = (counts[key] || 0) + 1;
     if (statusFilter && statusFilter !== key) return;
+    if (docsFilter) {
+      var d = docs[ref];
+      var docKey = docsVerified_(d) ? 'verified' : d && (d.id === 'Missing' || d.results === 'Missing') ? 'missing' : 'unverified';
+      if (docKey !== docsFilter) return;
+    }
     if (words.length) {
       var text = [ref, row[col.Name], row[col.Surname], row[col.SouthAfricanID], row[col.CellphoneNumber],
         row[col.LocalMunicipality], row[col.MunicipalWardNo], row[col.NearestFacility]].join(' ').toLowerCase();
@@ -1919,8 +1964,11 @@ function pool_(data, user) {
       channel: row[col.Channel] === 'Captured' ? 'Captured' : 'Online',
       paperDocs: String(row[col['Paper Documents']] || ''),
       idDoc: link(row, 'ID Document (link)'), resultsDoc: link(row, 'Proof of Results (link)'),
+      receivedAt: String(row[col['Received At']] || ''), dateReceived: formatDay_(row[col['Date Received']]),
       status: it.status, reason: s ? s.reason : '', statusBy: s && it.status ? s.by : '', statusOn: s && it.status ? s.on : '',
-      elsewhere: it.elsewhere ? s.institutionName : ''
+      elsewhere: it.elsewhere ? s.institutionName : '',
+      docs: docs[it.ref] ? { id: docs[it.ref].id, results: docs[it.ref].results, note: docs[it.ref].note,
+        by: docs[it.ref].by, on: docs[it.ref].on } : { id: '', results: '', note: '', by: '', on: '' }
     };
   };
 
@@ -1984,6 +2032,9 @@ function select_(data, user) {
       return bad('This applicant is already ' + { Shortlisted: 'shortlisted', Selected: 'selected', Reserve: 'on reserve' }[was] +
         ' at ' + current.institutionName + '. Clear that status there first.');
     }
+    if (status === 'Selected' && !docsVerified_(documentChecks_()[ref])) {
+      return bad('Verify both the ID document and the proof of results before selecting this applicant.');
+    }
     if (status === 'Selected' && !(current && was === 'Selected' && current.institution === inst.id)) {
       var taken = Object.keys(sel).filter(function (r) {
         return sel[r].status === 'Selected' && sel[r].institution === inst.id;
@@ -2016,6 +2067,85 @@ function select_(data, user) {
     SpreadsheetApp.flush();
     return { ok: true, status: status, reason: reason, statusBy: by,
       statusOn: Utilities.formatDate(now, TIME_ZONE, 'yyyy-MM-dd HH:mm') };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * HR records the document check for one applicant: ID document and proof of
+ * results each Verified, Missing or not checked (''), with an optional note.
+ * Logged in Selection History. A Selected applicant must stay fully verified.
+ */
+function verify_(data, user) {
+  var bad = function (message) { return { ok: false, error: 'invalid', message: message }; };
+  if (!user.canSelect) {
+    return { ok: false, error: 'forbidden', message: 'You can look at the selection lists, but not change them. Ask the administrator for selection access.' };
+  }
+  var idDoc = String(data.id || ''), results = String(data.results || '');
+  if ((idDoc && DOC_VALUES.indexOf(idDoc) === -1) || (results && DOC_VALUES.indexOf(results) === -1)) {
+    return bad('Choose Verified or Missing for each document.');
+  }
+  var note = String(data.note || '').replace(/\s+/g, ' ').trim().slice(0, 300);
+  var ref = String(data.ref || '').trim();
+
+  ensureAllocationTabs_();
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(25000); } catch (err) {
+    return { ok: false, error: 'busy', message: 'The system is busy. Please try again in a minute.' };
+  }
+  try {
+    var allocs = allocations_();
+    var inst = null;
+    allocs.forEach(function (a) { if (a.id === String(data.institution || '')) inst = a; });
+    if (!inst || !canSee_(user, inst.district)) return bad('That institution was not found. Refresh the page and try again.');
+
+    var apps = getSheet_();
+    var last = apps.getLastRow();
+    var refs = last < 2 ? [] : apps.getRange(2, HEADERS.indexOf('Reference') + 1, last - 1, 1).getDisplayValues();
+    var at = -1;
+    for (var i = 0; i < refs.length; i++) if (refs[i][0] === ref) { at = i + 2; break; }
+    if (at === -1) return bad('Application ' + ref + ' was not found.');
+    var row = apps.getRange(at, 1, 1, HEADERS.length).getValues()[0];
+    var col = {};
+    HEADERS.forEach(function (h, j) { col[h] = j; });
+    var applied = institutionMatcher_(allocs).all(row[col.NearestFacility], row[col.District]);
+    if (applied.indexOf(inst) === -1 && districtCode_(row[col.District]) !== inst.district) {
+      return bad('This applicant did not apply for ' + inst.name + ' and does not live in its district.');
+    }
+
+    var sel = selections_()[ref];
+    if (sel && sel.status === 'Selected' && !(idDoc === 'Verified' && results === 'Verified')) {
+      return bad('This applicant is Selected at ' + sel.institutionName + ', so both documents must stay verified. ' +
+        'Change the status first if a document is in doubt.');
+    }
+
+    var docs = documentChecks_();
+    var current = docs[ref] || null;
+    if (current && current.id === idDoc && current.results === results && current.note === note) {
+      return { ok: true, unchanged: true };
+    }
+    var now = new Date();
+    var by = user.name + ' (' + user.username + ')';
+    var applicant = String(row[col.Name]) + ' ' + String(row[col.Surname]);
+    var channel = row[col.Channel] === 'Captured' ? 'Paper' : 'Online';
+    var sheet = headedSheet_(DOC_SHEET, DOC_HEADERS);
+    var target = current ? current.row : sheet.getLastRow() + 1;
+    sheet.getRange(target, 1, 1, DOC_HEADERS.length - 1).setNumberFormat('@');
+    sheet.getRange(target, DOC_HEADERS.length).setNumberFormat('yyyy-mm-dd hh:mm');
+    sheet.getRange(target, 1, 1, DOC_HEADERS.length).setValues([[ref, safeCell_(applicant),
+      String(row[col.SouthAfricanID]).replace(/^'/, ''), channel, idDoc, results, safeCell_(note), safeCell_(by), now]]);
+    var describe = function (d) {
+      return 'Documents: ID ' + ((d && d.id) || 'not checked') + ', results ' + ((d && d.results) || 'not checked');
+    };
+    var log = headedSheet_(SEL_LOG_SHEET, SEL_LOG_HEADERS);
+    var logRow = log.getLastRow() + 1;
+    log.getRange(logRow, 1).setNumberFormat('yyyy-mm-dd hh:mm:ss');
+    log.getRange(logRow, 1, 1, SEL_LOG_HEADERS.length).setValues([[now, ref, safeCell_(applicant), safeCell_(inst.name),
+      describe(current), describe({ id: idDoc, results: results }), safeCell_(note), safeCell_(by)]]);
+    SpreadsheetApp.flush();
+    return { ok: true, docs: { id: idDoc, results: results, note: note, by: by,
+      on: Utilities.formatDate(now, TIME_ZONE, 'yyyy-MM-dd HH:mm') } };
   } finally {
     lock.releaseLock();
   }
