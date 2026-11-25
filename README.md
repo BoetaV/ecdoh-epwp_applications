@@ -151,9 +151,8 @@ deployments > New version).
 ## Selection (HR)
 
 Once applications have closed, HR selects the candidates on the **Selection**
-screen (staff bar > **Selection**). There are **611 posts**: 599 at 114
-institutions, from `docs/allocation per institution.csv`, and 12 reserved for
-further allocation (see *Reserved posts* below).
+screen (staff bar > **Selection**). There are **611 posts** at 118
+institutions, from `docs/allocation per institution.csv`.
 
 **Kept apart from the master list.** Selection never changes the Applications
 tab. It uses three tabs of its own in the Sheet:
@@ -200,35 +199,50 @@ The rules the system enforces:
   that were not on the application form, or that had too few applicants.
 - **Download to Excel** on an institution gives its applicants with their status.
 
-Institutions in the allocation list that applicants could not choose on the form
-(so nobody applied for them directly): Cecilia Makiwane, Frere, Mjanyana, Dora
-Nginza, Elizabeth Donkin, Livingstone, PE Provincial, Mthatha Regional, Nelson
-Mandela Academic and Fort England. They are listed with their posts like any
-other institution; HR fills them from applicants at nearby institutions
-(**Applicants: Everyone living in the district**).
+**Institutions that were not on the application form.** Nobody could choose
+them, so the allocation list names a nearby facility for each (the last column,
+*Application from*). The Selection screen shows "Will take applications from
+...", and the institution's applicants are the people who chose that facility:
 
-If the allocation list changes, correct the Allocations tab directly, or update
-the CSV and run `python tools/build_allocations.py` (this only affects a Sheet
-that does not have an Allocations tab yet). The script stops if the
-institutions and the reserved posts do not add up to 611.
+| Institution | Takes applications from |
+|---|---|
+| Cecilia Makiwane | Nkqubela Hospital |
+| Frere Hospital | Empilweni Gompo CHC |
+| Dora Nginza Hospital | New Brighton CHC |
+| Elizabeth Donkin Hospital | Gqebera CHC |
+| Livingstone Hospital | Korsten CHC |
+| PE Provincial Hospital | Central CHC |
+| Mthatha Regional Hospital | Ngangelizwe CHC |
+| Nelson Mandela Academic Hospital | Ngangelizwe CHC |
+| Fort England Hospital | Settlers Hospital |
 
-### Reserved posts
+Mjanyana Hospital has no nearby facility yet: HR picks from everyone living in
+Chris Hani District.
 
-Two lines of the original allocation list were duplicates of another line, so
-they were taken out of the institutions. Their posts were not dropped: they are
-kept for further allocation, so the total stays 611.
+**Shared applicants.** These applicants are also the applicants of the nearby
+facility itself (and Mthatha Regional and Nelson Mandela Academic share
+Ngangelizwe CHC). The overview says "Shares applicants with ...". In the list,
+anyone who already has a status at another institution is marked, for example
+**Already selected at Ngangelizwe CHC**, and cannot be shortlisted, selected or
+put on reserve a second time until that status is cleared. The *Applications*
+total counts each person once.
 
-| District | Posts | Duplicate line removed | Same hospital as |
-|---|---|---|---|
-| Alfred Nzo District | 6 | Taylor Bequest Matatiele Hospital | Tayler Bequest Matatiele Hospital |
-| Joe Gqabi District | 6 | Emplisweni Hospital | Empilisweni Hospital |
+If the allocation list changes, update the CSV and run
+`python tools/build_allocations.py`, then paste the new Code.gs into Apps Script
+and deploy a new version. The first time the Selection screen is opened after
+that, the **Allocations** tab is replaced with the new list; the old tab is kept,
+renamed "Allocations (replaced <date>)". Statuses already given stay. The script
+stops if the posts do not add up to 611.
 
-These 12 posts are kept apart from the selection process: they are listed in
-`docs/reserved posts.csv`, in the **Reserved Posts** tab of the Sheet, and in
-their own section of the Selection screen, and nobody can be selected for them.
-To allocate them later, add the posts to the institution in the **Allocations**
-tab and fill in **Allocated to** and **Allocated on** in the Reserved Posts tab
-(a filled-in line no longer counts as reserved).
+### Reserved posts (now allocated)
+
+Two lines of the original allocation list were duplicates (Taylor Bequest
+Matatiele Hospital, Alfred Nzo, 6 posts; Emplisweni Hospital, Joe Gqabi,
+6 posts). Their 12 posts were reserved and have since been allocated to Sarah
+Baartman District: Sundays Valley Hospital, SAWAS Hospital (Jansenville),
+Aberdeen Hospital and Joubertina CHC, 3 posts each. The record is kept in
+`docs/reserved posts.csv`; nothing is reserved any more, so the Selection screen
+no longer shows the reserved section.
 
 ## Importing a list captured elsewhere (Import tab)
 

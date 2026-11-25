@@ -16,6 +16,7 @@ then on the tab is used (so HR can correct posts there).
 Run from the project root:  python tools/build_allocations.py
 """
 import csv
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -50,6 +51,7 @@ DISTRICTS = {
 NAME_FIXES = {
     "Livingtsone Hospital": "Livingstone Hospital",
     "Livingtsone Hospital (PE Provincial)": "PE Provincial Hospital",
+    "Abdereen Hospital": "Aberdeen Hospital",
 }
 # Institution names spelt differently in the allocation list than on the form.
 SAME_FACILITY = {
@@ -91,10 +93,15 @@ with RESERVED_SRC.open(encoding="cp1252", newline="") as fh:
                          (row["Allocated on"] or "").strip()])
         if line:
             removed[(district, key(line))] = True
+# Only posts not yet given to an institution count as reserved; the rest is history.
+open_reserved = [r for r in reserved if not r[5]]
 
-rows, unmatched, seen = [], [], {}
+rows, unmatched, seen, borrowing = [], [], {}, []
 with SRC.open(encoding="cp1252", newline="") as fh:
-    for row in csv.DictReader(fh, delimiter=";"):
+    reader = csv.DictReader(fh, delimiter=";")
+    # "Application from": a nearby facility whose applicants this institution may take.
+    from_col = next((c for c in reader.fieldnames if c and "from" in c.lower()), None)
+    for row in reader:
         district = DISTRICTS[row["District"].strip().lower()]
         name = re.sub(r"\s+", " ", row["Facility Name"]).strip()
         name = NAME_FIXES.get(name, name)
@@ -105,29 +112,45 @@ with SRC.open(encoding="cp1252", newline="") as fh:
         hits = form.get(key(target), [])
         hit = next((h for h in hits if h[0] == district), hits[0] if hits else None)
         facility, local = (hit[1], hit[2]) if hit else ("", "")
-        if not hit:
+        if not hit and not (from_col and (row.get(from_col) or "").strip()):
             unmatched.append(f"{district}: {name} ({posts})")
         if facility:
             seen.setdefault(facility, []).append(name)
-        rows.append([district, name, posts, facility, local])
+        takes = re.sub(r"\s+", " ", (row.get(from_col) or "") if from_col else "").strip()
+        if takes:
+            th = form.get(key(SAME_FACILITY.get(takes, takes)), [])
+            th = next((h for h in th if h[0] == district), th[0] if th else None)
+            if not th:
+                raise SystemExit(f'{name}: takes applications from "{takes}", which is not a facility on the form.')
+            takes = th[1]
+            local = local or th[2]
+            borrowing.append(f"{district}: {name} takes applications from {takes}")
+        rows.append([district, name, posts, facility, local, takes])
 
 total = sum(r[2] for r in rows)
-kept = sum(r[1] for r in reserved)
+kept = sum(r[1] for r in open_reserved)
+version = hashlib.sha1(json.dumps([rows, open_reserved]).encode("utf-8")).hexdigest()[:12]
 if total + kept != TOTAL_POSTS:
     raise SystemExit(f"Institutions ({total}) plus reserved posts ({kept}) make {total + kept}, not {TOTAL_POSTS}.")
 gs = GS.read_text(encoding="utf-8")
 a, b = gs.index(BEGIN), gs.index(END)
 gs = (gs[:a] + BEGIN
-      + "\n// [district, institution, posts, facility on the application form, local municipality]\nvar ALLOCATIONS = "
+      + "\n// [district, institution, posts, facility on the application form, local municipality,\n"
+      + "// takes applications from (a nearby facility on the form)]\nvar ALLOCATIONS = "
       + json.dumps(rows, ensure_ascii=False, separators=(",", ":")) + ";\n"
-      + "// Posts kept for further allocation: [district, posts, duplicate line removed, same hospital as,\n"
+      + "// Posts not yet given to an institution: [district, posts, duplicate line removed, same hospital as,\n"
       + "// reason, allocated to, allocated on]\nvar RESERVED_POSTS = "
-      + json.dumps(reserved, ensure_ascii=False, separators=(",", ":")) + ";\n"
-      + "var TOTAL_POSTS = " + str(TOTAL_POSTS) + ";\n" + gs[b:])
+      + json.dumps(open_reserved, ensure_ascii=False, separators=(",", ":")) + ";\n"
+      + "var TOTAL_POSTS = " + str(TOTAL_POSTS) + ";\n"
+      + "// Changes whenever the lists above change; the Sheet's Allocations tab is then replaced.\n"
+      + "var ALLOCATIONS_VERSION = '" + version + "';\n" + gs[b:])
 GS.write_text(gs, encoding="utf-8", newline="\n")
 
 print(f"{len(rows)} institutions with {total} posts, plus {kept} reserved = {total + kept} -> {GS}")
-print("Not on the application form (no applications can be counted for them):")
+print("Take applications from a nearby facility:")
+for u in borrowing:
+    print("  " + u)
+print("Not on the application form and no nearby facility given:")
 for u in unmatched:
     print("  " + u)
 form_facilities = {f for hits in form.values() for (_, f, _) in hits}
