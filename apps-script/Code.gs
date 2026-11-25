@@ -1592,7 +1592,7 @@ var SEL_STATUSES = ['Shortlisted', 'Selected', 'Reserve', 'Not suitable', 'Withd
 // An applicant can only hold one of these at a time, at one institution.
 var SEL_ACTIVE = { Shortlisted: 1, Selected: 1, Reserve: 1 };
 var SEL_NEEDS_REASON = { 'Not suitable': 1, 'Withdrawn': 1 };
-var SEL_ORDER = { Selected: 0, Reserve: 1, Shortlisted: 2, '': 3, 'Not suitable': 4, Withdrawn: 5 };
+var SEL_ORDER = { Shortlisted: 0, Selected: 1, Reserve: 2, '': 3, 'Not suitable': 4, Withdrawn: 5 };
 var YOUTH_MAX_AGE = 35;
 var DOC_SHEET = 'Document Checks';
 var DOC_HEADERS = ['Reference', 'Applicant', 'ID number', 'How applied', 'ID document', 'Proof of results', 'Note',

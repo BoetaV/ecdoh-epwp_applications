@@ -326,6 +326,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 .sel-table td:first-child { min-width: 220px; }
 .sel-open { min-height: 36px; padding: 4px 14px; font-size: 14px; }
 .sel-h2 { margin: 28px 0 4px; font-size: 19px; color: var(--green-900); }
+.sel-note.warn { background: var(--yellow-100); border-color: var(--yellow); color: #4d3c00; }
 .sel-note { margin: 16px 0 0; padding: 12px 14px; border-radius: var(--radius); background: var(--green-50); border: 1px solid var(--line); color: var(--green-900); font-weight: 600; }
 .sel-warn { margin-top: 14px; padding: 12px 14px; border-radius: var(--radius); background: var(--yellow-100); border: 1px solid var(--yellow); color: #4d3c00; font-weight: 600; }
 .link-back { margin-top: 18px; padding: 0; border: 0; background: none; color: var(--green-700); font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
@@ -824,7 +825,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   </div>
   <div class="wrap list-wrap">
     <div class="alert" id="sel-alert" role="alert" hidden style="margin-top:14px"></div>
-    <p class="sel-note" id="sel-readonly" hidden>You can look at the selection lists. Only staff with selection access (HR) can change a status. Ask the administrator if you need it.</p>
+    <p class="sel-note warn" id="sel-readonly" hidden><strong>View only.</strong> Your account can look at the selection lists but cannot change a status or check documents.
+      To change statuses, the administrator must set <strong>Selection access</strong> to <strong>Yes</strong> for your username in the Users tab of the Sheet. Then refresh this page.</p>
 
     <section id="sel-overview">
       <div class="filters sel-filters">
@@ -3160,9 +3162,9 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     var kp = $('sel-inst-kpis');
     kp.innerHTML = '';
     kp.appendChild(kpi('Posts', num(i.posts), perPost(i.applications, i.posts) + ' applicants per post'));
+    kp.appendChild(kpi('Shortlisted', num(i.shortlisted), num(i.applications) + ' applied for this institution'));
     kp.appendChild(kpi('Selected', num(i.selected), i.posts && !i.open ? 'All posts filled' : num(i.open) + ' still open'));
     kp.appendChild(kpi('Reserve', num(i.reserve), 'In case someone declines'));
-    kp.appendChild(kpi('Shortlisted', num(i.shortlisted), num(i.applications) + ' applied for this institution'));
     if (i.active !== undefined) {
       kp.appendChild(kpi('Documents verified', num(i.verified) + ' of ' + num(i.active),
         'Shortlisted, reserve and selected with both documents verified'));
@@ -3432,6 +3434,10 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     };
     if (!selCanChange) {
       if (!r.elsewhere) td.appendChild(statusChip(here));
+      var vo = document.createElement('div');
+      vo.className = 'muted';
+      vo.textContent = 'View only';
+      td.appendChild(vo);
       var m0 = info();
       if (m0) td.appendChild(m0);
       return;
@@ -3610,7 +3616,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
           selAlert('No paper applicants are shortlisted, on reserve or selected at ' + out.institution.name + ' yet.');
           return;
         }
-        var order = { Selected: 0, Reserve: 1, Shortlisted: 2 };
+        var order = { Shortlisted: 0, Selected: 1, Reserve: 2 };
         list.sort(function (a, b) { return (a.receivedAt < b.receivedAt ? -1 : a.receivedAt > b.receivedAt ? 1 : 0) || order[a.status] - order[b.status]; });
         downloadBlob(buildXlsx({
           sheet: 'Files', title: 'EPWP paper files to pull - ' + out.institution.name, scope: out.institution.district,
