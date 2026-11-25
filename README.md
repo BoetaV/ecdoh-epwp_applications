@@ -215,9 +215,7 @@ them, so the allocation list names a nearby facility for each (the last column,
 | Mthatha Regional Hospital | Ngangelizwe CHC |
 | Nelson Mandela Academic Hospital | Ngangelizwe CHC |
 | Fort England Hospital | Settlers Hospital |
-
-Mjanyana Hospital has no nearby facility yet: HR picks from everyone living in
-Chris Hani District.
+| Mjanyana Hospital | All Saints Hospital |
 
 **Shared applicants.** These applicants are also the applicants of the nearby
 facility itself (and Mthatha Regional and Nelson Mandela Academic share
