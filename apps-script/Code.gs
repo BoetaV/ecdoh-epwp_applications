@@ -880,6 +880,7 @@ function doPost(e) {
       case 'pool': return json_(pool_(data, sessionUser_(data.token)));
       case 'select': return json_(select_(data, sessionUser_(data.token)));
       case 'verify': return json_(verify_(data, sessionUser_(data.token)));
+      case 'target-reason': return json_(targetReason_(data, sessionUser_(data.token)));
       default: return json_(saveApplication_(data, null));
     }
   } catch (err) {
@@ -1570,6 +1571,8 @@ function stats_(data, user) {
  *     and proof of results (from the upload for online applicants, from the
  *     paper file at the HR office for paper applicants). Nobody can be
  *     Selected until both are Verified.
+ *   - "Target Reasons": why an institution does not meet a national target,
+ *     given by HR (required when a selection makes a target unreachable).
  *   - "Reserved Posts": posts not given to an institution yet, kept for
  *     further allocation (filled from RESERVED_POSTS the first time). They
  *     are shown apart from the institutions; with them the total is TOTAL_POSTS.
@@ -1596,6 +1599,10 @@ var SEL_ORDER = { Shortlisted: 0, Selected: 1, Reserve: 2, '': 3, 'Not suitable'
 var YOUTH_MAX_AGE = 35;
 // EPWP national targets, in percent: youth (18 to 35), women, persons with disabilities.
 var TARGETS = { youth: 60, women: 55, pwd: 2 };
+var TARGET_NAMES = { youth: 'Youth', women: 'Women', pwd: 'Persons with disabilities' };
+// Why an institution does not meet a target (for the audit trail), one row per institution and target.
+var TREASON_SHEET = 'Target Reasons';
+var TREASON_HEADERS = ['District', 'Institution', 'Target', 'Reason', 'Given by', 'Given on'];
 var DOC_SHEET = 'Document Checks';
 var DOC_HEADERS = ['Reference', 'Applicant', 'ID number', 'How applied', 'ID document', 'Proof of results', 'Note',
   'Checked by', 'Checked on'];
@@ -1764,6 +1771,81 @@ function docsVerified_(d) {
   return !!d && d.id === 'Verified' && d.results === 'Verified';
 }
 
+/** Reasons for targets not met, as { institutionId: { youth: {...}, women: {...}, pwd: {...} } }. */
+function targetReasons_() {
+  var sheet = headedSheet_(TREASON_SHEET, TREASON_HEADERS);
+  var last = sheet.getLastRow();
+  var rows = last < 2 ? [] : sheet.getRange(2, 1, last - 1, TREASON_HEADERS.length).getValues();
+  var map = {};
+  rows.forEach(function (r, i) {
+    var key = null;
+    Object.keys(TARGET_NAMES).forEach(function (k) { if (TARGET_NAMES[k] === String(r[2]).trim()) key = k; });
+    if (!key) return;
+    var id = (districtCode_(r[0]) || districtFromText_(r[0])) + '|' + String(r[1]).trim();
+    var on = r[5];
+    (map[id] = map[id] || {})[key] = {
+      row: i + 2, reason: String(r[3] || ''), by: String(r[4] || ''),
+      on: on instanceof Date ? Utilities.formatDate(on, TIME_ZONE, 'yyyy-MM-dd HH:mm') : String(on || '')
+    };
+  });
+  return map;
+}
+
+/** Saves (or clears, with an empty reason) the reason a target is not met. Call with the script lock held. */
+function saveTargetReason_(inst, key, reason, user, current) {
+  var now = new Date();
+  var by = user.name + ' (' + user.username + ')';
+  var sheet = headedSheet_(TREASON_SHEET, TREASON_HEADERS);
+  var target = current ? current.row : sheet.getLastRow() + 1;
+  sheet.getRange(target, 1, 1, TREASON_HEADERS.length - 1).setNumberFormat('@');
+  sheet.getRange(target, TREASON_HEADERS.length).setNumberFormat('yyyy-mm-dd hh:mm');
+  sheet.getRange(target, 1, 1, TREASON_HEADERS.length).setValues([[displayDistrict_(inst.district), safeCell_(inst.name),
+    TARGET_NAMES[key], safeCell_(reason), safeCell_(by), now]]);
+  var log = headedSheet_(SEL_LOG_SHEET, SEL_LOG_HEADERS);
+  var logRow = log.getLastRow() + 1;
+  log.getRange(logRow, 1).setNumberFormat('yyyy-mm-dd hh:mm:ss');
+  log.getRange(logRow, 1, 1, SEL_LOG_HEADERS.length).setValues([[now, '', '', safeCell_(inst.name),
+    'Target reason (' + TARGET_NAMES[key] + '): ' + (current && current.reason ? current.reason : 'none'),
+    'Target reason (' + TARGET_NAMES[key] + '): ' + (reason || 'cleared'), safeCell_(reason), safeCell_(by)]]);
+  return { reason: reason, by: by, on: Utilities.formatDate(now, TIME_ZONE, 'yyyy-MM-dd HH:mm') };
+}
+
+function publicReasons_(r) {
+  var out = {};
+  Object.keys(r || {}).forEach(function (k) {
+    if (r[k].reason) out[k] = { reason: r[k].reason, by: r[k].by, on: r[k].on };
+  });
+  return out;
+}
+
+/** HR records why an institution does not meet a national target. */
+function targetReason_(data, user) {
+  var bad = function (message) { return { ok: false, error: 'invalid', message: message }; };
+  if (!user.canSelect) {
+    return { ok: false, error: 'forbidden', message: 'You can look at the selection lists, but not change them. Ask the administrator for selection access.' };
+  }
+  var key = String(data.target || '');
+  if (!TARGET_NAMES[key]) return bad('Choose a target.');
+  var reason = String(data.reason || '').replace(/\s+/g, ' ').trim().slice(0, 500);
+  ensureAllocationTabs_();
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(25000); } catch (err) {
+    return { ok: false, error: 'busy', message: 'The system is busy. Please try again in a minute.' };
+  }
+  try {
+    var inst = null;
+    allocations_().forEach(function (a) { if (a.id === String(data.institution || '')) inst = a; });
+    if (!inst || !canSee_(user, inst.district)) return bad('That institution was not found. Refresh the page and try again.');
+    var current = (targetReasons_()[inst.id] || {})[key] || null;
+    if ((current ? current.reason : '') === reason) return { ok: true, unchanged: true };
+    var saved = saveTargetReason_(inst, key, reason, user, current);
+    SpreadsheetApp.flush();
+    return { ok: true, target: key, saved: saved };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 /** The current status of everyone HR has looked at, by reference number. */
 function selections_() {
   var sheet = headedSheet_(SEL_SHEET, SEL_HEADERS);
@@ -1837,6 +1919,7 @@ function institutions_(data, user) {
   });
   var sel = selections_();
   var docs = documentChecks_();
+  var reasons = targetReasons_();
   var groupsByRef = {};
   var appGroups = emptyGroups_(), appByDistrict = {};
 
@@ -1899,7 +1982,7 @@ function institutions_(data, user) {
       onForm: !!a.facility, takesFrom: a.takesFrom, sharesWith: sharesWith_(a, allocs), applications: st.applications, women: st.women, youth: st.youth, disabled: st.disabled,
       shortlisted: st.Shortlisted, selected: st.Selected, reserve: st.Reserve, notSuitable: st['Not suitable'],
       withdrawn: st.Withdrawn, open: Math.max(0, a.posts - st.Selected), active: st.active, verified: st.verified,
-      groups: st.groups
+      groups: st.groups, reasons: publicReasons_(reasons[a.id])
     };
   });
   list.sort(function (x, y) { return x.district < y.district ? -1 : x.district > y.district ? 1 : x.name < y.name ? -1 : 1; });
@@ -2089,6 +2172,47 @@ function select_(data, user) {
       return { ok: true, status: status, unchanged: true };
     }
 
+    // Would this selection make the youth or women target unreachable at this institution?
+    var targetNotes = [];
+    if (status === 'Selected' && !(was === 'Selected' && current && current.institution === inst.id)) {
+      var now0 = new Date();
+      var have = { youth: 0, women: 0 }, selectedHere = 0;
+      var rowOf = {};
+      refs.forEach(function (r, j) { rowOf[r[0]] = j + 2; });
+      Object.keys(sel).forEach(function (r) {
+        if (sel[r].status !== 'Selected' || sel[r].institution !== inst.id || !rowOf[r]) return;
+        selectedHere++;
+        var g0 = targetGroups_(apps.getRange(rowOf[r], 1, 1, HEADERS.length).getValues()[0], col, now0);
+        if (g0.youth) have.youth++;
+        if (g0.women) have.women++;
+      });
+      var me = targetGroups_(row, col, now0);
+      var openAfter = inst.posts - selectedHere - 1;
+      var reasonsHere = targetReasons_()[inst.id] || {};
+      var missing = [];
+      ['youth', 'women'].forEach(function (k) {
+        var need = Math.ceil(inst.posts * TARGETS[k] / 100);
+        var after = have[k] + (me[k] ? 1 : 0);
+        if (need - after > openAfter) {
+          if (reasonsHere[k] && reasonsHere[k].reason) return;
+          missing.push(k);
+        }
+      });
+      if (missing.length) {
+        var given = String(data.targetReason || '').replace(/\s+/g, ' ').trim().slice(0, 500);
+        var names = missing.map(function (k) { return TARGET_NAMES[k].toLowerCase() + ' (' + TARGETS[k] + '%)'; }).join(' and ');
+        if (!given) {
+          return { ok: false, error: 'target-reason', targets: missing,
+            message: 'With this selection the ' + names + ' target can no longer be met at ' + inst.name +
+              '. Give the reason the target is not met, then save again.' };
+        }
+        missing.forEach(function (k) {
+          saveTargetReason_(inst, k, given, user, reasonsHere[k] || null);
+          targetNotes.push(TARGET_NAMES[k]);
+        });
+      }
+    }
+
     var now = new Date();
     var by = user.name + ' (' + user.username + ')';
     var values = [ref, safeCell_(applicant), String(row[col.SouthAfricanID]).replace(/^'/, ''), displayDistrict_(inst.district),
@@ -2105,7 +2229,7 @@ function select_(data, user) {
       safeCell_((current && current.institution !== inst.id && was ? current.institutionName + ' > ' : '') + inst.name),
       was || 'Not reviewed', status || 'Not reviewed', safeCell_(reason), safeCell_(by)]]);
     SpreadsheetApp.flush();
-    return { ok: true, status: status, reason: reason, statusBy: by,
+    return { ok: true, status: status, reason: reason, statusBy: by, targetReasons: targetNotes,
       statusOn: Utilities.formatDate(now, TIME_ZONE, 'yyyy-MM-dd HH:mm') };
   } finally {
     lock.releaseLock();

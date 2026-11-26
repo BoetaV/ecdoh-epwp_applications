@@ -342,6 +342,14 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 .tm-val { white-space: nowrap; font-weight: 700; font-variant-numeric: tabular-nums; }
 .tm-need { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
 .tm-need.bad { color: #7a1610; font-weight: 700; }
+.tm-reason { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: #fff7e8; border: 1px solid #f0d49a; font-size: 13px; }
+.tm-reason b { display: block; font-size: 12px; color: #6b4200; }
+.tm-reason .muted { font-size: 12px; }
+.tm-reason textarea { width: 100%; min-height: 60px; margin-top: 6px; padding: 6px 8px; font: inherit; font-size: 13px; border: 1px solid var(--line); border-radius: 8px; }
+.tm-reason .row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin-top: 6px; }
+.tm-reason .btn { min-height: 32px; padding: 3px 12px; font-size: 13px; }
+.tm-reason .err { color: var(--red); font-size: 12px; font-weight: 700; }
+.sel-status textarea.treason { width: 100%; min-height: 56px; margin-top: 6px; padding: 4px 8px; font: inherit; font-size: 13px; border: 2px solid #e0a640; border-radius: 8px; }
 .tok, .tbad, .tnone { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap; }
 .tok { background: var(--green-100); color: var(--green-900); }
 .tbad { background: #fff0d6; color: #6b4200; box-shadow: inset 0 0 0 1px #e0a640; }
@@ -3112,6 +3120,14 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       if (i.groups) {
         tg.appendChild(targetChips('Shortlist', i.groups.Shortlisted));
         tg.appendChild(targetChips('Selected', i.groups.Selected));
+        var rk = Object.keys(i.reasons || {});
+        if (rk.length) {
+          var rn = document.createElement('div');
+          rn.className = 'muted';
+          rn.textContent = 'Reason given: ' + rk.map(function (k) { return { youth: 'youth', women: 'women', pwd: 'disability' }[k]; }).join(', ');
+          rn.title = rk.map(function (k) { return i.reasons[k].reason; }).join(' / ');
+          tg.appendChild(rn);
+        }
       }
       tr.appendChild(tg);
       var td = document.createElement('td');
@@ -3279,10 +3295,98 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
             (need - have) + ' more needed among the ' + open + ' open posts.';
         }
         card.appendChild(n);
+        if (perInstitution) {
+          var sel0 = selectedG && selectedG.n ? share(selectedG, key) : null;
+          var below = (sel0 !== null && sel0 < target) || (!(key === 'pwd') && need - have > open);
+          card.appendChild(reasonBlock(key, below));
+        }
       }
       grid.appendChild(card);
     });
     box.appendChild(grid);
+  }
+
+  // The reason an institution does not meet a target: shown, and editable by HR.
+  function reasonBlock(key, below) {
+    var wrap = document.createElement('div');
+    var current = (selInst && selInst.reasons && selInst.reasons[key]) || null;
+    if (!current && !below) return wrap;
+    wrap.className = 'tm-reason';
+    var title = document.createElement('b');
+    title.textContent = 'Reason the target is not met';
+    wrap.appendChild(title);
+    var text = document.createElement('div');
+    text.textContent = current ? current.reason : 'No reason given yet.';
+    wrap.appendChild(text);
+    if (current) {
+      var by = document.createElement('div');
+      by.className = 'muted';
+      by.textContent = 'By ' + current.by.replace(/ \(.*\)$/, '') + ', ' + current.on;
+      wrap.appendChild(by);
+    }
+    if (!selCanChange) return wrap;
+    var edit = document.createElement('button');
+    edit.type = 'button';
+    edit.className = 'btn ghost';
+    edit.textContent = current ? 'Edit reason' : 'Give a reason';
+    var row = document.createElement('div');
+    row.className = 'row';
+    row.appendChild(edit);
+    wrap.appendChild(row);
+    edit.addEventListener('click', function () {
+      row.hidden = true;
+      var box = document.createElement('textarea');
+      box.maxLength = 500;
+      box.value = current ? current.reason : '';
+      box.placeholder = 'For example: not enough women applied for this institution';
+      box.setAttribute('aria-label', 'Reason the ' + key + ' target is not met');
+      var actions = document.createElement('div');
+      actions.className = 'row';
+      var save = document.createElement('button');
+      save.type = 'button';
+      save.className = 'btn green';
+      save.textContent = 'Save reason';
+      var cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.className = 'btn ghost';
+      cancel.textContent = 'Cancel';
+      var msg = document.createElement('span');
+      actions.appendChild(save);
+      actions.appendChild(cancel);
+      actions.appendChild(msg);
+      wrap.appendChild(box);
+      wrap.appendChild(actions);
+      box.focus();
+      cancel.addEventListener('click', function () { renderInstTargets(); });
+      save.addEventListener('click', function () {
+        var s = session();
+        if (!s) return sessionEnded();
+        save.disabled = true;
+        save.textContent = 'Saving...';
+        post({ action: 'target-reason', token: s.token, institution: selInst.id, target: key, reason: box.value.trim() })
+          .then(function (out) {
+            if (out && out.error === 'auth') return sessionEnded();
+            if (!out || !out.ok) {
+              save.disabled = false;
+              save.textContent = 'Save reason';
+              msg.className = 'err';
+              msg.textContent = (out && out.message) || 'Not saved. Try again.';
+              return;
+            }
+            selInst.reasons = selInst.reasons || {};
+            if (out.saved && out.saved.reason) selInst.reasons[key] = out.saved;
+            else if (out.saved) delete selInst.reasons[key];
+            selChanged = true;
+            renderInstTargets();
+          }).catch(function () {
+            save.disabled = false;
+            save.textContent = 'Save reason';
+            msg.className = 'err';
+            msg.textContent = 'Not saved. Check your internet connection and try again.';
+          });
+      });
+    });
+    return wrap;
   }
 
   function renderScopeTargets(out, allPosts) {
@@ -3347,7 +3451,10 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       return [i.district, i.name, i.local, i.posts, i.applications, perPost(i.applications, i.posts), i.women, i.youth, i.disabled,
         i.shortlisted, i.selected, i.reserve, i.notSuitable, i.withdrawn, i.open,
         i.takesFrom ? i.takesFrom : i.onForm ? 'Its own applicants' : 'Not on the form: the whole district',
-        (i.sharesWith || []).join(', ')].concat(groupCols(i.groups && i.groups.Shortlisted), groupCols(i.groups && i.groups.Selected));
+        (i.sharesWith || []).join(', ')].concat(groupCols(i.groups && i.groups.Shortlisted), groupCols(i.groups && i.groups.Selected),
+        [Object.keys(i.reasons || {}).map(function (k) {
+          return { youth: 'Youth', women: 'Women', pwd: 'Disability' }[k] + ': ' + i.reasons[k].reason;
+        }).join(' | ')]);
     }).concat((out.reserved || []).map(function (r) {
       return [r.district, 'Reserved for further allocation' + (r.removed ? ' (duplicate line "' + r.removed + '" removed)' : ''),
         r.allocatedTo ? 'Allocated to ' + r.allocatedTo : '', r.allocatedTo ? 0 : r.posts, '', '', '', '', '', '', '', '', '', '', '', '-', ''];
@@ -3361,7 +3468,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         'Youth (18 to 35)', 'With a disability', 'Shortlisted', 'Selected', 'Reserve', 'Not suitable', 'Withdrawn',
         'Posts still open', 'Takes applications from', 'Shares applicants with',
         'Shortlisted: youth', 'Shortlisted: youth %', 'Shortlisted: women', 'Shortlisted: women %', 'Shortlisted: with a disability', 'Shortlisted: disability %',
-        'Selected: youth', 'Selected: youth %', 'Selected: women', 'Selected: women %', 'Selected: with a disability', 'Selected: disability %'],
+        'Selected: youth', 'Selected: youth %', 'Selected: women', 'Selected: women %', 'Selected: with a disability', 'Selected: disability %',
+        'Reasons targets not met'],
       numeric: [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
       rows: rows.map(function (r) { return r.map(String); })
     }), 'EPWP_Posts_and_applications_' + fileSafe(out.scope) + '_' + todayIso() + '.xlsx');
@@ -3724,22 +3832,36 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         msg.textContent = 'Verify both documents first (Documents column).';
         return;
       }
-      saveStatus(r, sel.value, reason.value.trim(), td, save, msg);
+      if (!treason.hidden && !treason.value.trim()) {
+        msg.className = 'err';
+        msg.textContent = 'Give the reason the target is not met.';
+        treason.focus();
+        return;
+      }
+      saveStatus(r, sel.value, reason.value.trim(), td, save, msg, treason);
     });
+    var treason = document.createElement('textarea');
+    treason.className = 'treason';
+    treason.hidden = true;
+    treason.maxLength = 500;
+    treason.placeholder = 'Reason the target is not met (required)';
+    treason.setAttribute('aria-label', 'Reason the target is not met, for selecting ' + r.name + ' ' + r.surname);
     td.appendChild(sel);
     td.appendChild(reason);
+    td.appendChild(treason);
     var m = info();
     if (m) td.appendChild(m);
     td.appendChild(row);
     sync();
   }
 
-  function saveStatus(r, status, reason, td, btn, msg) {
+  function saveStatus(r, status, reason, td, btn, msg, treason) {
     var s = session();
     if (!s) return sessionEnded();
     btn.disabled = true;
     btn.textContent = 'Saving...';
-    post({ action: 'select', token: s.token, institution: selInst.id, ref: r.ref, status: status, reason: reason })
+    var tr = treason && !treason.hidden ? treason.value.trim() : '';
+    post({ action: 'select', token: s.token, institution: selInst.id, ref: r.ref, status: status, reason: reason, targetReason: tr })
       .then(function (out) {
         if (out && out.error === 'auth') return sessionEnded();
         if (!out || !out.ok) {
@@ -3747,7 +3869,18 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
           btn.textContent = 'Save';
           msg.className = 'err';
           msg.textContent = (out && out.message) || 'Not saved. Try again.';
+          if (out && out.error === 'target-reason' && treason) {
+            treason.hidden = false;
+            treason.focus();
+          }
           return;
+        }
+        if (out.targetReasons && out.targetReasons.length && tr) {
+          selInst.reasons = selInst.reasons || {};
+          out.targetReasons.forEach(function (name) {
+            var k = { Youth: 'youth', Women: 'women', 'Persons with disabilities': 'pwd' }[name];
+            if (k) selInst.reasons[k] = { reason: tr, by: out.statusBy || '', on: out.statusOn || '' };
+          });
         }
         // Keep the counts on screen up to date without reloading everything.
         var before = r.elsewhere ? '' : r.status;

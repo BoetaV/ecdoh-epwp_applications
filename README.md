@@ -222,7 +222,18 @@ every level and stage:
   shortlist towards the targets.
 - The Excel download of the institutions includes the counts and percentages.
 
-The targets guide HR; the system does not block a selection that misses them.
+**Reasons when a target is not met.** Where an institution's selected people
+are below a target (or the target can no longer be met with the posts still
+open), the meter on the institution's page shows *Reason the target is not met*
+with a **Give a reason** button (for example "Not enough women applied"). The
+reason is saved with who gave it and when, shown under the meter, marked in the
+overview's Targets column, included in the Excel download, kept in the **Target
+Reasons** tab and logged in Selection History.
+
+When a selection would make the youth or women target unreachable at that
+institution and no reason has been given yet, the system asks for the reason
+before it saves the selection. Otherwise the targets guide HR; they do not block
+a selection.
 
 **Checking the documents (online and paper alike).** Paper applicants'
 documents are not in the system; they stay in the paper file at the HR office.
