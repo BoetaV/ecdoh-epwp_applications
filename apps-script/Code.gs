@@ -591,6 +591,7 @@ function importList_(commit, receivedDate) {
       apps.getRange(appLast + 1, 2, toAdd.length, HEADERS.length - 1).setNumberFormat('@');
       apps.getRange(appLast + 1, 1, toAdd.length, HEADERS.length).setValues(toAdd);
       props.setProperty('counter', String(counter));
+      bumpData_();
     }
 
     sheet.getRange(1, resultCol + 1, 1, IMPORT_RESULTS.length).setValues([IMPORT_RESULTS])
@@ -776,7 +777,14 @@ function placeKey_(s) {
     .replace(/[^a-z]/g, '');
 }
 
+var FACILITY_KEYS_ = {};
 function facilityKey_(s) {
+  var k = String(s || '');
+  if (Object.prototype.hasOwnProperty.call(FACILITY_KEYS_, k)) return FACILITY_KEYS_[k];
+  return (FACILITY_KEYS_[k] = facilityKeyOf_(k));
+}
+
+function facilityKeyOf_(s) {
   return String(s || '').toLowerCase().replace(/&/g, ' and ')
     .replace(/\bcommunity health cent(er|re)\b/g, 'chc')
     .replace(/\b(hospitals?|hosp)\b\.?/g, 'hosp')
@@ -969,6 +977,7 @@ function saveApplication_(data, user) {
     sheet.getRange(lastRow + 1, 2, 1, HEADERS.length - 1).setNumberFormat('@');
     sheet.getRange(lastRow + 1, 1, 1, HEADERS.length).setValues([row]);
     SpreadsheetApp.flush();
+    bumpData_();
 
     return { ok: true, ref: ref, submitted: formatWhen_(now) };
   } catch (err) {
@@ -1270,6 +1279,85 @@ function newPassword_() {
 }
 
 /* =====================================================================
+ * Speed: read only the columns needed, and keep computed results
+ * ===================================================================== */
+
+/**
+ * The Applications rows as arrays in HEADERS order, but only the named
+ * columns are read (the others stay empty). Neighbouring columns are read
+ * together, so a handful of calls replaces reading all 35 columns.
+ */
+function readRows_(sheet, names) {
+  var last = sheet.getLastRow();
+  if (last < 2) return [];
+  var idx = [];
+  names.forEach(function (h) { var i = HEADERS.indexOf(h); if (i !== -1 && idx.indexOf(i) === -1) idx.push(i); });
+  idx.sort(function (a, b) { return a - b; });
+  var runs = [];
+  idx.forEach(function (i) {
+    var run = runs[runs.length - 1];
+    if (run && i - run[1] <= 2) run[1] = i; else runs.push([i, i]);
+  });
+  var n = last - 1, rows = new Array(n);
+  for (var r = 0; r < n; r++) rows[r] = new Array(HEADERS.length);
+  runs.forEach(function (run) {
+    var vals = sheet.getRange(2, run[0] + 1, n, run[1] - run[0] + 1).getValues();
+    for (var r = 0; r < n; r++) {
+      var src = vals[r], dst = rows[r];
+      for (var c = 0; c < src.length; c++) dst[run[0] + c] = src[c];
+    }
+  });
+  return rows;
+}
+
+// Computed results (Selection overview, dashboard) are kept in the script
+// cache. Any change to the data gives a new data version, so a kept result
+// is never out of date; CACHE_SECONDS only limits how long it is kept.
+var CACHE_SECONDS = 30 * 60;
+
+function dataVersion_() {
+  return PropertiesService.getScriptProperties().getProperty('dataVersion') || '0';
+}
+
+/** Call after anything changes the data the screens show. */
+function bumpData_() {
+  try {
+    PropertiesService.getScriptProperties().setProperty('dataVersion', String(Date.now()) + Math.floor(Math.random() * 1000));
+  } catch (err) { console.error(err); }
+}
+
+function cacheGet_(key) {
+  try {
+    var cache = CacheService.getScriptCache();
+    var head = cache.get(key);
+    if (!head) return null;
+    var count = Number(head);
+    var text = '';
+    for (var i = 0; i < count; i++) {
+      var part = cache.get(key + ':' + i);
+      if (part === null) return null;
+      text += part;
+    }
+    return JSON.parse(text);
+  } catch (err) { return null; }
+}
+
+function cachePut_(key, value) {
+  try {
+    var cache = CacheService.getScriptCache();
+    var text = JSON.stringify(value), size = 80000, count = Math.ceil(text.length / size) || 1;
+    if (count > 20) return;
+    for (var i = 0; i < count; i++) cache.put(key + ':' + i, text.slice(i * size, (i + 1) * size), CACHE_SECONDS);
+    cache.put(key, String(count), CACHE_SECONDS);
+  } catch (err) { console.error(err); }
+}
+
+/** Simple trigger: an edit made directly in the Sheet also refreshes the screens. */
+function onEdit(e) {
+  bumpData_();
+}
+
+/* =====================================================================
  * Sheet helpers
  * ===================================================================== */
 
@@ -1352,7 +1440,14 @@ function displayDistrict_(district) {
 }
 
 /** The application "District" value for a district name, or '' if it is not one. */
+var DISTRICT_CODES_ = {};
 function districtCode_(name) {
+  var k = String(name || '');
+  if (Object.prototype.hasOwnProperty.call(DISTRICT_CODES_, k)) return DISTRICT_CODES_[k];
+  return (DISTRICT_CODES_[k] = districtCodeOf_(k));
+}
+
+function districtCodeOf_(name) {
   var n = String(name || '').trim().toLowerCase();
   for (var i = 0; i < DISTRICTS.length; i++) {
     if (DISTRICTS[i][0].toLowerCase() === n || DISTRICTS[i][1].toLowerCase() === n) return DISTRICTS[i][0];
@@ -1371,7 +1466,8 @@ function canSee_(user, applicantDistrict) {
  * Filters: district (provincial users only), channel and a search text.
  */
 function list_(data, user) {
-  var f = filterApplications_(data, user);
+  var f = filterApplications_(data, user, ['Timestamp', 'Gender', 'MunicipalWardNo', 'HighestSchoolLevel', 'Captured By',
+    'Date Received', 'ID Document (link)', 'Proof of Results (link)']);
   var col = f.col, matches = f.matches, counts = f.counts, district = f.district;
 
   var offset = Math.max(0, Math.floor(Number(data.offset) || 0));
@@ -1476,7 +1572,19 @@ var TOP_QUALIFICATIONS = 12;
  * counts are returned, never personal details.
  */
 function stats_(data, user) {
-  var f = filterApplications_({ district: data.district }, user);
+  var key = 'stats:' + dataVersion_() + ':' + (user.provincial ? 'P' : 'D:' + user.districtCode) + ':' +
+    String(data.district || '') + ':' + String(data.local || '');
+  var out = cacheGet_(key);
+  if (!out) {
+    out = computeStats_(data, user);
+    cachePut_(key, out);
+  }
+  return out;
+}
+
+function computeStats_(data, user) {
+  var f = filterApplications_({ district: data.district }, user, ['Timestamp', 'DateOfBirth', 'Gender', 'DisabilityStatus',
+    'HighestSchoolLevel', 'Date Received']);
   var col = f.col, district = f.district;
   var local = String(data.local || '').trim();
   if (!district || !UNITS[district] || !UNITS[district][local]) local = '';
@@ -1655,6 +1763,7 @@ function ensureAllocationTabs_() {
     }
     SpreadsheetApp.flush();
     props.setProperty('allocationsVersion', ALLOCATIONS_VERSION);
+    bumpData_();
   } finally {
     lock.releaseLock();
   }
@@ -1703,13 +1812,16 @@ function institutionMatcher_(allocs) {
     for (var i = 0; i < hits.length; i++) if (hits[i].district === code) return hits[i];
     return hits[0];
   };
+  var memo = {};
   return {
     own: own,
     all: function (facility, applicantDistrict) {
+      var mk = String(facility) + '|' + String(applicantDistrict);
+      if (memo[mk]) return memo[mk];
       var first = own(facility, applicantDistrict);
       var list = first ? [first] : [];
       (byFrom[facilityKey_(facility)] || []).forEach(function (a) { if (list.indexOf(a) === -1) list.push(a); });
-      return list;
+      return (memo[mk] = list);
     }
   };
 }
@@ -1840,6 +1952,7 @@ function targetReason_(data, user) {
     if ((current ? current.reason : '') === reason) return { ok: true, unchanged: true };
     var saved = saveTargetReason_(inst, key, reason, user, current);
     SpreadsheetApp.flush();
+    bumpData_();
     return { ok: true, target: key, saved: saved };
   } finally {
     lock.releaseLock();
@@ -1907,6 +2020,18 @@ function selectionScope_(data, user) {
 function institutions_(data, user) {
   ensureAllocationTabs_();
   var district = selectionScope_(data, user);
+  var key = 'inst:' + dataVersion_() + ':' + ALLOCATIONS_VERSION + ':' + (user.provincial ? 'P' : 'D:' + user.districtCode) +
+    ':' + (district || 'all');
+  var out = cacheGet_(key);
+  if (!out) {
+    out = computeInstitutions_(district, user);
+    cachePut_(key, out);
+  }
+  out.canSelect = !!user.canSelect;
+  return out;
+}
+
+function computeInstitutions_(district, user) {
   var allocs = allocations_();
   var match = institutionMatcher_(allocs);
   var inScope = function (code) { return canSee_(user, code) && (!district || code === district); };
@@ -1923,9 +2048,8 @@ function institutions_(data, user) {
   var groupsByRef = {};
   var appGroups = emptyGroups_(), appByDistrict = {}, appChannel = { online: 0, captured: 0 };
 
-  var sheet = getSheet_();
-  var last = sheet.getLastRow();
-  var values = last < 2 ? [] : sheet.getRange(2, 1, last - 1, HEADERS.length).getValues();
+  var values = readRows_(getSheet_(), ['Reference', 'SouthAfricanID', 'DateOfBirth', 'Gender', 'DisabilityStatus',
+    'District', 'NearestFacility', 'Channel']);
   var col = {};
   HEADERS.forEach(function (h, i) { col[h] = i; });
   var now = new Date();
@@ -2032,9 +2156,10 @@ function pool_(data, user) {
   var groupFilter = { youth: 1, women: 1, pwd: 1 }[data.group] ? String(data.group) : '';
   var words = String(data.search || '').toLowerCase().replace(/[^a-z0-9 -]/g, ' ').split(/\s+/).filter(String);
 
-  var sheet = getSheet_();
-  var last = sheet.getLastRow();
-  var values = last < 2 ? [] : sheet.getRange(2, 1, last - 1, HEADERS.length).getValues();
+  var values = readRows_(getSheet_(), ['Reference', 'Name', 'Surname', 'SouthAfricanID', 'DateOfBirth', 'Gender',
+    'DisabilityStatus', 'CellphoneNumber', 'District', 'LocalMunicipality', 'NearestFacility', 'MunicipalWardNo',
+    'HighestSchoolLevel', 'ID Document (link)', 'Proof of Results (link)', 'Channel', 'Date Received', 'Received At',
+    'Paper Documents']);
   var col = {};
   HEADERS.forEach(function (h, i) { col[h] = i; });
   var now = new Date();
@@ -2235,6 +2360,7 @@ function select_(data, user) {
       safeCell_((current && current.institution !== inst.id && was ? current.institutionName + ' > ' : '') + inst.name),
       was || 'Not reviewed', status || 'Not reviewed', safeCell_(reason), safeCell_(by)]]);
     SpreadsheetApp.flush();
+    bumpData_();
     return { ok: true, status: status, reason: reason, statusBy: by, targetReasons: targetNotes,
       statusOn: Utilities.formatDate(now, TIME_ZONE, 'yyyy-MM-dd HH:mm') };
   } finally {
@@ -2314,6 +2440,7 @@ function verify_(data, user) {
     log.getRange(logRow, 1, 1, SEL_LOG_HEADERS.length).setValues([[now, ref, safeCell_(applicant), safeCell_(inst.name),
       describe(current), describe({ id: idDoc, results: results }), safeCell_(note), safeCell_(by)]]);
     SpreadsheetApp.flush();
+    bumpData_();
     return { ok: true, docs: { id: idDoc, results: results, note: note, by: by,
       on: Utilities.formatDate(now, TIME_ZONE, 'yyyy-MM-dd HH:mm') } };
   } finally {
@@ -2322,10 +2449,12 @@ function verify_(data, user) {
 }
 
 /** The applications a staff member may see, newest first, after the filters. */
-function filterApplications_(data, user) {
+function filterApplications_(data, user, names) {
   var sheet = getSheet_();
   var last = sheet.getLastRow();
-  var values = last < 2 ? [] : sheet.getRange(2, 1, last - 1, HEADERS.length).getValues();
+  var values = names ? readRows_(sheet, names.concat(['District', 'Channel', 'Reference', 'Name', 'Surname',
+    'SouthAfricanID', 'CellphoneNumber', 'LocalMunicipality', 'NearestFacility'])) :
+    last < 2 ? [] : sheet.getRange(2, 1, last - 1, HEADERS.length).getValues();
   var col = {};
   HEADERS.forEach(function (h, i) { col[h] = i; });
 

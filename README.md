@@ -398,6 +398,20 @@ Edit `docs/EC_EPWP.csv`, then run `python tools/build_units.py` and push. The
 script also updates the list inside `apps-script/Code.gs` used by the Import
 tab, so paste the new Code.gs into Apps Script as well.
 
+## Speed
+
+With tens of thousands of applications, reading the Sheet is the slow part, so
+the Apps Script:
+
+- reads only the columns a screen needs (for example 8 of the 35 for the
+  Selection overview), not the whole Applications tab;
+- works out each facility's institution once per facility, not once per row;
+- keeps the computed Selection overview and Dashboard figures for up to 30
+  minutes. Any change (a status, a document check, a target reason, a captured
+  or imported application, or an edit typed into the Sheet) gives the data a new
+  version, so the next load recalculates and the figures are never out of date.
+  The first load after a change is as slow as before; loads after that are quick.
+
 ## Looking after the data
 
 The Sheet and the Drive folder hold ID numbers, copies of ID documents and
