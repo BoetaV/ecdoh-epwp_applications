@@ -1921,7 +1921,7 @@ function institutions_(data, user) {
   var docs = documentChecks_();
   var reasons = targetReasons_();
   var groupsByRef = {};
-  var appGroups = emptyGroups_(), appByDistrict = {};
+  var appGroups = emptyGroups_(), appByDistrict = {}, appChannel = { online: 0, captured: 0 };
 
   var sheet = getSheet_();
   var last = sheet.getLastRow();
@@ -1949,6 +1949,7 @@ function institutions_(data, user) {
     var code = districtCode_(row[col.District]);
     if (counted || (!targets.length && inScope(code))) {
       addGroups_(appGroups, g);
+      if (row[col.Channel] === 'Captured') appChannel.captured++; else appChannel.online++;
       var dn = displayDistrict_(code) || 'Not recorded';
       addGroups_(appByDistrict[dn] = appByDistrict[dn] || emptyGroups_(), g);
     }
@@ -1999,6 +2000,7 @@ function institutions_(data, user) {
     targets: TARGETS,
     applicationGroups: appGroups,
     applicationGroupsByDistrict: appByDistrict,
+    applicationChannels: appChannel,
     reserved: reservedPosts_().filter(function (r) { return inScope(r.district) && !r.allocatedTo; }).map(function (r) {
       return { district: displayDistrict_(r.district), posts: r.posts, removed: r.removed, sameAs: r.sameAs, reason: r.reason,
         allocatedTo: r.allocatedTo, allocatedOn: r.allocatedOn };
@@ -2039,10 +2041,14 @@ function pool_(data, user) {
   var counts = { all: 0 };
   var rows = [];
   values.forEach(function (row) {
-    var here = match.all(row[col.NearestFacility], row[col.District]).indexOf(inst) !== -1;
-    if (fromDistrict ? districtCode_(row[col.District]) !== inst.district : !here) return;
     var ref = String(row[col.Reference]);
     var s = sel[ref] || null;
+    if (data.decided) {
+      if (!(s && s.status && s.institution === inst.id)) return;
+    } else {
+      var here = match.all(row[col.NearestFacility], row[col.District]).indexOf(inst) !== -1;
+      if (fromDistrict ? districtCode_(row[col.District]) !== inst.district : !here) return;
+    }
     var status = s ? s.status : '';
     var elsewhere = !!(s && status && s.institution !== inst.id);
     counts.all++;

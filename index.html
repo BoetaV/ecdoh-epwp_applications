@@ -875,6 +875,10 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg>
           <span id="sel-export-label">Download to Excel</span>
         </button>
+        <button class="btn ghost" type="button" id="sel-audit" disabled title="PDF report of the whole process, from applications to selection, for audit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg>
+          <span id="sel-audit-label">Audit report (PDF)</span>
+        </button>
       </div>
       <p class="summary" id="sel-status" aria-live="polite" style="margin-top:14px"></p>
       <div class="kpis" id="sel-kpis"></div>
@@ -979,6 +983,10 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       <div class="summary-row">
         <p class="summary" id="sel-pool-summary" aria-live="polite"></p>
         <div class="sel-buttons">
+          <button class="btn ghost" type="button" id="sel-inst-audit" title="PDF report of this institution: applications, shortlist, documents, selection and targets">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg>
+            <span id="sel-inst-audit-label">Audit report (PDF)</span>
+          </button>
           <button class="btn ghost" type="button" id="sel-pull" disabled title="Paper applicants who are shortlisted, on reserve or selected here, with where their paper file is">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg>
             <span id="sel-pull-label">Paper files to pull</span>
@@ -3171,6 +3179,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       others.appendChild(tr);
     });
     $('sel-export').disabled = !out.institutions.length;
+    $('sel-audit').disabled = !out.institutions.length;
   }
 
   /* ---------- EPWP national targets ---------- */
@@ -3979,6 +3988,328 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   $('sel-docs').addEventListener('change', function () { loadPool(0); });
   $('sel-group').addEventListener('change', function () { loadPool(0); });
   $('sel-pull').addEventListener('click', exportPull);
+
+  /* ---------- audit report (PDF) ---------- */
+  // One report for the scope shown (province, district) or for one institution:
+  // the process from posts and applications to selection, the national targets,
+  // the reasons given, and the controls. Made in the browser like the dashboard PDF.
+  function wrapText(s, size, bold, max) {
+    var words = pdfSafe(s).split(/\s+/), lines = [], line = '';
+    words.forEach(function (w) {
+      var t = line ? line + ' ' + w : w;
+      if (textWidth(t, size, bold) > max && line) { lines.push(line); line = w; } else line = t;
+    });
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  function auditPdf(title, scope, generated, who, logo) {
+    var doc = pdfDoc();
+    var C = { green: '#0a6b3d', dark: '#06402b', muted: '#4d5f54', pale: '#f3f9f2', line: '#cfdcd1', amber: '#b26a00', red: '#7a1610' };
+    var right = PDF_W - PDF_M, bottom = PDF_H - 56, width = right - PDF_M;
+    var y = 34;
+    if (logo) { var lh = 46; doc.image(PDF_M, y, lh * logo.w / logo.h, lh); y += lh + 14; }
+    doc.rect(0, y, PDF_W, 4, '#ffd21f');
+    y += 24;
+    doc.text(PDF_M, y, title, 17, true, C.dark);
+    y += 20;
+    doc.text(PDF_M, y, fitText(scope, 12, true, width), 12, true);
+    y += 15;
+    doc.text(PDF_M, y, fitText('Figures as at ' + generated + '. Produced by ' + who + ' on ' + todayIso() + '.', 9, false, width), 9, false, C.muted);
+    y += 18;
+    var api = {
+      C: C, right: right, width: width,
+      need: function (h) { if (y + h > bottom) { doc.newPage(); y = 50; return true; } return false; },
+      heading: function (t, note) {
+        api.need(48);
+        y += 6;
+        doc.text(PDF_M, y, t, 12, true, C.dark);
+        y += 6;
+        doc.rect(PDF_M, y, width, 0.8, C.line);
+        y += 12;
+        if (note) api.para(note, 8.5, C.muted);
+      },
+      para: function (t, size, color, bold) {
+        size = size || 9;
+        wrapText(t, size, bold, width).forEach(function (l) { api.need(size + 4); doc.text(PDF_M, y, l, size, bold, color); y += size + 3; });
+        y += 4;
+      },
+      bullets: function (items) {
+        items.forEach(function (t) {
+          var lines = wrapText(t, 9, false, width - 12);
+          lines.forEach(function (l, i) { api.need(13); if (!i) doc.text(PDF_M + 2, y, '-', 9); doc.text(PDF_M + 12, y, l, 9); y += 12; });
+        });
+        y += 6;
+      },
+      kpis: function (list) {
+        var per = 4, gap = 8, bw = (width - gap * (per - 1)) / per, bh = 50;
+        for (var i = 0; i < list.length; i += per) {
+          api.need(bh + 8);
+          list.slice(i, i + per).forEach(function (k, j) {
+            var x = PDF_M + j * (bw + gap);
+            doc.rect(x, y, bw, bh, C.pale);
+            doc.rect(x, y, 3, bh, C.green);
+            doc.text(x + 10, y + 14, fitText(k[0], 8.5, true, bw - 14), 8.5, true, C.muted);
+            doc.text(x + 10, y + 33, k[1], 17, true, C.dark);
+            if (k[2]) doc.text(x + 10, y + 44, fitText(k[2], 7.5, false, bw - 14), 7.5, false, C.muted);
+          });
+          y += bh + 8;
+        }
+        y += 8;
+      },
+      // cols: [title, width share, 'right' | ''], rows: arrays of text; colour(rowIndex, colIndex) optional.
+      table: function (cols, rows, colour) {
+        var total = cols.reduce(function (t, c) { return t + c[1]; }, 0);
+        var ws = cols.map(function (c) { return c[1] / total * width; });
+        var rh = 13, size = 7.8;
+        var head = function () {
+          doc.rect(PDF_M, y, width, rh + 2, C.green);
+          var x = PDF_M;
+          cols.forEach(function (c, i) {
+            var t = fitText(c[0], size, true, ws[i] - 6);
+            doc.text(c[2] === 'right' ? x + ws[i] - 3 : x + 3, y + 10, t, size, true, '#ffffff', c[2] === 'right' ? 'right' : '');
+            x += ws[i];
+          });
+          y += rh + 2;
+        };
+        api.need(rh * 3);
+        head();
+        if (!rows.length) { doc.text(PDF_M + 3, y + 10, 'None.', size, false, C.muted); y += rh + 10; return; }
+        rows.forEach(function (r, ri) {
+          if (api.need(rh)) head();
+          if (ri % 2 === 1) doc.rect(PDF_M, y, width, rh, C.pale);
+          var x = PDF_M;
+          r.forEach(function (v, i) {
+            var t = fitText(v === null || v === undefined ? '' : String(v), size, false, ws[i] - 6);
+            var col = colour ? colour(ri, i, v) : null;
+            doc.text(cols[i][2] === 'right' ? x + ws[i] - 3 : x + 3, y + 9.5, t, size, !!col, col || '#14261c', cols[i][2] === 'right' ? 'right' : '');
+            x += ws[i];
+          });
+          y += rh;
+        });
+        y += 12;
+      },
+      finish: function (footer) {
+        var pages = doc.pages.length;
+        doc.pages.forEach(function (ops, i) {
+          doc.ops = ops;
+          doc.rect(PDF_M, PDF_H - 40, width, 0.8, C.line);
+          doc.text(PDF_M, PDF_H - 27, fitText(footer, 8, false, 400), 8, false, C.muted);
+          doc.text(right, PDF_H - 27, 'Page ' + (i + 1) + ' of ' + pages, 8, false, C.muted, 'right');
+        });
+        return doc;
+      }
+    };
+    return api;
+  }
+
+  function pctOf(g, k) { var v = share(g, k); return v === null ? '-' : pct1(v); }
+  function metText(g, k, t) { var v = share(g, k); return v === null ? 'None yet' : v >= t[k] ? 'Met' : 'Below target'; }
+  function metColour(ri, ci, v) { return v === 'Met' ? '#0a6b3d' : v === 'Below target' ? '#b26a00' : null; }
+
+  // The national targets as a table: one row per target, columns per stage.
+  function targetTable(r, apps, shortlisted, selected, posts) {
+    var t = targetsOf();
+    r.table([['Target', 19], ['Required', 8, 'right'], ['Applications', 11, 'right'], ['Shortlisted', 10, 'right'],
+      ['Selected', 9, 'right'], ['Status', 12], ['Needed among the posts', 31]],
+      TARGET_LIST.map(function (k) {
+        var key = k[0], need = Math.ceil(posts * t[key] / 100), have = selected[key];
+        return [k[1], t[key] + '%', pctOf(apps, key), pctOf(shortlisted, key), pctOf(selected, key), metText(selected, key, t),
+          posts ? 'At least ' + need + ' of ' + posts + '; ' + have + ' selected' : '-'];
+      }), function (ri, ci, v) { return ci === 5 ? metColour(ri, ci, v) : null; });
+  }
+
+  function controlsSection(r) {
+    r.heading('Controls applied by the system');
+    r.bullets([
+      'Every applicant was checked when applying: valid South African ID number, age 18 to 45, one application per ID number. Paper applications were captured by approved district capturers and imported lists were checked the same way.',
+      'Only staff with Selection access could change a status or check documents; everyone else could only view. District staff only see their own district.',
+      'Nobody could be selected before both the ID document and the proof of results were verified (from the upload for online applicants, from the paper file for paper applicants).',
+      'No institution could have more people selected than its posts, and an applicant could be shortlisted, selected or on reserve at only one institution at a time.',
+      '"Not suitable" and "Withdrawn" required a reason. A selection that made the youth or women target unreachable required a reason for the target not being met.',
+      'Every change (status, document check, target reason) is kept with who made it and when, in the Selections, Document Checks, Target Reasons and Selection History tabs of the Google Sheet. The Applications master list is never changed by selection.'
+    ]);
+  }
+
+  function reasonRows(insts) {
+    var rows = [];
+    insts.forEach(function (i) {
+      Object.keys(i.reasons || {}).forEach(function (k) {
+        var x = i.reasons[k];
+        rows.push([i.district, i.name, { youth: 'Youth', women: 'Women', pwd: 'Persons with disabilities' }[k], x.reason,
+          x.by.replace(/ \(.*\)$/, ''), x.on]);
+      });
+    });
+    return rows;
+  }
+
+  function buildScopeAudit(out, logo, who) {
+    var t = targetsOf(out);
+    var insts = out.institutions;
+    var sum = function (k) { return insts.reduce(function (n, i) { return n + (i[k] || 0); }, 0); };
+    var reserved = (out.reserved || []).filter(function (x) { return !x.allocatedTo; });
+    var kept = reserved.reduce(function (n, x) { return n + x.posts; }, 0);
+    var posts = sum('posts') + kept;
+    var shortlisted = sumGroups(insts.map(function (i) { return i.groups && i.groups.Shortlisted; }));
+    var selected = sumGroups(insts.map(function (i) { return i.groups && i.groups.Selected; }));
+    var ch = out.applicationChannels || {};
+    var r = auditPdf('EPWP General Worker recruitment: audit report', out.scope, out.generated, who, logo);
+
+    r.heading('1. The process at a glance', 'From posts and applications to selection, for ' + out.scope + '.');
+    r.kpis([
+      ['Posts', num(posts), insts.length + ' institutions' + (kept ? ', ' + kept + ' reserved' : '')],
+      ['Applications', num(out.applicationsTotal || 0), (ch.online !== undefined ? num(ch.online) + ' online, ' + num(ch.captured) + ' paper' : '')],
+      ['Applicants per post', perPost(out.applicationsTotal || 0, posts), ''],
+      ['Shortlisted', num(sum('shortlisted')), ''],
+      ['Selected', num(sum('selected')), pct(sum('selected'), posts) + ' of the posts'],
+      ['Reserve', num(sum('reserve')), 'In case someone declines'],
+      ['Posts still open', num(sum('open')), ''],
+      ['Documents verified', num(sum('verified')) + ' of ' + num(sum('active')), 'Of everyone shortlisted or chosen']
+    ]);
+    r.table([['Stage', 40], ['Number', 15, 'right'], ['Notes', 45]], [
+      ['Applications received', num(out.applicationsTotal || 0), ch.online !== undefined ? num(ch.online) + ' online, ' + num(ch.captured) + ' paper (captured or imported)' : ''],
+      ['Shortlisted', num(sum('shortlisted')), ''],
+      ['Selected', num(sum('selected')), 'Both documents verified before selection'],
+      ['Reserve', num(sum('reserve')), ''],
+      ['Not suitable', num(sum('notSuitable')), 'Reason recorded for each'],
+      ['Withdrawn', num(sum('withdrawn')), 'Reason recorded for each'],
+      ['Posts still open', num(sum('open')), 'Of ' + num(posts) + ' posts']
+    ]);
+
+    r.heading('2. EPWP national targets', 'Targets: ' + t.youth + '% youth (18 to 35), ' + t.women + '% women, ' + t.pwd +
+      '% persons with disabilities. Shares of the applications, the shortlist and the selected.');
+    targetTable(r, out.applicationGroups || { n: 0, youth: 0, women: 0, pwd: 0 }, shortlisted, selected, posts);
+
+    var byD = {};
+    insts.forEach(function (i) {
+      var d = byD[i.district] = byD[i.district] || { posts: 0, apps: 0, sl: 0, se: 0, open: 0, slg: [], seg: [] };
+      d.posts += i.posts; d.sl += i.shortlisted; d.se += i.selected; d.open += i.open;
+      if (i.groups) { d.slg.push(i.groups.Shortlisted); d.seg.push(i.groups.Selected); }
+    });
+    var names = Object.keys(byD).sort();
+    if (names.length > 1) {
+      r.heading('3. Per district', 'Selected shares against the targets (Y youth, W women, D persons with disabilities).');
+      r.table([['District', 24], ['Posts', 7, 'right'], ['Applications', 11, 'right'], ['Shortlisted', 10, 'right'],
+        ['Selected', 9, 'right'], ['Open', 7, 'right'], ['Y selected', 10, 'right'], ['W selected', 10, 'right'], ['D selected', 10, 'right']],
+        names.map(function (n) {
+          var d = byD[n], g = sumGroups(d.seg), a = (out.applicationGroupsByDistrict || {})[n] || { n: 0 };
+          return [n, num(d.posts), num(a.n), num(d.sl), num(d.se), num(d.open), pctOf(g, 'youth'), pctOf(g, 'women'), pctOf(g, 'pwd')];
+        }), function (ri, ci, v) {
+          if (ci < 6 || v === '-') return null;
+          var k = ['youth', 'women', 'pwd'][ci - 6];
+          return parseFloat(v) >= t[k] ? '#0a6b3d' : '#b26a00';
+        });
+    }
+
+    r.heading((names.length > 1 ? '4' : '3') + '. Per institution', 'Selected shares against the targets. Docs: shortlisted, reserve and selected with both documents verified.');
+    r.table([['Institution', 26], ['District', 15], ['Posts', 6, 'right'], ['Appl.', 7, 'right'], ['Short.', 7, 'right'],
+      ['Sel.', 6, 'right'], ['Open', 6, 'right'], ['Docs', 8, 'right'], ['Y', 6, 'right'], ['W', 6, 'right'], ['D', 6, 'right']],
+      insts.map(function (i) {
+        var g = i.groups ? i.groups.Selected : null;
+        return [i.name + (Object.keys(i.reasons || {}).length ? ' *' : ''), i.district, num(i.posts), num(i.applications),
+          num(i.shortlisted), num(i.selected), num(i.open), (i.verified || 0) + '/' + (i.active || 0),
+          pctOf(g, 'youth'), pctOf(g, 'women'), pctOf(g, 'pwd')];
+      }), function (ri, ci, v) {
+        if (ci < 8 || v === '-') return null;
+        var k = ['youth', 'women', 'pwd'][ci - 8];
+        return parseFloat(v) >= t[k] ? '#0a6b3d' : '#b26a00';
+      });
+    r.para('* A reason has been given for a target not met (see the next section). Institutions that were not on the application form take applications from a nearby facility; shared applicants can only be active at one institution.', 8, r.C.muted);
+
+    var reasons = reasonRows(insts);
+    r.heading((names.length > 1 ? '5' : '4') + '. Reasons targets were not met');
+    r.table([['District', 13], ['Institution', 17], ['Target', 12], ['Reason', 32], ['Given by', 12], ['On', 14]], reasons);
+
+    controlsSection(r);
+    return r.finish('Eastern Cape Department of Health - EPWP recruitment audit report - ' + out.scope);
+  }
+
+  function buildInstitutionAudit(i, decided, logo, who, generated) {
+    var t = targetsOf();
+    var r = auditPdf('EPWP General Worker recruitment: audit report', i.name + ', ' + i.district, generated, who, logo);
+    var g = i.groups || {};
+    var apps = { n: i.applications, youth: i.youth, women: i.women, pwd: i.disabled };
+    r.heading('1. The process at a glance', (i.takesFrom ? 'Not on the application form; takes applications from ' + i.takesFrom + '. ' : '') +
+      (i.sharesWith && i.sharesWith.length ? 'Shares applicants with ' + i.sharesWith.join(', ') + '.' : ''));
+    r.kpis([
+      ['Posts', num(i.posts), ''],
+      ['Applications', num(i.applications), perPost(i.applications, i.posts) + ' per post'],
+      ['Shortlisted', num(i.shortlisted), ''],
+      ['Selected', num(i.selected), i.posts && !i.open ? 'All posts filled' : num(i.open) + ' still open'],
+      ['Reserve', num(i.reserve), ''],
+      ['Not suitable', num(i.notSuitable), ''],
+      ['Withdrawn', num(i.withdrawn), ''],
+      ['Documents verified', (i.verified || 0) + ' of ' + (i.active || 0), 'Of everyone shortlisted or chosen']
+    ]);
+    r.heading('2. EPWP national targets', 'Targets: ' + t.youth + '% youth (18 to 35), ' + t.women + '% women, ' + t.pwd +
+      '% persons with disabilities (the 2% is tracked at district and province level).');
+    targetTable(r, apps, g.Shortlisted || { n: 0 }, g.Selected || { n: 0, youth: 0, women: 0, pwd: 0 }, i.posts);
+    var reasons = reasonRows([i]);
+    if (reasons.length) {
+      r.heading('3. Reasons targets were not met');
+      r.table([['Target', 18], ['Reason', 48], ['Given by', 18], ['On', 16]], reasons.map(function (x) { return x.slice(2); }));
+    }
+    var n = reasons.length ? 4 : 3;
+    var order = { Selected: 0, Reserve: 1, Shortlisted: 2, 'Not suitable': 3, Withdrawn: 4 };
+    decided.sort(function (a, b) { return order[a.status] - order[b.status] || (a.ref < b.ref ? -1 : 1); });
+    r.heading(n + '. Decisions', 'Everyone with a status at this institution. Docs: ID document / proof of results.');
+    r.table([['Reference', 25], ['Applicant', 15], ['Gender, age', 10], ['Groups', 6], ['How', 7], ['Docs', 7], ['Status', 11], ['Reason', 19]],
+      decided.map(function (x) {
+        var grp = x.groups ? [x.groups.youth ? 'Y' : '', x.groups.women ? 'W' : '', x.groups.pwd ? 'D' : ''].filter(String).join(' ') : '';
+        var d = x.docs || {};
+        return [x.ref, x.name + ' ' + x.surname, (x.gender || '').charAt(0) + (x.age !== null ? ', ' + x.age : ''), grp,
+          x.channel === 'Captured' ? 'Paper' : 'Online', (d.id || '-').charAt(0) + ' / ' + (d.results || '-').charAt(0), x.status,
+          x.reason || ''];
+      }), function (ri, ci, v) { return ci === 6 && v === 'Selected' ? '#0a6b3d' : null; });
+    r.para('Docs: V verified, M missing, - not checked. Groups: Y youth, W woman, D person with a disability. The full history of each decision (who and when) is in the Selection History tab.', 8, r.C.muted);
+    controlsSection(r);
+    return r.finish('Eastern Cape Department of Health - EPWP recruitment audit report - ' + i.name);
+  }
+
+  function saveAuditPdf(doc, logo, name) {
+    var blob = pdfBlob(doc, logo);
+    downloadBlob(blob, 'EPWP_Audit_report_' + fileSafe(name) + '_' + todayIso() + '.pdf');
+  }
+
+  $('sel-audit').addEventListener('click', function () {
+    var s = session(), out = selData;
+    if (!s) return sessionEnded();
+    if (!out) return;
+    var btn = this;
+    btn.disabled = true;
+    $('sel-audit-label').textContent = 'Preparing PDF...';
+    logoJpeg().then(function (logo) {
+      saveAuditPdf(buildScopeAudit(out, logo, s.name + ' (' + s.username + ')'), logo, out.scope);
+    }).catch(function () {
+      selAlert('The audit report could not be made. Please try again.');
+    }).then(function () {
+      btn.disabled = false;
+      $('sel-audit-label').textContent = 'Audit report (PDF)';
+    });
+  });
+
+  $('sel-inst-audit').addEventListener('click', function () {
+    var s = session(), i = selInst;
+    if (!s) return sessionEnded();
+    if (!i) return;
+    var btn = this;
+    btn.disabled = true;
+    $('sel-inst-audit-label').textContent = 'Preparing PDF...';
+    selAlert('');
+    Promise.all([post({ action: 'pool', token: s.token, institution: i.id, all: true, decided: true }), logoJpeg()])
+      .then(function (res) {
+        var out = res[0], logo = res[1];
+        if (out && out.error === 'auth') return sessionEnded();
+        if (!out || !out.ok) { selAlert((out && out.message) || 'The audit report could not be made.'); return; }
+        var generated = (selData && selData.generated) || todayIso();
+        saveAuditPdf(buildInstitutionAudit(i, out.rows, logo, s.name + ' (' + s.username + ')', generated), logo, i.name);
+      }).catch(function () {
+        selAlert('The audit report could not be made. Check your internet connection and try again.');
+      }).then(function () {
+        btn.disabled = false;
+        $('sel-inst-audit-label').textContent = 'Audit report (PDF)';
+      });
+  });
 
   // The paper applicants HR is considering here, with where their paper file is,
   // so the files can be fetched for the document check.

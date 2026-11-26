@@ -235,6 +235,25 @@ institution and no reason has been given yet, the system asks for the reason
 before it saves the selection. Otherwise the targets guide HR; they do not block
 a selection.
 
+**Audit report (PDF).** For audit purposes the Selection screen makes a PDF of
+the whole process, from posts and applications to selection, at every level:
+
+- **Province or district**: *Audit report (PDF)* next to *Download to Excel* on
+  the overview (provincial users: all districts, or the district they picked;
+  district users: their district). It has the process at a glance (posts,
+  applications online and paper, applicants per post, shortlisted, selected,
+  reserve, not suitable, withdrawn, posts still open, documents verified), the
+  national targets for applications, shortlist and selected with how many of the
+  posts each group needs, the figures per district and per institution, every
+  reason given for a target not met, and the controls the system applied.
+- **Institution**: *Audit report (PDF)* on the institution's page. The same
+  figures for that institution, plus every decision: reference, applicant, gender
+  and age, target groups, how they applied, document checks, status and reason.
+
+The PDF is made in the browser from the figures on screen, with the department
+logo, the date of the figures and who produced it. The full history of every
+change stays in the Selection History tab of the Sheet.
+
 **Checking the documents (online and paper alike).** Paper applicants'
 documents are not in the system; they stay in the paper file at the HR office.
 So every applicant is checked the same way, in the **Documents** column of an
