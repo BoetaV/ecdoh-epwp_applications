@@ -1594,6 +1594,8 @@ var SEL_ACTIVE = { Shortlisted: 1, Selected: 1, Reserve: 1 };
 var SEL_NEEDS_REASON = { 'Not suitable': 1, 'Withdrawn': 1 };
 var SEL_ORDER = { Shortlisted: 0, Selected: 1, Reserve: 2, '': 3, 'Not suitable': 4, Withdrawn: 5 };
 var YOUTH_MAX_AGE = 35;
+// EPWP national targets, in percent: youth (18 to 35), women, persons with disabilities.
+var TARGETS = { youth: 60, women: 55, pwd: 2 };
 var DOC_SHEET = 'Document Checks';
 var DOC_HEADERS = ['Reference', 'Applicant', 'ID number', 'How applied', 'ID document', 'Proof of results', 'Note',
   'Checked by', 'Checked on'];
@@ -1792,6 +1794,25 @@ function applicantAge_(row, col, now) {
   return dob ? ageOn_(dob, now) : null;
 }
 
+/** Is this applicant youth (18 to 35), a woman, a person with a disability? */
+function targetGroups_(row, col, now) {
+  var age = applicantAge_(row, col, now);
+  return {
+    youth: age !== null && age <= YOUTH_MAX_AGE,
+    women: row[col.Gender] === 'Female',
+    pwd: row[col.DisabilityStatus] === 'Yes'
+  };
+}
+
+function addGroups_(t, g) {
+  t.n++;
+  if (g.youth) t.youth++;
+  if (g.women) t.women++;
+  if (g.pwd) t.pwd++;
+}
+
+function emptyGroups_() { return { n: 0, youth: 0, women: 0, pwd: 0 }; }
+
 function selectionScope_(data, user) {
   return user.provincial ? districtCode_(data.district) : user.districtCode;
 }
@@ -1811,8 +1832,13 @@ function institutions_(data, user) {
   allocs.forEach(function (a) {
     if (!inScope(a.district)) return;
     stats[a.id] = { applications: 0, women: 0, youth: 0, disabled: 0, Shortlisted: 0, Selected: 0, Reserve: 0,
-      'Not suitable': 0, Withdrawn: 0, active: 0, verified: 0 };
+      'Not suitable': 0, Withdrawn: 0, active: 0, verified: 0,
+      groups: { Shortlisted: emptyGroups_(), Selected: emptyGroups_(), Reserve: emptyGroups_() } };
   });
+  var sel = selections_();
+  var docs = documentChecks_();
+  var groupsByRef = {};
+  var appGroups = emptyGroups_(), appByDistrict = {};
 
   var sheet = getSheet_();
   var last = sheet.getLastRow();
@@ -1825,19 +1851,26 @@ function institutions_(data, user) {
   values.forEach(function (row) {
     var targets = match.all(row[col.NearestFacility], row[col.District]);
     var counted = false;
+    var g = targetGroups_(row, col, now);
+    var ref = String(row[col.Reference]);
+    if (sel[ref]) groupsByRef[ref] = g;
     targets.forEach(function (a) {
       if (!stats[a.id]) return;
       counted = true;
       var st = stats[a.id];
       st.applications++;
-      if (row[col.Gender] === 'Female') st.women++;
-      if (row[col.DisabilityStatus] === 'Yes') st.disabled++;
-      var age = applicantAge_(row, col, now);
-      if (age !== null && age <= YOUTH_MAX_AGE) st.youth++;
+      if (g.women) st.women++;
+      if (g.pwd) st.disabled++;
+      if (g.youth) st.youth++;
     });
+    var code = districtCode_(row[col.District]);
+    if (counted || (!targets.length && inScope(code))) {
+      addGroups_(appGroups, g);
+      var dn = displayDistrict_(code) || 'Not recorded';
+      addGroups_(appByDistrict[dn] = appByDistrict[dn] || emptyGroups_(), g);
+    }
     if (counted) applicationsTotal++;
     if (!targets.length) {
-      var code = districtCode_(row[col.District]);
       if (!inScope(code)) return;
       var f = String(row[col.NearestFacility] || '').trim() || 'Not recorded';
       var k = code + '|' + f;
@@ -1848,8 +1881,6 @@ function institutions_(data, user) {
     }
   });
 
-  var sel = selections_();
-  var docs = documentChecks_();
   Object.keys(sel).forEach(function (ref) {
     var s = sel[ref], st = stats[s.institution];
     if (!st || st[s.status] === undefined) return;
@@ -1857,6 +1888,7 @@ function institutions_(data, user) {
     if (SEL_ACTIVE[s.status]) {
       st.active++;
       if (docsVerified_(docs[ref])) st.verified++;
+      if (groupsByRef[ref]) addGroups_(st.groups[s.status], groupsByRef[ref]);
     }
   });
 
@@ -1866,7 +1898,8 @@ function institutions_(data, user) {
       id: a.id, district: displayDistrict_(a.district), name: a.name, local: a.local, posts: a.posts,
       onForm: !!a.facility, takesFrom: a.takesFrom, sharesWith: sharesWith_(a, allocs), applications: st.applications, women: st.women, youth: st.youth, disabled: st.disabled,
       shortlisted: st.Shortlisted, selected: st.Selected, reserve: st.Reserve, notSuitable: st['Not suitable'],
-      withdrawn: st.Withdrawn, open: Math.max(0, a.posts - st.Selected), active: st.active, verified: st.verified
+      withdrawn: st.Withdrawn, open: Math.max(0, a.posts - st.Selected), active: st.active, verified: st.verified,
+      groups: st.groups
     };
   });
   list.sort(function (x, y) { return x.district < y.district ? -1 : x.district > y.district ? 1 : x.name < y.name ? -1 : 1; });
@@ -1880,6 +1913,9 @@ function institutions_(data, user) {
     institutions: list,
     others: others,
     applicationsTotal: applicationsTotal,
+    targets: TARGETS,
+    applicationGroups: appGroups,
+    applicationGroupsByDistrict: appByDistrict,
     reserved: reservedPosts_().filter(function (r) { return inScope(r.district) && !r.allocatedTo; }).map(function (r) {
       return { district: displayDistrict_(r.district), posts: r.posts, removed: r.removed, sameAs: r.sameAs, reason: r.reason,
         allocatedTo: r.allocatedTo, allocatedOn: r.allocatedOn };
@@ -1908,6 +1944,7 @@ function pool_(data, user) {
   var docs = documentChecks_();
   var statusFilter = String(data.status || '');
   var docsFilter = String(data.docs || '');
+  var groupFilter = { youth: 1, women: 1, pwd: 1 }[data.group] ? String(data.group) : '';
   var words = String(data.search || '').toLowerCase().replace(/[^a-z0-9 -]/g, ' ').split(/\s+/).filter(String);
 
   var sheet = getSheet_();
@@ -1929,6 +1966,7 @@ function pool_(data, user) {
     var key = elsewhere ? 'elsewhere' : (status || 'none');
     counts[key] = (counts[key] || 0) + 1;
     if (statusFilter && statusFilter !== key) return;
+    if (groupFilter && !targetGroups_(row, col, now)[groupFilter]) return;
     if (docsFilter) {
       var d = docs[ref];
       var docKey = docsVerified_(d) ? 'verified' : d && (d.id === 'Missing' || d.results === 'Missing') ? 'missing' : 'unverified';
@@ -1965,6 +2003,7 @@ function pool_(data, user) {
       paperDocs: String(row[col['Paper Documents']] || ''),
       idDoc: link(row, 'ID Document (link)'), resultsDoc: link(row, 'Proof of Results (link)'),
       receivedAt: String(row[col['Received At']] || ''), dateReceived: formatDay_(row[col['Date Received']]),
+      groups: targetGroups_(row, col, now),
       status: it.status, reason: s ? s.reason : '', statusBy: s && it.status ? s.by : '', statusOn: s && it.status ? s.on : '',
       elsewhere: it.elsewhere ? s.institutionName : '',
       docs: docs[it.ref] ? { id: docs[it.ref].id, results: docs[it.ref].results, note: docs[it.ref].note,
@@ -1980,6 +2019,7 @@ function pool_(data, user) {
       posts: inst.posts, onForm: !!inst.facility, takesFrom: inst.takesFrom, sharesWith: sharesWith_(inst, allocs) },
     from: fromDistrict ? 'district' : 'institution',
     canSelect: !!user.canSelect,
+    targets: TARGETS,
     counts: counts,
     total: rows.length,
     offset: data.all ? 0 : offset,

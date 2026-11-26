@@ -199,6 +199,31 @@ The rules the system enforces:
   that were not on the application form, or that had too few applicants.
 - **Download to Excel** on an institution gives its applicants with their status.
 
+**EPWP national targets.** The process must be fair, transparent and
+auditable, and meet the national targets: **60% youth** (18 to 35), **55% women**
+and **2% persons with disabilities**. The Selection screen measures them at
+every level and stage:
+
+- **Meters at the top** for the province (all districts) or the district:
+  applications, shortlisted and selected, each against its target (the black
+  line). Green means met, orange means below target. Under each meter: how many
+  of the posts must go to that group (for example "At least 367 youth among the
+  611 posts"), how many are selected so far, and how many more are needed among
+  the open posts.
+- **National targets per district** (provincial view): the shares among the
+  applications, the shortlist and the selected for each district.
+- **Per institution**: the *Targets* column shows the shortlist and the selected
+  (Y youth, W women, D disability), and the institution's own page has the same
+  meters. It warns when a target can no longer be met with the posts still open.
+  The 2% for persons with disabilities is tracked at district and province level,
+  because a 3-post clinic cannot meet it on its own.
+- **Target group filter** on an institution's list (youth, women, persons with
+  disabilities), and Youth / Woman / PwD tags next to each applicant, to help
+  shortlist towards the targets.
+- The Excel download of the institutions includes the counts and percentages.
+
+The targets guide HR; the system does not block a selection that misses them.
+
 **Checking the documents (online and paper alike).** Paper applicants'
 documents are not in the system; they stay in the paper file at the HR office.
 So every applicant is checked the same way, in the **Documents** column of an

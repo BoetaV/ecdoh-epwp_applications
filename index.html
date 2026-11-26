@@ -326,6 +326,31 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 .sel-table td:first-child { min-width: 220px; }
 .sel-open { min-height: 36px; padding: 4px 14px; font-size: 14px; }
 .sel-h2 { margin: 28px 0 4px; font-size: 19px; color: var(--green-900); }
+/* National targets */
+.targets { margin-top: 16px; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+.targets h2 { margin: 0; font-size: 18px; color: var(--green-900); }
+.targets > .muted { margin: 2px 0 12px; }
+.tgrid { display: grid; gap: 14px; }
+.tmeter { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.tmeter h3 { margin: 0 0 8px; font-size: 15px; color: var(--green-900); display: flex; justify-content: space-between; gap: 8px; }
+.tmeter h3 span { font-weight: 600; color: var(--muted); font-size: 13px; }
+.tm-row { display: grid; grid-template-columns: 92px 1fr auto; gap: 10px; align-items: center; margin-top: 6px; font-size: 13px; }
+.tm-track { position: relative; height: 12px; background: #e6ece7; border-radius: 6px; }
+.tm-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: var(--green-700); }
+.tm-fill.below { background: #b26a00; }
+.tm-mark { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+.tm-val { white-space: nowrap; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tm-need { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
+.tm-need.bad { color: #7a1610; font-weight: 700; }
+.tok, .tbad, .tnone { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.tok { background: var(--green-100); color: var(--green-900); }
+.tbad { background: #fff0d6; color: #6b4200; box-shadow: inset 0 0 0 1px #e0a640; }
+.tnone { background: #eef1ef; color: var(--muted); }
+.tchips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.tchips + .tchips { margin-top: 4px; }
+.tchips b { font-size: 11px; color: var(--muted); min-width: 52px; }
+.tgroup { display: inline-block; margin: 2px 4px 0 0; padding: 0 6px; border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--green-50); color: var(--green-900); box-shadow: inset 0 0 0 1px var(--line); }
+@media (min-width: 960px) { .tgrid { grid-template-columns: repeat(3, 1fr); } }
 .sel-note.warn { background: var(--yellow-100); border-color: var(--yellow); color: #4d3c00; }
 .sel-note { margin: 16px 0 0; padding: 12px 14px; border-radius: var(--radius); background: var(--green-50); border: 1px solid var(--line); color: var(--green-900); font-weight: 600; }
 .sel-warn { margin-top: 14px; padding: 12px 14px; border-radius: var(--radius); background: var(--yellow-100); border: 1px solid var(--yellow); color: #4d3c00; font-weight: 600; }
@@ -359,7 +384,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 .st.Verified { background: var(--green-100); color: var(--green-900); }
 .st.Missing { background: #fde8e6; color: #7a1610; }
 @media (min-width: 720px) {
-  .filters.sel-pool-filters { grid-template-columns: 2fr 1fr 1fr 1fr auto; }
+  .filters.sel-pool-filters { grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; }
 }
 .sel-status { min-width: 220px; }
 .sel-status select, .sel-status input { width: 100%; min-height: 36px; padding: 4px 8px; font-size: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); font-family: inherit; }
@@ -845,13 +870,24 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       </div>
       <p class="summary" id="sel-status" aria-live="polite" style="margin-top:14px"></p>
       <div class="kpis" id="sel-kpis"></div>
+      <section class="targets" id="sel-targets" aria-label="EPWP national targets"></section>
+      <div id="sel-dtargets-wrap" hidden>
+        <h2 class="sel-h2">National targets per district</h2>
+        <p class="muted">Share of youth (18 to 35), women and persons with disabilities among the applications, the shortlist and the selected, per district.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>District</th><th class="num">Posts</th><th>Applications</th><th>Shortlisted</th><th>Selected</th></tr></thead>
+            <tbody id="sel-dtargets"></tbody>
+          </table>
+        </div>
+      </div>
       <div class="table-wrap sel-table">
         <table>
           <thead>
             <tr>
               <th>Institution</th><th class="num">Posts</th><th class="num">Applications</th><th class="num">Per post</th>
               <th class="num">Women</th><th class="num">Youth</th><th class="num">Disability</th>
-              <th class="num">Shortlisted</th><th class="num">Selected</th><th class="num">Reserve</th><th class="num">Still open</th><th><span class="sr-only">Open</span></th>
+              <th class="num">Shortlisted</th><th class="num">Selected</th><th class="num">Reserve</th><th class="num">Still open</th><th>Targets (shortlist / selected)</th><th><span class="sr-only">Open</span></th>
             </tr>
           </thead>
           <tbody id="sel-body"></tbody>
@@ -885,6 +921,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       <h2 class="sel-inst" id="sel-inst-name" tabindex="-1"></h2>
       <p class="muted" id="sel-inst-where"></p>
       <div class="kpis" id="sel-inst-kpis"></div>
+      <section class="targets" id="sel-inst-targets" aria-label="EPWP national targets for this institution"></section>
       <div class="sel-warn" id="sel-inst-warn" hidden></div>
       <form class="filters sel-pool-filters" id="sel-pool-form" novalidate>
         <div class="field">
@@ -909,6 +946,15 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
             <option value="Not suitable">Not suitable</option>
             <option value="Withdrawn">Withdrawn</option>
             <option value="elsewhere">Already has a status at another institution</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="sel-group">Target group</label>
+          <select id="sel-group">
+            <option value="">Everyone</option>
+            <option value="youth">Youth (18 to 35)</option>
+            <option value="women">Women</option>
+            <option value="pwd">Persons with disabilities</option>
           </select>
         </div>
         <div class="field">
@@ -3012,13 +3058,14 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     kp.appendChild(kpi('Selected', num(selected), pct(selected, posts) + ' of the posts'));
     kp.appendChild(kpi('Still open', num(sum(out.institutions, 'open')), num(sum(out.institutions, 'reserve')) + ' on reserve'));
     $('sel-status').textContent = find ? list.length + ' of ' + out.institutions.length + ' institutions match "' + $('sel-find').value.trim() + '".' : '';
+    renderScopeTargets(out, posts + kept);
 
     var body = $('sel-body');
     body.innerHTML = '';
     if (!list.length) {
       var tr0 = document.createElement('tr');
       var td0 = document.createElement('td');
-      td0.colSpan = 12;
+      td0.colSpan = 13;
       td0.className = 'empty';
       td0.textContent = out.institutions.length ? 'No institution matches.' : 'There are no posts for this district.';
       tr0.appendChild(td0);
@@ -3061,6 +3108,12 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       var open = numCell(tr, '');
       if (i.posts && !i.open) open.appendChild(chip('Filled', 'full'));
       else open.textContent = num(i.open);
+      var tg = document.createElement('td');
+      if (i.groups) {
+        tg.appendChild(targetChips('Shortlist', i.groups.Shortlisted));
+        tg.appendChild(targetChips('Selected', i.groups.Selected));
+      }
+      tr.appendChild(tg);
       var td = document.createElement('td');
       var btn = document.createElement('button');
       btn.type = 'button';
@@ -3104,6 +3157,178 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('sel-export').disabled = !out.institutions.length;
   }
 
+  /* ---------- EPWP national targets ---------- */
+  var TARGET_LIST = [['youth', 'Youth (18 to 35)'], ['women', 'Women'], ['pwd', 'Persons with disabilities']];
+  var DEFAULT_TARGETS = { youth: 60, women: 55, pwd: 2 };
+  function targetsOf(out) { return (out && out.targets) || (selData && selData.targets) || DEFAULT_TARGETS; }
+  function share(g, k) { return g && g.n ? g[k] / g.n * 100 : null; }
+  function pct1(v) { return (Math.round(v * 10) / 10).toFixed(1) + '%'; }
+  function sumGroups(list) {
+    var t = { n: 0, youth: 0, women: 0, pwd: 0 };
+    list.forEach(function (g) { if (!g) return; t.n += g.n; t.youth += g.youth; t.women += g.women; t.pwd += g.pwd; });
+    return t;
+  }
+  function groupCols(g) {
+    g = g || { n: 0, youth: 0, women: 0, pwd: 0 };
+    var p = function (k) { return g.n ? String(Math.round(g[k] / g.n * 1000) / 10) : ''; };
+    return [String(g.youth), p('youth'), String(g.women), p('women'), String(g.pwd), p('pwd')];
+  }
+  function statusTag(value, target) {
+    var span = document.createElement('span');
+    if (value === null) { span.className = 'tnone'; span.textContent = 'None yet'; }
+    else if (value >= target) { span.className = 'tok'; span.textContent = '\u2713 Met'; }
+    else { span.className = 'tbad'; span.textContent = '! Below ' + target + '%'; }
+    return span;
+  }
+  // "Y 64% W 58% D 2%" with met / below colouring, for tables.
+  function targetChips(label, g) {
+    var t = targetsOf();
+    var line = document.createElement('div');
+    line.className = 'tchips';
+    if (label) {
+      var b = document.createElement('b');
+      b.textContent = label;
+      line.appendChild(b);
+    }
+    if (!g || !g.n) {
+      var none = document.createElement('span');
+      none.className = 'tnone';
+      none.textContent = 'none yet';
+      line.appendChild(none);
+      return line;
+    }
+    [['youth', 'Y'], ['women', 'W'], ['pwd', 'D']].forEach(function (k) {
+      var v = share(g, k[0]);
+      var span = document.createElement('span');
+      span.className = v >= t[k[0]] ? 'tok' : 'tbad';
+      span.textContent = k[1] + ' ' + Math.round(v) + '%';
+      span.title = TARGET_LIST.filter(function (x) { return x[0] === k[0]; })[0][1] + ': ' + g[k[0]] + ' of ' + g.n +
+        ' (target ' + t[k[0]] + '%)';
+      line.appendChild(span);
+    });
+    return line;
+  }
+  // Three meters (youth, women, disability), each with a row per stage. posts: for "needed" counts.
+  function renderTargets(box, title, note, stages, posts, selectedG, perInstitution) {
+    var t = targetsOf();
+    box.innerHTML = '';
+    var h = document.createElement('h2');
+    h.textContent = title;
+    box.appendChild(h);
+    var p = document.createElement('p');
+    p.className = 'muted';
+    p.textContent = note;
+    box.appendChild(p);
+    var grid = document.createElement('div');
+    grid.className = 'tgrid';
+    TARGET_LIST.forEach(function (k) {
+      var key = k[0], target = t[key];
+      var card = document.createElement('div');
+      card.className = 'tmeter';
+      var h3 = document.createElement('h3');
+      h3.textContent = k[1];
+      var ts = document.createElement('span');
+      ts.textContent = 'Target ' + target + '%';
+      h3.appendChild(ts);
+      card.appendChild(h3);
+      stages.forEach(function (st) {
+        var g = st[1], v = share(g, key);
+        var row = document.createElement('div');
+        row.className = 'tm-row';
+        var l = document.createElement('span');
+        l.textContent = st[0];
+        var track = document.createElement('div');
+        track.className = 'tm-track';
+        track.setAttribute('role', 'img');
+        track.setAttribute('aria-label', st[0] + ': ' + (v === null ? 'none yet' : pct1(v)) + ', target ' + target + '%');
+        var fill = document.createElement('div');
+        fill.className = 'tm-fill' + (v !== null && v < target ? ' below' : '');
+        fill.style.width = (v === null ? 0 : Math.min(100, v)) + '%';
+        var mark = document.createElement('div');
+        mark.className = 'tm-mark';
+        mark.style.left = target + '%';
+        track.appendChild(fill);
+        track.appendChild(mark);
+        var val = document.createElement('span');
+        val.className = 'tm-val';
+        val.textContent = v === null ? '- ' : pct1(v) + ' ';
+        val.title = g ? g[key] + ' of ' + g.n : '';
+        val.appendChild(statusTag(v, target));
+        row.appendChild(l);
+        row.appendChild(track);
+        row.appendChild(val);
+        card.appendChild(row);
+      });
+      if (posts) {
+        var noun = { youth: 'youth', women: 'women', pwd: 'persons with disabilities' }[key];
+        var need = Math.ceil(posts * target / 100);
+        var have = selectedG ? selectedG[key] : 0;
+        var open = posts - (selectedG ? selectedG.n : 0);
+        var n = document.createElement('p');
+        n.className = 'tm-need';
+        if (key === 'pwd' && perInstitution) {
+          n.textContent = 'Tracked at district and province level (2% of all posts). ' + have + ' ' + noun + ' selected here.';
+        } else if (have >= need) {
+          n.textContent = 'At least ' + need + ' ' + noun + ' among the ' + posts + ' posts. Reached: ' + have + ' selected.';
+        } else if (need - have > open) {
+          n.className = 'tm-need bad';
+          n.textContent = 'At least ' + need + ' ' + noun + ' needed among the ' + posts + ' posts; ' + have + ' selected and only ' + open +
+            ' posts still open. The target can no longer be met here.';
+        } else {
+          n.textContent = 'At least ' + need + ' ' + noun + ' among the ' + posts + ' posts. ' + have + ' ' + noun + ' selected so far; ' +
+            (need - have) + ' more needed among the ' + open + ' open posts.';
+        }
+        card.appendChild(n);
+      }
+      grid.appendChild(card);
+    });
+    box.appendChild(grid);
+  }
+
+  function renderScopeTargets(out, allPosts) {
+    var shortlisted = sumGroups(out.institutions.map(function (i) { return i.groups && i.groups.Shortlisted; }));
+    var selected = sumGroups(out.institutions.map(function (i) { return i.groups && i.groups.Selected; }));
+    var box = $('sel-targets');
+    box.hidden = !out.applicationGroups;
+    if (out.applicationGroups) {
+      renderTargets(box, 'EPWP national targets: ' + out.scope,
+        'Applications, shortlist and selected compared with the national targets (the black line). Green: met. Orange: below target.',
+        [['Applications', out.applicationGroups], ['Shortlisted', shortlisted], ['Selected', selected]], allPosts, selected, false);
+    }
+    // Per district, for the whole province.
+    var wrap = $('sel-dtargets-wrap'), body = $('sel-dtargets');
+    body.innerHTML = '';
+    var byD = {};
+    out.institutions.forEach(function (i) {
+      var d = byD[i.district] = byD[i.district] || { posts: 0, sl: [], se: [] };
+      d.posts += i.posts;
+      if (i.groups) { d.sl.push(i.groups.Shortlisted); d.se.push(i.groups.Selected); }
+    });
+    var names = Object.keys(byD).sort();
+    wrap.hidden = !(out.applicationGroupsByDistrict && names.length > 1);
+    if (wrap.hidden) return;
+    names.forEach(function (name) {
+      var d = byD[name];
+      var tr = document.createElement('tr');
+      addCell(tr, name);
+      numCell(tr, num(d.posts), true);
+      var a = document.createElement('td'); a.appendChild(targetChips('', (out.applicationGroupsByDistrict || {})[name])); tr.appendChild(a);
+      var b = document.createElement('td'); b.appendChild(targetChips('', sumGroups(d.sl))); tr.appendChild(b);
+      var c = document.createElement('td'); c.appendChild(targetChips('', sumGroups(d.se))); tr.appendChild(c);
+      body.appendChild(tr);
+    });
+  }
+
+  function renderInstTargets() {
+    var i = selInst, box = $('sel-inst-targets');
+    box.hidden = !i || !i.groups;
+    if (box.hidden) return;
+    var apps = { n: i.applications, youth: i.youth, women: i.women, pwd: i.disabled };
+    renderTargets(box, 'EPWP national targets: ' + i.name,
+      'Use these while shortlisting and selecting, so that the people chosen meet the national targets.',
+      [['Applications', apps], ['Shortlisted', i.groups.Shortlisted], ['Selected', i.groups.Selected]], i.posts, i.groups.Selected, true);
+  }
+
   function downloadBlob(blob, name) {
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -3122,7 +3347,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       return [i.district, i.name, i.local, i.posts, i.applications, perPost(i.applications, i.posts), i.women, i.youth, i.disabled,
         i.shortlisted, i.selected, i.reserve, i.notSuitable, i.withdrawn, i.open,
         i.takesFrom ? i.takesFrom : i.onForm ? 'Its own applicants' : 'Not on the form: the whole district',
-        (i.sharesWith || []).join(', ')];
+        (i.sharesWith || []).join(', ')].concat(groupCols(i.groups && i.groups.Shortlisted), groupCols(i.groups && i.groups.Selected));
     }).concat((out.reserved || []).map(function (r) {
       return [r.district, 'Reserved for further allocation' + (r.removed ? ' (duplicate line "' + r.removed + '" removed)' : ''),
         r.allocatedTo ? 'Allocated to ' + r.allocatedTo : '', r.allocatedTo ? 0 : r.posts, '', '', '', '', '', '', '', '', '', '', '', '-', ''];
@@ -3134,8 +3359,10 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       sheet: 'Institutions', title: 'EPWP posts and applications per institution', scope: out.scope,
       headers: ['District', 'Institution', 'Local municipality', 'Posts', 'Applications', 'Applications per post', 'Women',
         'Youth (18 to 35)', 'With a disability', 'Shortlisted', 'Selected', 'Reserve', 'Not suitable', 'Withdrawn',
-        'Posts still open', 'Takes applications from', 'Shares applicants with'],
-      numeric: [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+        'Posts still open', 'Takes applications from', 'Shares applicants with',
+        'Shortlisted: youth', 'Shortlisted: youth %', 'Shortlisted: women', 'Shortlisted: women %', 'Shortlisted: with a disability', 'Shortlisted: disability %',
+        'Selected: youth', 'Selected: youth %', 'Selected: women', 'Selected: women %', 'Selected: with a disability', 'Selected: disability %'],
+      numeric: [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
       rows: rows.map(function (r) { return r.map(String); })
     }), 'EPWP_Posts_and_applications_' + fileSafe(out.scope) + '_' + todayIso() + '.xlsx');
   }
@@ -3147,6 +3374,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('sel-search').value = '';
     $('sel-filter').value = '';
     $('sel-docs').value = '';
+    $('sel-group').value = '';
     $('sel-from').value = inst.onForm || inst.takesFrom ? 'institution' : 'district';
     $('sel-pool-body').innerHTML = '';
     renderInstHead();
@@ -3184,6 +3412,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     }
     warn.hidden = !msg;
     warn.textContent = msg;
+    renderInstTargets();
   }
 
   function backToOverview() {
@@ -3196,7 +3425,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   }
 
   function poolFilters() {
-    return { search: $('sel-search').value.trim(), from: $('sel-from').value, status: $('sel-filter').value, docs: $('sel-docs').value };
+    return { search: $('sel-search').value.trim(), from: $('sel-from').value, status: $('sel-filter').value, docs: $('sel-docs').value,
+      group: $('sel-group').value };
   }
 
   function loadPool(offset) {
@@ -3210,7 +3440,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('sel-pull').disabled = true;
     $('sel-pool-summary').textContent = 'Loading...';
     post({ action: 'pool', token: s.token, institution: selInst.id, offset: offset, search: f.search, from: f.from, status: f.status,
-      docs: f.docs })
+      docs: f.docs, group: f.group })
       .then(function (out) {
         if (seq !== poolSeq) return;
         if (out && out.error === 'auth') return sessionEnded();
@@ -3263,8 +3493,17 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   function poolRow(r) {
     var tr = document.createElement('tr');
     addCell(tr, r.ref, r.channel === 'Captured' ? 'Paper application' : 'Online', true);
-    addCell(tr, r.name + ' ' + r.surname, [r.gender, r.age !== null ? r.age + ' years' : '', r.disability === 'Yes' ? 'Disability' : '']
+    var who = addCell(tr, r.name + ' ' + r.surname, [r.gender, r.age !== null ? r.age + ' years' : '', r.disability === 'Yes' ? 'Disability' : '']
       .filter(String).join(', '));
+    if (r.groups) {
+      [['youth', 'Youth'], ['women', 'Woman'], ['pwd', 'PwD']].forEach(function (g) {
+        if (!r.groups[g[0]]) return;
+        var t = document.createElement('span');
+        t.className = 'tgroup';
+        t.textContent = g[1];
+        who.appendChild(t);
+      });
+    }
     addCell(tr, r.id, '', true);
     addCell(tr, r.cell, '', true);
     addCell(tr, r.local.replace(/ (Local|Metropolitan) Municipality$/, ''), 'Ward ' + r.ward);
@@ -3513,6 +3752,16 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         // Keep the counts on screen up to date without reloading everything.
         var before = r.elsewhere ? '' : r.status;
         var wasActive = isActiveHere(r);
+        if (selInst.groups && r.groups) {
+          var move = function (st, sign) {
+            var g = selInst.groups[st];
+            if (!g) return;
+            g.n += sign;
+            ['youth', 'women', 'pwd'].forEach(function (k) { if (r.groups[k]) g[k] += sign; });
+          };
+          if (wasActive) move(before, -1);
+          if (status === 'Shortlisted' || status === 'Reserve' || status === 'Selected') move(status, 1);
+        }
         if (before && SEL_FIELD[before]) selInst[SEL_FIELD[before]]--;
         if (status && SEL_FIELD[status]) selInst[SEL_FIELD[status]]++;
         var nowActive = status === 'Shortlisted' || status === 'Reserve' || status === 'Selected';
@@ -3595,6 +3844,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   $('sel-next').addEventListener('click', function () { loadPool(selOffset + 50); });
   $('sel-pool-export').addEventListener('click', exportPool);
   $('sel-docs').addEventListener('change', function () { loadPool(0); });
+  $('sel-group').addEventListener('change', function () { loadPool(0); });
   $('sel-pull').addEventListener('click', exportPull);
 
   // The paper applicants HR is considering here, with where their paper file is,
