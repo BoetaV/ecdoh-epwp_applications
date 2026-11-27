@@ -254,6 +254,15 @@ The PDF is made in the browser from the figures on screen, with the department
 logo, the date of the figures and who produced it. The full history of every
 change stays in the Selection History tab of the Sheet.
 
+**One ward at a time.** In View applications and in an institution's list on
+the Selection screen, *Local municipality* and *Ward* are separate columns, and
+their headings are drop-down filters listing the municipalities and wards that
+occur in the list (with how many applicants each). Ward numbers repeat across
+municipalities, so the ward filter works within the chosen municipality (in an
+institution with applicants from one municipality only, the wards are offered
+straight away). "03", "3" and "Ward 3" count as the same ward. Download to Excel
+follows the filter.
+
 **Checking the documents (online and paper alike).** Paper applicants'
 documents are not in the system; they stay in the paper file at the HR office.
 So every applicant is checked the same way, in the **Documents** column of an

@@ -1488,7 +1488,7 @@ function list_(data, user) {
       cell: String(row[col.CellphoneNumber]),
       district: displayDistrict_(String(row[col.District])),
       local: String(row[col.LocalMunicipality]),
-      ward: String(row[col.MunicipalWardNo]),
+      ward: wardOf_(row[col.MunicipalWardNo]),
       facility: String(row[col.NearestFacility]),
       qualification: String(row[col.HighestSchoolLevel]),
       channel: row[col.Channel] === 'Captured' ? 'Captured' : 'Online',
@@ -1503,6 +1503,7 @@ function list_(data, user) {
     ok: true,
     scope: scopeName_(user, district),
     counts: counts,
+    places: f.places,
     total: matches.length,
     offset: offset,
     pageSize: PAGE_SIZE,
@@ -1558,6 +1559,8 @@ function logDownload_(user, scope, data, count) {
     var filters = [];
     if (data.channel === 'Online' || data.channel === 'Captured') filters.push(data.channel + ' only');
     if (String(data.search || '').trim()) filters.push('search "' + String(data.search).trim().slice(0, 60) + '"');
+    if (String(data.local || '').trim()) filters.push(String(data.local).trim());
+    if (String(data.ward || '').trim()) filters.push('ward ' + String(data.ward).split('|').pop());
     sheet.appendRow([new Date(), user.username, safeCell_(user.name), safeCell_(user.district), safeCell_(scope),
       safeCell_(filters.join(', ') || 'none'), count]);
   } catch (err) {
@@ -2158,6 +2161,7 @@ function pool_(data, user) {
   var statusFilter = String(data.status || '');
   var docsFilter = String(data.docs || '');
   var groupFilter = { youth: 1, women: 1, pwd: 1 }[data.group] ? String(data.group) : '';
+  var place = placeFilter_(data);
   var words = String(data.search || '').toLowerCase().replace(/[^a-z0-9 -]/g, ' ').split(/\s+/).filter(String);
 
   var values = readRows_(getSheet_(), ['Reference', 'Name', 'Surname', 'SouthAfricanID', 'DateOfBirth', 'Gender',
@@ -2183,6 +2187,8 @@ function pool_(data, user) {
     counts.all++;
     var key = elsewhere ? 'elsewhere' : (status || 'none');
     counts[key] = (counts[key] || 0) + 1;
+    place.count(row, col);
+    if (!place.keep(row, col)) return;
     if (statusFilter && statusFilter !== key) return;
     if (groupFilter && !targetGroups_(row, col, now)[groupFilter]) return;
     if (docsFilter) {
@@ -2215,7 +2221,7 @@ function pool_(data, user) {
       cell: String(row[col.CellphoneNumber]).replace(/^'/, ''),
       address: String(row[col.CurrentAddress] || '').replace(/^'/, ''),
       district: displayDistrict_(String(row[col.District])),
-      local: String(row[col.LocalMunicipality]), ward: String(row[col.MunicipalWardNo]),
+      local: String(row[col.LocalMunicipality]), ward: wardOf_(row[col.MunicipalWardNo]),
       facility: String(row[col.NearestFacility]),
       qualification: qual, qualificationListed: QUALIFICATIONS.indexOf(qual) !== -1,
       channel: row[col.Channel] === 'Captured' ? 'Captured' : 'Online',
@@ -2240,6 +2246,7 @@ function pool_(data, user) {
     canSelect: !!user.canSelect,
     targets: TARGETS,
     counts: counts,
+    places: place.options(),
     total: rows.length,
     offset: data.all ? 0 : offset,
     pageSize: PAGE_SIZE,
@@ -2507,12 +2514,58 @@ function logDocumentView_(user, ref, applicant, label) {
   } catch (err) { console.error(err); }
 }
 
+/** "Ward 07", "07" or 7 as "7"; anything else as typed. */
+function wardOf_(v) {
+  var w = String(v === undefined || v === null ? '' : v).replace(/^'/, '').replace(/^ward\s*/i, '').trim();
+  return /^\d+$/.test(w) ? String(Number(w)) : w;
+}
+
+/**
+ * Local municipality and ward filters for a list, and the choices for them
+ * (with counts) taken from the rows before these two filters. Wards are only
+ * offered within a local municipality, because ward numbers repeat across
+ * municipalities; their value is "<municipality>|<ward>".
+ */
+function placeFilter_(data) {
+  var local = String(data.local || '').trim(), ward = String(data.ward || '').trim();
+  var locals = {}, wards = {};
+  return {
+    count: function (row, col) {
+      var l = String(row[col.LocalMunicipality] || '').trim() || 'Not recorded';
+      locals[l] = (locals[l] || 0) + 1;
+      var w = wardOf_(row[col.MunicipalWardNo]) || 'Not recorded';
+      var key = l + '|' + w;
+      wards[key] = (wards[key] || 0) + 1;
+    },
+    keep: function (row, col) {
+      var l = String(row[col.LocalMunicipality] || '').trim() || 'Not recorded';
+      if (local && l !== local) return false;
+      if (ward && l + '|' + (wardOf_(row[col.MunicipalWardNo]) || 'Not recorded') !== ward) return false;
+      return true;
+    },
+    options: function () {
+      var lk = Object.keys(locals).sort();
+      var useLocal = local || (lk.length === 1 ? lk[0] : '');
+      var wk = useLocal ? Object.keys(wards).filter(function (k) { return k.split('|')[0] === useLocal; }) : [];
+      wk.sort(function (a, b) {
+        var x = a.split('|')[1], y = b.split('|')[1];
+        return (Number(x) || 1e9) - (Number(y) || 1e9) || (x < y ? -1 : 1);
+      });
+      return {
+        locals: lk.map(function (k) { return [k, locals[k]]; }),
+        wards: wk.map(function (k) { return [k, k.split('|')[1], wards[k]]; }),
+        local: local, ward: ward
+      };
+    }
+  };
+}
+
 /** The applications a staff member may see, newest first, after the filters. */
 function filterApplications_(data, user, names) {
   var sheet = getSheet_();
   var last = sheet.getLastRow();
   var values = names ? readRows_(sheet, names.concat(['District', 'Channel', 'Reference', 'Name', 'Surname',
-    'SouthAfricanID', 'CellphoneNumber', 'LocalMunicipality', 'NearestFacility'])) :
+    'SouthAfricanID', 'CellphoneNumber', 'LocalMunicipality', 'MunicipalWardNo', 'NearestFacility'])) :
     last < 2 ? [] : sheet.getRange(2, 1, last - 1, HEADERS.length).getValues();
   var col = {};
   HEADERS.forEach(function (h, i) { col[h] = i; });
@@ -2531,9 +2584,12 @@ function filterApplications_(data, user, names) {
   }
 
   var counts = { all: inScope.length, online: 0, captured: 0 };
+  var place = placeFilter_(data);
   var matches = inScope.filter(function (row) {
     var rowChannel = row[col.Channel] === 'Captured' ? 'Captured' : 'Online';
     if (rowChannel === 'Captured') counts.captured++; else counts.online++;
+    place.count(row, col);
+    if (!place.keep(row, col)) return false;
     if (channel && rowChannel !== channel) return false;
     if (!words.length) return true;
     var text = [row[col.Reference], row[col.Name], row[col.Surname], row[col.SouthAfricanID],
@@ -2541,7 +2597,7 @@ function filterApplications_(data, user, names) {
     return words.every(function (w) { return text.indexOf(w) !== -1; });
   });
 
-  return { col: col, matches: matches, counts: counts, district: district };
+  return { col: col, matches: matches, counts: counts, district: district, places: place.options() };
 }
 
 /* =====================================================================

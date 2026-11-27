@@ -375,6 +375,9 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 .takes { display: block; margin-top: 2px; color: var(--green-700); font-size: 12px; font-weight: 700; }
 .st.elsewhere { display: block; width: fit-content; max-width: 100%; white-space: normal; margin-bottom: 6px; }
 .st.elsewhere.Selected { background: #7a1610; color: var(--white); }
+.table-wrap th.th-filter { vertical-align: top; }
+.th-filter select { display: block; margin-top: 4px; width: 100%; min-width: 120px; max-width: 200px; padding: 2px 4px; font: inherit; font-size: 12px; font-weight: 600; color: var(--ink); background: var(--white); border: 0; border-radius: 6px; }
+.th-filter select:disabled { color: var(--muted); background: #e6ece7; }
 .sel-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
 .sel-buttons .btn { min-height: 44px; padding: 8px 18px; font-size: 15px; }
 .sel-buttons .btn svg { width: 18px; height: 18px; }
@@ -804,7 +807,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         <thead>
           <tr>
             <th>Reference</th><th>Received</th><th>Applicant</th><th>ID number</th><th>Cellphone</th>
-            <th>Where they live</th><th>Nearest facility</th><th>Qualification</th><th>How</th><th>Documents</th>
+            <th class="th-filter">Local municipality<select id="list-local" aria-label="Show one local municipality"><option value="">All</option></select></th><th class="th-filter">Ward<select id="list-ward" aria-label="Show one ward" disabled><option value="">Pick a municipality</option></select></th><th>Nearest facility</th><th>Qualification</th><th>How</th><th>Documents</th>
           </tr>
         </thead>
         <tbody id="list-body"></tbody>
@@ -1003,7 +1006,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         <table>
           <thead>
             <tr>
-              <th>Reference</th><th>Applicant</th><th>ID number</th><th>Cellphone</th><th>Where they live</th>
+              <th>Reference</th><th>Applicant</th><th>ID number</th><th>Cellphone</th><th class="th-filter">Local municipality<select id="sel-local" aria-label="Show one local municipality"><option value="">All</option></select></th><th class="th-filter">Ward<select id="sel-ward" aria-label="Show one ward" disabled><option value="">Pick a municipality</option></select></th>
               <th>Applied for</th><th>Qualification</th><th>Documents</th><th>Status</th>
             </tr>
           </thead>
@@ -2082,6 +2085,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('list-scope').textContent = '';
     $('list-search').value = '';
     $('list-channel').value = '';
+    resetPlaceFilters($('list-local'), $('list-ward'));
     while ($('list-district').options.length > 1) $('list-district').remove(1);
   }
 
@@ -2089,14 +2093,15 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     var s = session();
     if (!s) return sessionEnded();
     var seq = ++listSeq;
-    var filters = { search: $('list-search').value.trim(), channel: $('list-channel').value, district: $('list-district').value };
+    var filters = { search: $('list-search').value.trim(), channel: $('list-channel').value, district: $('list-district').value,
+      local: $('list-local').value, ward: $('list-ward').value };
     $('list-alert').hidden = true;
     $('list-btn').disabled = true;
     $('list-export').disabled = true;
     $('list-summary').textContent = 'Loading...';
     post({
       action: 'list', token: s.token, offset: offset,
-      search: filters.search, channel: filters.channel, district: filters.district
+      search: filters.search, channel: filters.channel, district: filters.district, local: filters.local, ward: filters.ward
     }).then(function (out) {
       if (seq !== listSeq) return;
       listFilters = filters;
@@ -2105,6 +2110,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       listLoaded = true;
       listOffset = out.offset;
       renderList(out);
+      fillPlaceFilters($('list-local'), $('list-ward'), out.places);
     }).catch(function () {
       if (seq !== listSeq) return;
       $('list-summary').textContent = '';
@@ -2138,7 +2144,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     if (!out.rows.length) {
       var tr = document.createElement('tr');
       var td = document.createElement('td');
-      td.colSpan = 10;
+      td.colSpan = 11;
       td.className = 'empty';
       td.textContent = c.all ? 'No applications match your search.' : 'There are no applications yet.';
       tr.appendChild(td);
@@ -2151,7 +2157,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       addCell(tr, r.name + ' ' + r.surname, r.gender);
       addCell(tr, r.id, '', true);
       addCell(tr, r.cell, '', true);
-      addCell(tr, r.local, (out.scope === r.district ? '' : r.district + ', ') + 'Ward ' + r.ward);
+      addCell(tr, shortLocal(r.local), out.scope === r.district ? '' : r.district);
+      addCell(tr, r.ward, '', true);
       addCell(tr, r.facility);
       addCell(tr, r.qualification);
       var how = addCell(tr, '', r.channel === 'Captured' ? r.capturedBy : '');
@@ -2174,6 +2181,34 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('list-page').textContent = out.total ? first + ' to ' + lastShown + ' of ' + out.total : '';
     $('list-prev').disabled = out.offset === 0;
     $('list-next').disabled = lastShown >= out.total;
+  }
+
+  /* ---------- local municipality and ward filters in table headings ---------- */
+  function fillPlaceFilters(localSel, wardSel, places) {
+    if (!places) return;
+    while (localSel.options.length > 1) localSel.remove(1);
+    (places.locals || []).forEach(function (l) {
+      localSel.add(new Option(shortLocal(l[0]) + ' (' + num(l[1]) + ')', l[0]));
+    });
+    localSel.value = places.local || '';
+    while (wardSel.options.length) wardSel.remove(0);
+    var wards = places.wards || [];
+    if (wards.length) {
+      wardSel.add(new Option('All wards', ''));
+      wards.forEach(function (w) { wardSel.add(new Option('Ward ' + w[1] + ' (' + num(w[2]) + ')', w[0])); });
+      wardSel.value = places.ward || '';
+      wardSel.disabled = false;
+    } else {
+      wardSel.add(new Option(localSel.value ? 'No wards' : 'Pick a municipality', ''));
+      wardSel.disabled = true;
+    }
+  }
+  function resetPlaceFilters(localSel, wardSel) {
+    while (localSel.options.length > 1) localSel.remove(1);
+    localSel.value = '';
+    while (wardSel.options.length) wardSel.remove(0);
+    wardSel.add(new Option('Pick a municipality', ''));
+    wardSel.disabled = true;
   }
 
   /* ---------- supporting documents ---------- */
@@ -2349,7 +2384,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     // Download exactly what the list is showing, even if the search box was changed since.
     post({
       action: 'export', token: s.token,
-      search: listFilters.search || '', channel: listFilters.channel || '', district: listFilters.district || ''
+      search: listFilters.search || '', channel: listFilters.channel || '', district: listFilters.district || '',
+      local: listFilters.local || '', ward: listFilters.ward || ''
     }).then(function (out) {
       if (out && out.error === 'auth') return sessionEnded();
       if (!out || !out.ok) {
@@ -2381,7 +2417,9 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 
   $('list-form').addEventListener('submit', function (e) { e.preventDefault(); loadList(0); });
   $('list-channel').addEventListener('change', function () { loadList(0); });
-  $('list-district').addEventListener('change', function () { loadList(0); });
+  $('list-district').addEventListener('change', function () { resetPlaceFilters($('list-local'), $('list-ward')); loadList(0); });
+  $('list-local').addEventListener('change', function () { $('list-ward').value = ''; loadList(0); });
+  $('list-ward').addEventListener('change', function () { loadList(0); });
   $('list-prev').addEventListener('click', function () { loadList(Math.max(0, listOffset - 50)); });
   $('list-next').addEventListener('click', function () { loadList(listOffset + 50); });
 
@@ -3545,6 +3583,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('sel-filter').value = '';
     $('sel-docs').value = '';
     $('sel-group').value = '';
+    resetPlaceFilters($('sel-local'), $('sel-ward'));
     $('sel-from').value = inst.onForm || inst.takesFrom ? 'institution' : 'district';
     $('sel-pool-body').innerHTML = '';
     renderInstHead();
@@ -3596,7 +3635,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 
   function poolFilters() {
     return { search: $('sel-search').value.trim(), from: $('sel-from').value, status: $('sel-filter').value, docs: $('sel-docs').value,
-      group: $('sel-group').value };
+      group: $('sel-group').value, local: $('sel-local').value, ward: $('sel-ward').value };
   }
 
   function loadPool(offset) {
@@ -3610,7 +3649,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('sel-pull').disabled = true;
     $('sel-pool-summary').textContent = 'Loading...';
     post({ action: 'pool', token: s.token, institution: selInst.id, offset: offset, search: f.search, from: f.from, status: f.status,
-      docs: f.docs, group: f.group })
+      docs: f.docs, group: f.group, local: f.local, ward: f.ward })
       .then(function (out) {
         if (seq !== poolSeq) return;
         if (out && out.error === 'auth') return sessionEnded();
@@ -3624,6 +3663,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         selCanChange = !!out.canSelect;
         $('sel-readonly').hidden = selCanChange;
         renderPool(out);
+        fillPlaceFilters($('sel-local'), $('sel-ward'), out.places);
       }).catch(function () {
         if (seq !== poolSeq) return;
         $('sel-pool-summary').textContent = '';
@@ -3645,7 +3685,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     if (!out.rows.length) {
       var tr0 = document.createElement('tr');
       var td0 = document.createElement('td');
-      td0.colSpan = 9;
+      td0.colSpan = 10;
       td0.className = 'empty';
       td0.textContent = c.all ? 'Nobody matches the search or status.' : 'Nobody applied for this institution yet. Choose "Everyone living in the district".';
       tr0.appendChild(td0);
@@ -3676,7 +3716,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     }
     addCell(tr, r.id, '', true);
     addCell(tr, r.cell, '', true);
-    addCell(tr, r.local.replace(/ (Local|Metropolitan) Municipality$/, ''), 'Ward ' + r.ward);
+    addCell(tr, shortLocal(r.local));
+    addCell(tr, r.ward, '', true);
     addCell(tr, r.facility);
     var q = addCell(tr, r.qualification);
     if (!r.qualificationListed) {
@@ -3991,7 +4032,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     selAlert('');
     var f = selPoolFilters;
     post({ action: 'pool', token: s.token, institution: selInst.id, all: true, search: f.search || '', from: f.from || '', status: f.status || '',
-      docs: f.docs || '' })
+      docs: f.docs || '', local: f.local || '', ward: f.ward || '' })
       .then(function (out) {
         if (out && out.error === 'auth') return sessionEnded();
         if (!out || !out.ok) { selAlert((out && out.message) || 'The download could not be prepared.'); return; }
@@ -4028,12 +4069,14 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   $('sel-export').addEventListener('click', exportSel);
   $('sel-back').addEventListener('click', backToOverview);
   $('sel-pool-form').addEventListener('submit', function (e) { e.preventDefault(); loadPool(0); });
-  $('sel-from').addEventListener('change', function () { loadPool(0); });
+  $('sel-from').addEventListener('change', function () { resetPlaceFilters($('sel-local'), $('sel-ward')); loadPool(0); });
   $('sel-filter').addEventListener('change', function () { loadPool(0); });
   $('sel-prev').addEventListener('click', function () { loadPool(Math.max(0, selOffset - 50)); });
   $('sel-next').addEventListener('click', function () { loadPool(selOffset + 50); });
   $('sel-pool-export').addEventListener('click', exportPool);
   $('sel-docs').addEventListener('change', function () { loadPool(0); });
+  $('sel-local').addEventListener('change', function () { $('sel-ward').value = ''; loadPool(0); });
+  $('sel-ward').addEventListener('change', function () { loadPool(0); });
   $('sel-group').addEventListener('change', function () { loadPool(0); });
   $('sel-pull').addEventListener('click', exportPull);
 
