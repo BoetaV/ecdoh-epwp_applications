@@ -207,16 +207,31 @@ every level and stage:
 - **Meters at the top** for the province (all districts) or the district:
   applications, shortlisted and selected, each against its target (the black
   line). Green means met, orange means below target. Under each meter: how many
-  of the posts must go to that group (for example "At least 367 youth among the
-  611 posts"), how many are selected so far, and how many more are needed among
-  the open posts.
+  of the posts must go to that group, how many are selected so far, and how many
+  more are needed among the open posts.
 - **National targets per district** (provincial view): the shares among the
   applications, the shortlist and the selected for each district.
 - **Per institution**: the *Targets* column shows the shortlist and the selected
   (Y youth, W women, D disability), and the institution's own page has the same
   meters. It warns when a target can no longer be met with the posts still open.
-  The 2% for persons with disabilities is tracked at district and province level,
-  because a 3-post clinic cannot meet it on its own.
+- **How many to shortlist.** HR shortlists **3 people per post**. For each
+  institution, the people each target needs among its posts are worked out and
+  rounded up to whole people, then multiplied by 3. For example, 6 posts:
+  at least 4 youth (60%), 4 women (55%) and 1 person with a disability (2%) must
+  be selected, so shortlist 18 people with at least 12 youth, 12 women and
+  3 persons with disabilities. A district and the province add up their
+  institutions. These numbers are shown:
+  - in a box at the top of the targets (total and per group, with how many are on
+    the shortlist and how many to go; orange until reached, green once reached);
+  - as a *To shortlist* bar in each meter (for example "2 of 12");
+  - on the *On the shortlist* card (for example "5 of 18");
+  - in the overview's *Targets* column and the district table (Y 2/12, W 3/12,
+    D 0/3);
+  - in the audit PDF (*To shortlist* column) and the Excel download of the
+    institutions.
+
+  *On the shortlist* counts everyone still shortlisted, on reserve or selected,
+  so selecting someone does not lower it.
 - **Target group filter** in the *Applicant* heading of an institution's list
   (youth, women, persons with disabilities, also men and older than 35), and Youth / Woman / PwD tags next to each applicant, to help
   shortlist towards the targets.

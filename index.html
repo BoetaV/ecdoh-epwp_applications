@@ -341,6 +341,17 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 .tm-mark { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
 .tm-val { white-space: nowrap; font-weight: 700; font-variant-numeric: tabular-nums; }
 .tm-need { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
+.tm-row.tm-count { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); }
+.tplan { margin-bottom: 14px; padding: 12px 14px; border-radius: 10px; background: var(--green-50); border: 1px solid var(--line); }
+.tplan h3 { margin: 0 0 10px; font-size: 16px; color: var(--green-900); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; }
+.tplan h3 span { font-weight: 600; color: var(--muted); font-size: 13px; }
+.tplan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.tplan-cell { background: var(--white); border: 1px solid var(--line); border-left: 4px solid #b26a00; border-radius: 8px; padding: 8px 10px; }
+.tplan-cell.met { border-left-color: var(--green-700); }
+.tplan-cell small { display: block; font-size: 12px; font-weight: 700; color: var(--muted); }
+.tplan-cell strong { display: block; font-size: 24px; color: var(--green-900); font-variant-numeric: tabular-nums; }
+.tplan-cell span { display: block; font-size: 13px; font-weight: 700; }
+.tplan-cell em { display: block; margin-top: 2px; font-style: normal; font-size: 11px; color: var(--muted); }
 .tm-need.bad { color: #7a1610; font-weight: 700; }
 .tm-reason { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: #fff7e8; border: 1px solid #f0d49a; font-size: 13px; }
 .tm-reason b { display: block; font-size: 12px; color: #6b4200; }
@@ -3183,6 +3194,9 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       (out.totalPosts && out.totalPosts !== posts + kept ? '. Should be ' + num(out.totalPosts) + ': check the Allocations tab' : '')));
     var appsTotal = out.applicationsTotal !== undefined ? out.applicationsTotal : apps + otherApps;
     kp.appendChild(kpi('Applications', num(appsTotal), perPost(appsTotal, posts) + ' per post'));
+    var sp = shortlistPlan(out.institutions);
+    kp.appendChild(kpi('On the shortlist', num(sum(out.institutions, 'shortlisted') + selected + sum(out.institutions, 'reserve')) + ' of ' + num(sp.shortlist),
+      'At least ' + num(sp.sl.youth) + ' youth, ' + num(sp.sl.women) + ' women, ' + num(sp.sl.pwd) + ' with a disability'));
     kp.appendChild(kpi('Selected', num(selected), pct(selected, posts) + ' of the posts'));
     kp.appendChild(kpi('Still open', num(sum(out.institutions, 'open')), num(sum(out.institutions, 'reserve')) + ' on reserve'));
     $('sel-status').textContent = find ? list.length + ' of ' + out.institutions.length + ' institutions match "' + $('sel-find').value.trim() + '".' : '';
@@ -3238,7 +3252,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       else open.textContent = num(i.open);
       var tg = document.createElement('td');
       if (i.groups) {
-        tg.appendChild(targetChips('Shortlist', i.groups.Shortlisted));
+        tg.appendChild(targetChips('Shortlist', onShortlist(i.groups), shortlistPlan([i])));
         tg.appendChild(targetChips('Selected', i.groups.Selected));
         var rk = Object.keys(i.reasons || {});
         if (rk.length) {
@@ -3300,6 +3314,67 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   var DEFAULT_TARGETS = { youth: 60, women: 55, pwd: 2 };
   function targetsOf(out) { return (out && out.targets) || (selData && selData.targets) || DEFAULT_TARGETS; }
   function share(g, k) { return g && g.n ? g[k] / g.n * 100 : null; }
+  // HR shortlists 3 people per post. Per institution: the people each target
+  // needs among the posts (rounded up), times 3, is the least to shortlist of
+  // that group. A district or the province adds up its institutions.
+  var SHORTLIST_TIMES = 3;
+  var TARGET_NOUN = { youth: 'youth', women: 'women', pwd: 'persons with disabilities' };
+  function needOf(posts, key) { return Math.ceil((posts || 0) * targetsOf()[key] / 100); }
+  // Everyone who made the shortlist: still shortlisted, on reserve or selected.
+  function onShortlist(groups) { return sumGroups(groups ? [groups.Shortlisted, groups.Selected, groups.Reserve] : []); }
+  function shortlistPlan(insts) {
+    var plan = { posts: 0, shortlist: 0, sel: { youth: 0, women: 0, pwd: 0 }, sl: { youth: 0, women: 0, pwd: 0 } };
+    insts.forEach(function (i) {
+      if (!i || !i.posts) return;
+      plan.posts += i.posts;
+      plan.shortlist += SHORTLIST_TIMES * i.posts;
+      TARGET_LIST.forEach(function (k) {
+        var n = needOf(i.posts, k[0]);
+        plan.sel[k[0]] += n;
+        plan.sl[k[0]] += SHORTLIST_TIMES * n;
+      });
+    });
+    return plan;
+  }
+  // "Shortlist 18 (3 x 6 posts): at least 12 youth, 12 women, 3 persons with disabilities"
+  function planText(plan) {
+    return 'Shortlist ' + num(plan.shortlist) + ' (' + SHORTLIST_TIMES + ' \u00d7 ' + num(plan.posts) + ' posts): at least ' +
+      num(plan.sl.youth) + ' youth, ' + num(plan.sl.women) + ' women, ' + num(plan.sl.pwd) + ' persons with disabilities';
+  }
+  // The box above the meters: how many to shortlist, in total and per target group.
+  function planBox(plan, shortlistedG) {
+    var box = document.createElement('div');
+    box.className = 'tplan';
+    var h = document.createElement('h3');
+    h.textContent = 'Shortlist ' + num(plan.shortlist) + ' people';
+    var sub = document.createElement('span');
+    sub.textContent = SHORTLIST_TIMES + ' per post \u00d7 ' + num(plan.posts) + ' post' + (plan.posts === 1 ? '' : 's');
+    h.appendChild(sub);
+    box.appendChild(h);
+    var have = shortlistedG || { n: 0, youth: 0, women: 0, pwd: 0 };
+    var grid = document.createElement('div');
+    grid.className = 'tplan-grid';
+    [['n', 'In total', plan.shortlist, '']].concat(TARGET_LIST.map(function (k) {
+      return [k[0], k[1], plan.sl[k[0]], SHORTLIST_TIMES + ' \u00d7 ' + num(plan.sel[k[0]]) + ' needed among the posts (' + targetsOf()[k[0]] + '%)'];
+    })).forEach(function (x) {
+      var got = have[x[0]] || 0;
+      var cell = document.createElement('div');
+      cell.className = 'tplan-cell' + (got >= x[2] ? ' met' : '');
+      var l = document.createElement('small');
+      l.textContent = x[0] === 'n' ? x[1] : 'At least: ' + x[1].toLowerCase();
+      var v = document.createElement('strong');
+      v.textContent = num(x[2]);
+      var n = document.createElement('span');
+      n.textContent = num(got) + ' on the shortlist' + (got >= x[2] ? ' \u2713' : ', ' + num(x[2] - got) + ' to go');
+      cell.appendChild(l);
+      cell.appendChild(v);
+      cell.appendChild(n);
+      if (x[3]) { var f = document.createElement('em'); f.textContent = x[3]; cell.appendChild(f); }
+      grid.appendChild(cell);
+    });
+    box.appendChild(grid);
+    return box;
+  }
   function pct1(v) { return (Math.round(v * 10) / 10).toFixed(1) + '%'; }
   function sumGroups(list) {
     var t = { n: 0, youth: 0, women: 0, pwd: 0 };
@@ -3319,7 +3394,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     return span;
   }
   // "Y 64% W 58% D 2%" with met / below colouring, for tables.
-  function targetChips(label, g) {
+  function targetChips(label, g, needSl) {
     var t = targetsOf();
     var line = document.createElement('div');
     line.className = 'tchips';
@@ -3327,6 +3402,20 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       var b = document.createElement('b');
       b.textContent = label;
       line.appendChild(b);
+    }
+    if (needSl) {
+      // Shortlist: how many of each group, against how many must be shortlisted.
+      var have = g || { n: 0, youth: 0, women: 0, pwd: 0 };
+      [['n', 'All'], ['youth', 'Y'], ['women', 'W'], ['pwd', 'D']].forEach(function (k) {
+        var need = k[0] === 'n' ? needSl.shortlist : needSl.sl[k[0]];
+        var span = document.createElement('span');
+        span.className = (have[k[0]] || 0) >= need ? 'tok' : 'tbad';
+        span.textContent = k[1] + ' ' + num(have[k[0]] || 0) + '/' + num(need);
+        span.title = (k[0] === 'n' ? 'On the shortlist' : TARGET_LIST.filter(function (x) { return x[0] === k[0]; })[0][1] + ' on the shortlist') +
+          ': ' + (have[k[0]] || 0) + ', at least ' + need + ' to shortlist (shortlisted, reserve and selected count)';
+        line.appendChild(span);
+      });
+      return line;
     }
     if (!g || !g.n) {
       var none = document.createElement('span');
@@ -3347,7 +3436,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     return line;
   }
   // Three meters (youth, women, disability), each with a row per stage. posts: for "needed" counts.
-  function renderTargets(box, title, note, stages, posts, selectedG, perInstitution) {
+  function renderTargets(box, title, note, stages, posts, selectedG, perInstitution, plan, shortlistedG) {
     var t = targetsOf();
     box.innerHTML = '';
     var h = document.createElement('h2');
@@ -3357,6 +3446,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     p.className = 'muted';
     p.textContent = note;
     box.appendChild(p);
+    if (plan && plan.posts) box.appendChild(planBox(plan, shortlistedG));
     var grid = document.createElement('div');
     grid.className = 'tgrid';
     TARGET_LIST.forEach(function (k) {
@@ -3397,29 +3487,56 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         row.appendChild(val);
         card.appendChild(row);
       });
+      if (plan && plan.posts) {
+        // Shortlist count: how many of this group are shortlisted, against how many must be.
+        var slNeed = plan.sl[key], slHave = shortlistedG ? shortlistedG[key] || 0 : 0;
+        var row2 = document.createElement('div');
+        row2.className = 'tm-row tm-count';
+        var l2 = document.createElement('span');
+        l2.textContent = 'To shortlist';
+        var track2 = document.createElement('div');
+        track2.className = 'tm-track';
+        track2.setAttribute('role', 'img');
+        track2.setAttribute('aria-label', 'On the shortlist ' + slHave + ' of at least ' + slNeed + ' ' + TARGET_NOUN[key]);
+        var fill2 = document.createElement('div');
+        fill2.className = 'tm-fill' + (slHave < slNeed ? ' below' : '');
+        fill2.style.width = (slNeed ? Math.min(100, slHave / slNeed * 100) : 100) + '%';
+        track2.appendChild(fill2);
+        var val2 = document.createElement('span');
+        val2.className = 'tm-val';
+        val2.textContent = num(slHave) + ' of ' + num(slNeed) + ' ';
+        var tag = document.createElement('span');
+        tag.className = slHave >= slNeed ? 'tok' : 'tbad';
+        tag.textContent = slHave >= slNeed ? '\u2713 Met' : num(slNeed - slHave) + ' to go';
+        val2.appendChild(tag);
+        row2.appendChild(l2);
+        row2.appendChild(track2);
+        row2.appendChild(val2);
+        card.appendChild(row2);
+      }
       if (posts) {
-        var noun = { youth: 'youth', women: 'women', pwd: 'persons with disabilities' }[key];
-        var need = Math.ceil(posts * target / 100);
+        var need = plan && plan.posts ? plan.sel[key] : Math.ceil(posts * target / 100);
+        var nounOf = function (x) { return key === 'pwd' && x === 1 ? 'person with a disability' : TARGET_NOUN[key]; };
         var have = selectedG ? selectedG[key] : 0;
         var open = posts - (selectedG ? selectedG.n : 0);
         var n = document.createElement('p');
         n.className = 'tm-need';
-        if (key === 'pwd' && perInstitution) {
-          n.textContent = 'Tracked at district and province level (2% of all posts). ' + have + ' ' + noun + ' selected here.';
-        } else if (have >= need) {
-          n.textContent = 'At least ' + need + ' ' + noun + ' among the ' + posts + ' posts. Reached: ' + have + ' selected.';
+        var slLine = plan && plan.posts ? ' Shortlist at least ' + num(plan.sl[key]) + ' ' + nounOf(plan.sl[key]) + ' (' + SHORTLIST_TIMES + ' \u00d7 ' + num(need) + ').' : '';
+        if (have >= need) {
+          n.textContent = 'At least ' + need + ' ' + nounOf(need) + ' among the ' + posts + ' posts. Reached: ' + have + ' selected.';
         } else if (need - have > open) {
           n.className = 'tm-need bad';
-          n.textContent = 'At least ' + need + ' ' + noun + ' needed among the ' + posts + ' posts; ' + have + ' selected and only ' + open +
+          n.textContent = 'At least ' + need + ' ' + nounOf(need) + ' needed among the ' + posts + ' posts; ' + have + ' selected and only ' + open +
             ' posts still open. The target can no longer be met here.';
         } else {
-          n.textContent = 'At least ' + need + ' ' + noun + ' among the ' + posts + ' posts. ' + have + ' ' + noun + ' selected so far; ' +
+          n.textContent = 'At least ' + need + ' ' + nounOf(need) + ' among the ' + posts + ' posts. ' + have + ' ' + nounOf(have) + ' selected so far; ' +
             (need - have) + ' more needed among the ' + open + ' open posts.';
         }
+        n.textContent += slLine;
         card.appendChild(n);
         if (perInstitution) {
           var sel0 = selectedG && selectedG.n ? share(selectedG, key) : null;
-          var below = (sel0 !== null && sel0 < target) || (!(key === 'pwd') && need - have > open);
+          var below = (sel0 !== null && sel0 < target) || need - have > open;
           card.appendChild(reasonBlock(key, below));
         }
       }
@@ -3517,17 +3634,22 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     var box = $('sel-targets');
     box.hidden = !out.applicationGroups;
     if (out.applicationGroups) {
+      var plan = shortlistPlan(out.institutions);
       renderTargets(box, 'EPWP national targets: ' + out.scope,
-        'Applications, shortlist and selected compared with the national targets (the black line). Green: met. Orange: below target.',
-        [['Applications', out.applicationGroups], ['Shortlisted', shortlisted], ['Selected', selected]], allPosts, selected, false);
+        'Applications, shortlist and selected compared with the national targets (the black line). Green: met. Orange: below target. ' +
+        'The numbers to shortlist add up the institutions: at each, ' + SHORTLIST_TIMES + ' times the people each target needs among its posts.',
+        [['Applications', out.applicationGroups], ['Shortlisted', shortlisted], ['Selected', selected]], plan.posts, selected, false, plan,
+        sumGroups(out.institutions.map(function (i) { return onShortlist(i.groups); })));
     }
     // Per district, for the whole province.
     var wrap = $('sel-dtargets-wrap'), body = $('sel-dtargets');
     body.innerHTML = '';
     var byD = {};
     out.institutions.forEach(function (i) {
-      var d = byD[i.district] = byD[i.district] || { posts: 0, sl: [], se: [] };
+      var d = byD[i.district] = byD[i.district] || { posts: 0, sl: [], se: [], insts: [], on: [] };
       d.posts += i.posts;
+      d.insts.push(i);
+      d.on.push(onShortlist(i.groups));
       if (i.groups) { d.sl.push(i.groups.Shortlisted); d.se.push(i.groups.Selected); }
     });
     var names = Object.keys(byD).sort();
@@ -3539,7 +3661,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       addCell(tr, name);
       numCell(tr, num(d.posts), true);
       var a = document.createElement('td'); a.appendChild(targetChips('', (out.applicationGroupsByDistrict || {})[name])); tr.appendChild(a);
-      var b = document.createElement('td'); b.appendChild(targetChips('', sumGroups(d.sl))); tr.appendChild(b);
+      var b = document.createElement('td'); b.appendChild(targetChips('', sumGroups(d.on), shortlistPlan(d.insts))); tr.appendChild(b);
       var c = document.createElement('td'); c.appendChild(targetChips('', sumGroups(d.se))); tr.appendChild(c);
       body.appendChild(tr);
     });
@@ -3552,7 +3674,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     var apps = { n: i.applications, youth: i.youth, women: i.women, pwd: i.disabled };
     renderTargets(box, 'EPWP national targets: ' + i.name,
       'Use these while shortlisting and selecting, so that the people chosen meet the national targets.',
-      [['Applications', apps], ['Shortlisted', i.groups.Shortlisted], ['Selected', i.groups.Selected]], i.posts, i.groups.Selected, true);
+      [['Applications', apps], ['Shortlisted', i.groups.Shortlisted], ['Selected', i.groups.Selected]], i.posts, i.groups.Selected, true,
+      shortlistPlan([i]), onShortlist(i.groups));
   }
 
   function downloadBlob(blob, name) {
@@ -3576,7 +3699,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         (i.sharesWith || []).join(', ')].concat(groupCols(i.groups && i.groups.Shortlisted), groupCols(i.groups && i.groups.Selected),
         [Object.keys(i.reasons || {}).map(function (k) {
           return { youth: 'Youth', women: 'Women', pwd: 'Disability' }[k] + ': ' + i.reasons[k].reason;
-        }).join(' | ')]);
+        }).join(' | ')], (function (pl) { return [pl.shortlist, pl.sl.youth, pl.sl.women, pl.sl.pwd]; })(shortlistPlan([i])));
     }).concat((out.reserved || []).map(function (r) {
       return [r.district, 'Reserved for further allocation' + (r.removed ? ' (duplicate line "' + r.removed + '" removed)' : ''),
         r.allocatedTo ? 'Allocated to ' + r.allocatedTo : '', r.allocatedTo ? 0 : r.posts, '', '', '', '', '', '', '', '', '', '', '', '-', ''];
@@ -3591,8 +3714,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         'Posts still open', 'Takes applications from', 'Shares applicants with',
         'Shortlisted: youth', 'Shortlisted: youth %', 'Shortlisted: women', 'Shortlisted: women %', 'Shortlisted: with a disability', 'Shortlisted: disability %',
         'Selected: youth', 'Selected: youth %', 'Selected: women', 'Selected: women %', 'Selected: with a disability', 'Selected: disability %',
-        'Reasons targets not met'],
-      numeric: [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        'Reasons targets not met', 'To shortlist (3 per post)', 'To shortlist: youth', 'To shortlist: women', 'To shortlist: with a disability'],
+      numeric: [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1],
       rows: rows.map(function (r) { return r.map(String); })
     }), 'EPWP_Posts_and_applications_' + fileSafe(out.scope) + '_' + todayIso() + '.xlsx');
   }
@@ -3618,7 +3741,9 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     var kp = $('sel-inst-kpis');
     kp.innerHTML = '';
     kp.appendChild(kpi('Posts', num(i.posts), perPost(i.applications, i.posts) + ' applicants per post'));
-    kp.appendChild(kpi('Shortlisted', num(i.shortlisted), num(i.applications) + ' applied for this institution'));
+    var ip = shortlistPlan([i]);
+    kp.appendChild(kpi('On the shortlist', num(i.shortlisted + i.selected + i.reserve) + ' of ' + num(ip.shortlist),
+      'At least ' + num(ip.sl.youth) + ' youth, ' + num(ip.sl.women) + ' women, ' + num(ip.sl.pwd) + ' with a disability'));
     kp.appendChild(kpi('Selected', num(i.selected), i.posts && !i.open ? 'All posts filled' : num(i.open) + ' still open'));
     kp.appendChild(kpi('Reserve', num(i.reserve), 'In case someone declines'));
     if (i.active !== undefined) {
@@ -4273,15 +4398,21 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   function metColour(ri, ci, v) { return v === 'Met' ? '#0a6b3d' : v === 'Below target' ? '#b26a00' : null; }
 
   // The national targets as a table: one row per target, columns per stage.
-  function targetTable(r, apps, shortlisted, selected, posts) {
+  function targetTable(r, apps, shortlisted, selected, posts, plan, onSl) {
+    onSl = onSl || shortlisted;
     var t = targetsOf();
     r.table([['Target', 19], ['Required', 8, 'right'], ['Applications', 11, 'right'], ['Shortlisted', 10, 'right'],
-      ['Selected', 9, 'right'], ['Status', 12], ['Needed among the posts', 31]],
+      ['Selected', 9, 'right'], ['Status', 12], ['To shortlist', 12, 'right'], ['Needed among the posts', 19]],
       TARGET_LIST.map(function (k) {
-        var key = k[0], need = Math.ceil(posts * t[key] / 100), have = selected[key];
+        var key = k[0], need = plan ? plan.sel[key] : Math.ceil(posts * t[key] / 100), have = selected[key];
         return [k[1], t[key] + '%', pctOf(apps, key), pctOf(shortlisted, key), pctOf(selected, key), metText(selected, key, t),
-          posts ? 'At least ' + need + ' of ' + posts + '; ' + have + ' selected' : '-'];
+          plan ? (onSl[key] || 0) + ' of ' + plan.sl[key] : '-',
+          posts ? need + ' of ' + posts + '; ' + have + ' selected' : '-'];
       }), function (ri, ci, v) { return ci === 5 ? metColour(ri, ci, v) : null; });
+    if (plan && plan.posts) {
+      r.para(planText(plan) + ' (' + SHORTLIST_TIMES + ' times the people each target needs among the posts of each institution). ' +
+        'On the shortlist so far (shortlisted, reserve or selected): ' + num(onSl.n || 0) + '.', 8, r.C.muted);
+    }
   }
 
   function controlsSection(r) {
@@ -4343,7 +4474,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 
     r.heading('2. EPWP national targets', 'Targets: ' + t.youth + '% youth (18 to 35), ' + t.women + '% women, ' + t.pwd +
       '% persons with disabilities. Shares of the applications, the shortlist and the selected.');
-    targetTable(r, out.applicationGroups || { n: 0, youth: 0, women: 0, pwd: 0 }, shortlisted, selected, posts);
+    targetTable(r, out.applicationGroups || { n: 0, youth: 0, women: 0, pwd: 0 }, shortlisted, selected, posts, shortlistPlan(insts),
+      sumGroups(insts.map(function (i) { return onShortlist(i.groups); })));
 
     var byD = {};
     insts.forEach(function (i) {
@@ -4407,8 +4539,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       ['Documents verified', (i.verified || 0) + ' of ' + (i.active || 0), 'Of everyone shortlisted or chosen']
     ]);
     r.heading('2. EPWP national targets', 'Targets: ' + t.youth + '% youth (18 to 35), ' + t.women + '% women, ' + t.pwd +
-      '% persons with disabilities (the 2% is tracked at district and province level).');
-    targetTable(r, apps, g.Shortlisted || { n: 0 }, g.Selected || { n: 0, youth: 0, women: 0, pwd: 0 }, i.posts);
+      '% persons with disabilities, each rounded up to whole people for the posts here.');
+    targetTable(r, apps, g.Shortlisted || { n: 0 }, g.Selected || { n: 0, youth: 0, women: 0, pwd: 0 }, i.posts, shortlistPlan([i]), onShortlist(g));
     var reasons = reasonRows([i]);
     if (reasons.length) {
       r.heading('3. Reasons targets were not met');
