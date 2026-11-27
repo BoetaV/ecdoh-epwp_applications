@@ -2160,9 +2160,20 @@ function pool_(data, user) {
   var docs = documentChecks_();
   var statusFilter = String(data.status || '');
   var docsFilter = String(data.docs || '');
-  var groupFilter = { youth: 1, women: 1, pwd: 1 }[data.group] ? String(data.group) : '';
+  var groupFilter = { youth: 1, older: 1, women: 1, men: 1, pwd: 1 }[data.group] ? String(data.group) : '';
   var place = placeFilter_(data);
   var words = String(data.search || '').toLowerCase().replace(/[^a-z0-9 -]/g, ' ').split(/\s+/).filter(String);
+  // Filters in the column headings: how applied, ID and cellphone (part of the
+  // number), the facility applied for and the qualification.
+  var channelFilter = { Online: 1, Captured: 1 }[data.channel] ? String(data.channel) : '';
+  var digits = function (v) { return String(v === undefined || v === null ? '' : v).replace(/\D/g, ''); };
+  var idFilter = digits(data.idText), cellFilter = digits(data.cellText);
+  if (/^\s*\+\s*27/.test(String(data.cellText || ''))) cellFilter = cellFilter.slice(2);   // +27 82 ... is 082 ...
+  else if (cellFilter.charAt(0) === '0') cellFilter = cellFilter.slice(1);
+  var facilityFilter = String(data.facility || '');
+  var qualFilter = String(data.qual || '');
+  var facilities = {}, quals = {};
+  var tally = function (o, k) { o[k] = (o[k] || 0) + 1; };
 
   var values = readRows_(getSheet_(), ['Reference', 'Name', 'Surname', 'SouthAfricanID', 'DateOfBirth', 'Gender',
     'DisabilityStatus', 'CurrentAddress', 'CellphoneNumber', 'District', 'LocalMunicipality', 'NearestFacility', 'MunicipalWardNo',
@@ -2188,9 +2199,24 @@ function pool_(data, user) {
     var key = elsewhere ? 'elsewhere' : (status || 'none');
     counts[key] = (counts[key] || 0) + 1;
     place.count(row, col);
+    var fac = String(row[col.NearestFacility] || '').trim() || 'Not recorded';
+    var qual = String(row[col.HighestSchoolLevel] || '').trim() || 'Not recorded';
+    tally(facilities, fac);
+    tally(quals, qual);
     if (!place.keep(row, col)) return;
     if (statusFilter && statusFilter !== key) return;
-    if (groupFilter && !targetGroups_(row, col, now)[groupFilter]) return;
+    if (groupFilter) {
+      var g = targetGroups_(row, col, now);
+      var inGroup = groupFilter === 'men' ? row[col.Gender] === 'Male'
+        : groupFilter === 'older' ? applicantAge_(row, col, now) !== null && !g.youth
+        : g[groupFilter];
+      if (!inGroup) return;
+    }
+    if (channelFilter && (row[col.Channel] === 'Captured' ? 'Captured' : 'Online') !== channelFilter) return;
+    if (idFilter && digits(row[col.SouthAfricanID]).indexOf(idFilter) === -1) return;
+    if (cellFilter && digits(row[col.CellphoneNumber]).indexOf(cellFilter) === -1) return;
+    if (facilityFilter && fac !== facilityFilter) return;
+    if (qualFilter && (qualFilter === '__unlisted' ? QUALIFICATIONS.indexOf(qual) !== -1 : qual !== qualFilter)) return;
     if (docsFilter) {
       var d = docs[ref];
       var docKey = docsVerified_(d) ? 'verified' : d && (d.id === 'Missing' || d.results === 'Missing') ? 'missing' : 'unverified';
@@ -2247,6 +2273,13 @@ function pool_(data, user) {
     targets: TARGETS,
     counts: counts,
     places: place.options(),
+    columns: {
+      facilities: Object.keys(facilities).sort().map(function (k) { return [k, facilities[k]]; }),
+      qualifications: Object.keys(quals).sort(function (a, b) {
+        var x = QUALIFICATIONS.indexOf(a), y = QUALIFICATIONS.indexOf(b);
+        return (x === -1 ? 99 : x) - (y === -1 ? 99 : y) || (a < b ? -1 : 1);
+      }).map(function (k) { return [k, quals[k], QUALIFICATIONS.indexOf(k) !== -1]; })
+    },
     total: rows.length,
     offset: data.all ? 0 : offset,
     pageSize: PAGE_SIZE,

@@ -378,6 +378,12 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 .table-wrap th.th-filter { vertical-align: top; }
 .th-filter select { display: block; margin-top: 4px; width: 100%; min-width: 120px; max-width: 200px; padding: 2px 4px; font: inherit; font-size: 12px; font-weight: 600; color: var(--ink); background: var(--white); border: 0; border-radius: 6px; }
 .th-filter select:disabled { color: var(--muted); background: #e6ece7; }
+.th-filter input { display: block; margin-top: 4px; width: 100%; min-width: 120px; max-width: 160px; padding: 2px 6px; font: inherit; font-size: 12px; font-weight: 600; color: var(--ink); background: var(--white); border: 0; border-radius: 6px; }
+.th-filter select, .th-filter input { height: 28px; min-height: 0; line-height: 1.2; }
+.th-filter select.on, .th-filter input.on { box-shadow: 0 0 0 2px var(--yellow); }
+.top-scroll { overflow-x: auto; overflow-y: hidden; margin-top: 10px; height: 16px; }
+.top-scroll > div { height: 1px; }
+.top-scroll:not([hidden]) + .table-wrap { margin-top: 2px; }
 .sel-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
 .sel-buttons .btn { min-height: 44px; padding: 8px 18px; font-size: 15px; }
 .sel-buttons .btn svg { width: 18px; height: 18px; }
@@ -395,7 +401,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 .st.Verified { background: var(--green-100); color: var(--green-900); }
 .st.Missing { background: #fde8e6; color: #7a1610; }
 @media (min-width: 720px) {
-  .filters.sel-pool-filters { grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; }
+  .filters.sel-pool-filters { grid-template-columns: 2fr 1fr auto auto; }
 }
 .sel-status { min-width: 220px; }
 .sel-status select, .sel-status input { width: 100%; min-height: 36px; padding: 4px 8px; font-size: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); font-family: inherit; }
@@ -950,38 +956,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
             <option value="district">Everyone living in the district</option>
           </select>
         </div>
-        <div class="field">
-          <label for="sel-filter">Status</label>
-          <select id="sel-filter">
-            <option value="">All</option>
-            <option value="none">Not reviewed</option>
-            <option value="Shortlisted">Shortlisted</option>
-            <option value="Selected">Selected</option>
-            <option value="Reserve">Reserve</option>
-            <option value="Not suitable">Not suitable</option>
-            <option value="Withdrawn">Withdrawn</option>
-            <option value="elsewhere">Already has a status at another institution</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="sel-group">Target group</label>
-          <select id="sel-group">
-            <option value="">Everyone</option>
-            <option value="youth">Youth (18 to 35)</option>
-            <option value="women">Women</option>
-            <option value="pwd">Persons with disabilities</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="sel-docs">Documents</label>
-          <select id="sel-docs">
-            <option value="">All</option>
-            <option value="unverified">Not yet verified</option>
-            <option value="verified">Both verified</option>
-            <option value="missing">A document is missing</option>
-          </select>
-        </div>
         <button class="btn green" type="submit" id="sel-pool-btn">Show</button>
+        <button class="btn ghost" type="button" id="sel-clear" title="Clear the search and every column filter">Clear filters</button>
       </form>
       <div class="summary-row">
         <p class="summary" id="sel-pool-summary" aria-live="polite"></p>
@@ -1002,12 +978,27 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       </div>
       <p class="muted" style="margin:8px 0 0">Before anyone can be <strong>Selected</strong>, both documents must be verified:
         for online applicants from the uploaded files, for paper applicants from the paper file at the HR office.</p>
-      <div class="table-wrap">
+      <div class="table-wrap" id="sel-pool-wrap">
         <table>
           <thead>
             <tr>
-              <th>Reference</th><th>Applicant</th><th>ID number</th><th>Cellphone</th><th class="th-filter">Local municipality<select id="sel-local" aria-label="Show one local municipality"><option value="">All</option></select></th><th class="th-filter">Ward<select id="sel-ward" aria-label="Show one ward" disabled><option value="">Pick a municipality</option></select></th>
-              <th>Applied for</th><th>Qualification</th><th>Documents</th><th>Status</th>
+              <th class="th-filter">Reference<select id="sel-channel" aria-label="Show online or paper applications">
+                <option value="">All</option><option value="Online">Online</option><option value="Captured">Paper application</option></select></th>
+              <th class="th-filter">Applicant<select id="sel-group" aria-label="Show one group of applicants">
+                <option value="">Everyone</option><option value="youth">Youth (18 to 35)</option><option value="older">Older than 35</option>
+                <option value="women">Women</option><option value="men">Men</option><option value="pwd">Persons with disabilities</option></select></th>
+              <th class="th-filter">ID number<input type="search" id="sel-idtext" inputmode="numeric" maxlength="13" placeholder="Type digits" aria-label="ID number contains"></th>
+              <th class="th-filter">Cellphone<input type="search" id="sel-celltext" inputmode="tel" maxlength="16" placeholder="Type digits" aria-label="Cellphone contains"></th>
+              <th class="th-filter">Local municipality<select id="sel-local" aria-label="Show one local municipality"><option value="">All</option></select></th><th class="th-filter">Ward<select id="sel-ward" aria-label="Show one ward" disabled><option value="">Pick a municipality</option></select></th>
+              <th class="th-filter">Applied for<select id="sel-facility" aria-label="Show one facility applied for"><option value="">All</option></select></th>
+              <th class="th-filter">Qualification<select id="sel-qual" aria-label="Show one qualification"><option value="">All</option></select></th>
+              <th class="th-filter">Documents<select id="sel-docs" aria-label="Show by document check">
+                <option value="">All</option><option value="unverified">Not yet verified</option><option value="verified">Both verified</option>
+                <option value="missing">A document is missing</option></select></th>
+              <th class="th-filter">Status<select id="sel-filter" aria-label="Show one status">
+                <option value="">All</option><option value="none">Not reviewed</option><option value="Shortlisted">Shortlisted</option>
+                <option value="Selected">Selected</option><option value="Reserve">Reserve</option><option value="Not suitable">Not suitable</option>
+                <option value="Withdrawn">Withdrawn</option><option value="elsewhere">Status at another institution</option></select></th>
             </tr>
           </thead>
           <tbody id="sel-pool-body"></tbody>
@@ -2183,6 +2174,36 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('list-next').disabled = lastShown >= out.total;
   }
 
+  /* ---------- scrollbar above a wide table ---------- */
+  // A second horizontal scrollbar on top, so a long list can be scrolled
+  // sideways without going to the bottom first. Hidden when the table fits.
+  function topScroll(wrap) {
+    var bar = document.createElement('div');
+    bar.className = 'top-scroll';
+    bar.setAttribute('aria-hidden', 'true');
+    var inner = document.createElement('div');
+    bar.appendChild(inner);
+    wrap.parentNode.insertBefore(bar, wrap);
+    var sync = function (from, to) {
+      if (to.scrollLeft !== from.scrollLeft) to.scrollLeft = from.scrollLeft;
+    };
+    bar.addEventListener('scroll', function () { sync(bar, wrap); });
+    wrap.addEventListener('scroll', function () { sync(wrap, bar); });
+    var size = function () {
+      inner.style.width = wrap.scrollWidth + 'px';
+      bar.hidden = wrap.scrollWidth <= wrap.clientWidth + 1;
+      bar.scrollLeft = wrap.scrollLeft;
+    };
+    window.addEventListener('resize', size);
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(size);
+      ro.observe(wrap);
+      if (wrap.firstElementChild) ro.observe(wrap.firstElementChild);
+    }
+    size();
+    return size;
+  }
+
   /* ---------- local municipality and ward filters in table headings ---------- */
   function fillPlaceFilters(localSel, wardSel, places) {
     if (!places) return;
@@ -3240,6 +3261,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       tr.appendChild(td);
       body.appendChild(tr);
     });
+    if (selScroll) selScroll();
 
     var res = $('sel-reserved');
     res.innerHTML = '';
@@ -3580,10 +3602,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('sel-overview').hidden = true;
     $('sel-detail').hidden = false;
     $('sel-search').value = '';
-    $('sel-filter').value = '';
-    $('sel-docs').value = '';
-    $('sel-group').value = '';
-    resetPlaceFilters($('sel-local'), $('sel-ward'));
+    resetPoolFilters();
     $('sel-from').value = inst.onForm || inst.takesFrom ? 'institution' : 'district';
     $('sel-pool-body').innerHTML = '';
     renderInstHead();
@@ -3635,7 +3654,43 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 
   function poolFilters() {
     return { search: $('sel-search').value.trim(), from: $('sel-from').value, status: $('sel-filter').value, docs: $('sel-docs').value,
-      group: $('sel-group').value, local: $('sel-local').value, ward: $('sel-ward').value };
+      group: $('sel-group').value, local: $('sel-local').value, ward: $('sel-ward').value, channel: $('sel-channel').value,
+      idText: $('sel-idtext').value.trim(), cellText: $('sel-celltext').value.trim(), facility: $('sel-facility').value,
+      qual: $('sel-qual').value };
+  }
+
+  // The column filters of the applicant list (not Search or Applicants).
+  var POOL_COLUMN_FILTERS = ['sel-channel', 'sel-group', 'sel-idtext', 'sel-celltext', 'sel-facility', 'sel-qual', 'sel-docs', 'sel-filter'];
+
+  function markPoolFilters() {
+    POOL_COLUMN_FILTERS.concat(['sel-local', 'sel-ward']).forEach(function (id) {
+      $(id).classList.toggle('on', !!$(id).value);
+    });
+  }
+
+  function resetPoolFilters() {
+    POOL_COLUMN_FILTERS.forEach(function (id) { $(id).value = ''; });
+    resetPlaceFilters($('sel-local'), $('sel-ward'));
+    [$('sel-facility'), $('sel-qual')].forEach(function (el) { while (el.options.length > 1) el.remove(1); });
+    markPoolFilters();
+  }
+
+  // Choices (with counts) for the Applied for and Qualification headings.
+  function fillColumnFilters(cols) {
+    if (!cols) return;
+    var fill = function (el, list) {   // list of [value, label]
+      var keep = el.value;
+      while (el.options.length > 1) el.remove(1);
+      list.forEach(function (x) { el.add(new Option(x[1], x[0])); });
+      if (keep && !list.some(function (x) { return x[0] === keep; })) el.add(new Option(keep + ' (0)', keep));
+      el.value = keep;
+    };
+    fill($('sel-facility'), (cols.facilities || []).map(function (x) { return [x[0], x[0] + ' (' + num(x[1]) + ')']; }));
+    var quals = cols.qualifications || [];
+    var other = quals.reduce(function (t, x) { return t + (x[2] ? 0 : x[1]); }, 0);
+    fill($('sel-qual'), [['__unlisted', 'Not an advertised qualification (' + num(other) + ')']].concat(quals.map(function (x) {
+      return [x[0], x[0] + (x[2] || x[0] === 'Not recorded' ? '' : ' (not advertised)') + ' (' + num(x[1]) + ')'];
+    })));
   }
 
   function loadPool(offset) {
@@ -3648,8 +3703,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('sel-pool-export').disabled = true;
     $('sel-pull').disabled = true;
     $('sel-pool-summary').textContent = 'Loading...';
-    post({ action: 'pool', token: s.token, institution: selInst.id, offset: offset, search: f.search, from: f.from, status: f.status,
-      docs: f.docs, group: f.group, local: f.local, ward: f.ward })
+    markPoolFilters();
+    post(Object.assign({ action: 'pool', token: s.token, institution: selInst.id, offset: offset }, f))
       .then(function (out) {
         if (seq !== poolSeq) return;
         if (out && out.error === 'auth') return sessionEnded();
@@ -3664,6 +3719,9 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         $('sel-readonly').hidden = selCanChange;
         renderPool(out);
         fillPlaceFilters($('sel-local'), $('sel-ward'), out.places);
+        fillColumnFilters(out.columns);
+        markPoolFilters();
+        if (poolScroll) poolScroll();
       }).catch(function () {
         if (seq !== poolSeq) return;
         $('sel-pool-summary').textContent = '';
@@ -3687,7 +3745,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       var td0 = document.createElement('td');
       td0.colSpan = 10;
       td0.className = 'empty';
-      td0.textContent = c.all ? 'Nobody matches the search or status.' : 'Nobody applied for this institution yet. Choose "Everyone living in the district".';
+      td0.textContent = c.all ? 'Nobody matches the search or the column filters.' : 'Nobody applied for this institution yet. Choose "Everyone living in the district".';
       tr0.appendChild(td0);
       body.appendChild(tr0);
     }
@@ -4031,8 +4089,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('sel-pool-export-label').textContent = 'Preparing file...';
     selAlert('');
     var f = selPoolFilters;
-    post({ action: 'pool', token: s.token, institution: selInst.id, all: true, search: f.search || '', from: f.from || '', status: f.status || '',
-      docs: f.docs || '', local: f.local || '', ward: f.ward || '' })
+    post(Object.assign({}, f, { action: 'pool', token: s.token, institution: selInst.id, all: true }))
       .then(function (out) {
         if (out && out.error === 'auth') return sessionEnded();
         if (!out || !out.ok) { selAlert((out && out.message) || 'The download could not be prepared.'); return; }
@@ -4069,8 +4126,25 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   $('sel-export').addEventListener('click', exportSel);
   $('sel-back').addEventListener('click', backToOverview);
   $('sel-pool-form').addEventListener('submit', function (e) { e.preventDefault(); loadPool(0); });
-  $('sel-from').addEventListener('change', function () { resetPlaceFilters($('sel-local'), $('sel-ward')); loadPool(0); });
-  $('sel-filter').addEventListener('change', function () { loadPool(0); });
+  $('sel-from').addEventListener('change', function () { resetPoolFilters(); loadPool(0); });
+  $('sel-clear').addEventListener('click', function () { $('sel-search').value = ''; resetPoolFilters(); loadPool(0); });
+  ['sel-filter', 'sel-channel', 'sel-facility', 'sel-qual'].forEach(function (id) {
+    $(id).addEventListener('change', function () { loadPool(0); });
+  });
+  // ID and cellphone: look up shortly after typing stops.
+  [['sel-idtext', 'idText'], ['sel-celltext', 'cellText']].forEach(function (x) {
+    var id = x[0], timer = null;
+    var go = function () {
+      clearTimeout(timer);
+      if (!selInst || $(id).value.trim() === (selPoolFilters[x[1]] || '')) return;
+      loadPool(0);
+    };
+    $(id).addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(go, 600); });
+    $(id).addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+    $(id).addEventListener('change', go);
+  });
+  var poolScroll = topScroll($('sel-pool-wrap'));
+  var selScroll = topScroll(document.querySelector('.table-wrap.sel-table'));
   $('sel-prev').addEventListener('click', function () { loadPool(Math.max(0, selOffset - 50)); });
   $('sel-next').addEventListener('click', function () { loadPool(selOffset + 50); });
   $('sel-pool-export').addEventListener('click', exportPool);

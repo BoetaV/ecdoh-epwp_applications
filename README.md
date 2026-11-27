@@ -217,8 +217,8 @@ every level and stage:
   meters. It warns when a target can no longer be met with the posts still open.
   The 2% for persons with disabilities is tracked at district and province level,
   because a 3-post clinic cannot meet it on its own.
-- **Target group filter** on an institution's list (youth, women, persons with
-  disabilities), and Youth / Woman / PwD tags next to each applicant, to help
+- **Target group filter** in the *Applicant* heading of an institution's list
+  (youth, women, persons with disabilities, also men and older than 35), and Youth / Woman / PwD tags next to each applicant, to help
   shortlist towards the targets.
 - The Excel download of the institutions includes the counts and percentages.
 
@@ -262,6 +262,28 @@ municipalities, so the ward filter works within the chosen municipality (in an
 institution with applicants from one municipality only, the wards are offered
 straight away). "03", "3" and "Ward 3" count as the same ward. Download to Excel
 follows the filter.
+
+**A filter in every column.** In an institution's list on the Selection screen,
+every column heading has its own filter, and they can be combined:
+
+| Column | Filter |
+|---|---|
+| Reference | Online or paper application |
+| Applicant | Youth (18 to 35), older than 35, women, men, persons with disabilities |
+| ID number, Cellphone | Type part of the number (the list updates when you stop typing or press Enter; `082...` and `+27 82...` both work) |
+| Local municipality, Ward | One municipality, then one ward |
+| Applied for | One facility (with how many applicants each) |
+| Qualification | One qualification, or *Not an advertised qualification* |
+| Documents | Not yet verified, both verified, a document is missing |
+| Status | Not reviewed, Shortlisted, Selected, Reserve, Not suitable, Withdrawn, or a status at another institution |
+
+A heading with a filter in use is outlined in yellow. **Clear filters** (next to
+*Show*) clears the search and every column filter. *Download to Excel* follows
+all the filters.
+
+**Scrollbar on top.** The Selection tables are wider than most screens, so they
+have a second horizontal scrollbar above the table, kept in step with the one at
+the bottom. It only appears when the table does not fit.
 
 **Checking the documents (online and paper alike).** Paper applicants'
 documents are not in the system; they stay in the paper file at the HR office.
