@@ -2360,57 +2360,77 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   }
   function colName(i) { var s = ''; i++; while (i > 0) { var m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
 
+  // One or more sheets: out itself, with out.before / out.after (arrays of
+  // { sheet, headers, rows, links, numeric, wrap, widths, filter }) around it.
   function buildXlsx(out) {
-    var headers = out.headers, rows = out.rows, links = out.links || [];
-    var numeric = out.numeric || [];
-    var sheetName = /^[A-Za-z]{1,30}$/.test(out.sheet || '') ? out.sheet : 'Applications';
-    var lastCol = colName(headers.length - 1), lastRow = rows.length + 1;
-    var widths = headers.map(function (h, c) {
-      var w = h.length;
-      rows.slice(0, 300).forEach(function (r) { w = Math.max(w, String(r[c] || '').length); });
-      return Math.min(Math.max(w + 2, 8), links[c] ? 18 : 50);
+    var sheets = (out.before || []).concat([out], out.after || []);
+    var used = {};
+    var parts = sheets.map(function (sh, si) {
+      var headers = sh.headers, rows = sh.rows, links = sh.links || [], numeric = sh.numeric || [], wrap = sh.wrap || [];
+      var name = /^[A-Za-z]{1,30}$/.test(sh.sheet || '') ? sh.sheet : 'Sheet' + (si + 1);
+      if (used[name]) name = 'Sheet' + (si + 1);
+      used[name] = 1;
+      var lastCol = colName(headers.length - 1), lastRow = rows.length + 1;
+      var widths = sh.widths || headers.map(function (h, c) {
+        var w = h.length;
+        rows.slice(0, 300).forEach(function (r) { w = Math.max(w, String(r[c] || '').length); });
+        return Math.min(Math.max(w + 2, 8), links[c] ? 18 : 50);
+      });
+      var cell = function (ref, value, style) {
+        return '<c r="' + ref + '" t="inlineStr"' + (style ? ' s="' + style + '"' : '') + '><is><t xml:space="preserve">' + xmlText(value) + '</t></is></c>';
+      };
+      var hyperlinks = [], rels = [];
+      var data = '<row r="1">' + headers.map(function (h, c) { return cell(colName(c) + '1', h, 1); }).join('') + '</row>';
+      rows.forEach(function (r, i) {
+        var rowNo = i + 2;
+        data += '<row r="' + rowNo + '">' + r.map(function (v, c) {
+          var ref = colName(c) + rowNo;
+          if (links[c] && /^https:\/\//.test(v)) {
+            var id = 'rId' + (rels.length + 1);
+            rels.push('<Relationship Id="' + id + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="' + xmlText(v) + '" TargetMode="External"/>');
+            hyperlinks.push('<hyperlink ref="' + ref + '" r:id="' + id + '"/>');
+            return cell(ref, 'Open', 2);
+          }
+          if (numeric[c] && /^-?\d+(\.\d+)?$/.test(String(v))) return '<c r="' + ref + '"><v>' + v + '</v></c>';
+          return cell(ref, v, wrap[c] ? 3 : 0);
+        }).join('') + '</row>';
+      });
+      var filter = sh.filter !== false;
+      var xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+        '<dimension ref="A1:' + lastCol + lastRow + '"/>' +
+        '<sheetViews><sheetView workbookViewId="0"' + (si === 0 ? ' tabSelected="1"' : '') + '><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' +
+        '<sheetFormatPr defaultRowHeight="15"/>' +
+        '<cols>' + widths.map(function (w, c) { return '<col min="' + (c + 1) + '" max="' + (c + 1) + '" width="' + w + '" customWidth="1"/>'; }).join('') + '</cols>' +
+        '<sheetData>' + data + '</sheetData>' +
+        (filter ? '<autoFilter ref="A1:' + lastCol + lastRow + '"/>' : '') +
+        (hyperlinks.length ? '<hyperlinks>' + hyperlinks.join('') + '</hyperlinks>' : '') +
+        '</worksheet>';
+      return { name: name, xml: xml, rels: rels, lastCol: lastCol, lastRow: lastRow, filter: filter };
     });
-    var cell = function (ref, value, style) {
-      return '<c r="' + ref + '" t="inlineStr"' + (style ? ' s="' + style + '"' : '') + '><is><t xml:space="preserve">' + xmlText(value) + '</t></is></c>';
-    };
-    var hyperlinks = [], rels = [];
-    var data = '<row r="1">' + headers.map(function (h, c) { return cell(colName(c) + '1', h, 1); }).join('') + '</row>';
-    rows.forEach(function (r, i) {
-      var rowNo = i + 2;
-      data += '<row r="' + rowNo + '">' + r.map(function (v, c) {
-        var ref = colName(c) + rowNo;
-        if (links[c] && /^https:\/\//.test(v)) {
-          var id = 'rId' + (rels.length + 1);
-          rels.push('<Relationship Id="' + id + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="' + xmlText(v) + '" TargetMode="External"/>');
-          hyperlinks.push('<hyperlink ref="' + ref + '" r:id="' + id + '"/>');
-          return cell(ref, 'Open', 2);
-        }
-        if (numeric[c] && /^-?\d+(\.\d+)?$/.test(String(v))) return '<c r="' + ref + '"><v>' + v + '</v></c>';
-        return cell(ref, v, 0);
-      }).join('') + '</row>';
-    });
-    var sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
-      '<dimension ref="A1:' + lastCol + lastRow + '"/>' +
-      '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' +
-      '<sheetFormatPr defaultRowHeight="15"/>' +
-      '<cols>' + widths.map(function (w, c) { return '<col min="' + (c + 1) + '" max="' + (c + 1) + '" width="' + w + '" customWidth="1"/>'; }).join('') + '</cols>' +
-      '<sheetData>' + data + '</sheetData>' +
-      '<autoFilter ref="A1:' + lastCol + lastRow + '"/>' +
-      (hyperlinks.length ? '<hyperlinks>' + hyperlinks.join('') + '</hyperlinks>' : '') +
-      '</worksheet>';
+    var n = parts.length;
     var files = [
-      { name: '[Content_Types].xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>' },
+      { name: '[Content_Types].xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+        parts.map(function (pt, i) { return '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'; }).join('') +
+        '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>' },
       { name: '_rels/.rels', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>' },
       { name: 'docProps/core.xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>' + xmlText((out.title || 'EPWP applications') + ' - ' + out.scope) + '</dc:title><dc:creator>Eastern Cape Department of Health EPWP system</dc:creator></cp:coreProperties>' },
-      { name: 'xl/workbook.xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="' + sheetName + '" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">' + sheetName + '!$A$1:$' + lastCol + '$' + lastRow + '</definedName></definedNames></workbook>' },
-      { name: 'xl/_rels/workbook.xml.rels', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>' },
-      { name: 'xl/styles.xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><u/><sz val="11"/><color rgb="FF0563C1"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF0A6B3D"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>' },
-      { name: 'xl/worksheets/sheet1.xml', text: sheet }
+      { name: 'xl/workbook.xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' +
+        parts.map(function (pt, i) { return '<sheet name="' + pt.name + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>'; }).join('') + '</sheets>' +
+        (parts.some(function (pt) { return pt.filter; }) ? '<definedNames>' + parts.map(function (pt, i) {
+          return pt.filter ? '<definedName name="_xlnm._FilterDatabase" localSheetId="' + i + '" hidden="1">' + pt.name + '!$A$1:$' + pt.lastCol + '$' + pt.lastRow + '</definedName>' : '';
+        }).join('') + '</definedNames>' : '') + '</workbook>' },
+      { name: 'xl/_rels/workbook.xml.rels', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+        parts.map(function (pt, i) { return '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>'; }).join('') +
+        '<Relationship Id="rId' + (n + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>' },
+      { name: 'xl/styles.xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><u/><sz val="11"/><color rgb="FF0563C1"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF0A6B3D"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>' }
     ];
-    if (rels.length) {
-      files.push({ name: 'xl/worksheets/_rels/sheet1.xml.rels', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + rels.join('') + '</Relationships>' });
-    }
+    parts.forEach(function (pt, i) {
+      files.push({ name: 'xl/worksheets/sheet' + (i + 1) + '.xml', text: pt.xml });
+      if (pt.rels.length) {
+        files.push({ name: 'xl/worksheets/_rels/sheet' + (i + 1) + '.xml.rels', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + pt.rels.join('') + '</Relationships>' });
+      }
+    });
     return zip(files);
   }
 
@@ -3858,6 +3878,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   function exportSel() {
     var out = selData;
     if (!out) return;
+    var scopePlan = scopeChannels(shortlistPlan(out.institutions), out);
+    var scopeOn = sumGroups(out.institutions.map(function (i) { return onShortlist(i.groups); }));
     var rows = out.institutions.map(function (i) {
       return [i.district, i.name, i.local, i.posts, i.applications, perPost(i.applications, i.posts), i.women, i.youth, i.disabled,
         i.shortlisted, i.selected, i.reserve, i.notSuitable, i.withdrawn, i.open,
@@ -3867,7 +3889,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
           return { youth: 'Youth', women: 'Women', pwd: 'Disability' }[k] + ': ' + i.reasons[k].reason;
         }).join(' | ')], (function (pl) { return [pl.shortlist, pl.sl.youth, pl.sl.women, pl.sl.pwd]; })(shortlistPlan([i])),
         (function (c) { return c ? [c.online, pctOfN(c.online, c.n).replace('%', ''), c.paper, pctOfN(c.paper, c.n).replace('%', ''),
-          c.onlineQ, c.paperQ, c.haveOnline, c.havePaper] : []; })(channelSplit(i)));
+          c.onlineQ, c.paperQ, c.haveOnline, c.havePaper] : ['', '', '', '', '', '', '', '']; })(channelSplit(i)),
+        (function (pl, on) { return [on.n, on.youth, on.women, on.pwd, shortText(pl, on)]; })(shortlistPlan([i]), onShortlist(i.groups)));
     }).concat((out.reserved || []).map(function (r) {
       return [r.district, 'Reserved for further allocation' + (r.removed ? ' (duplicate line "' + r.removed + '" removed)' : ''),
         r.allocatedTo ? 'Allocated to ' + r.allocatedTo : '', r.allocatedTo ? 0 : r.posts, '', '', '', '', '', '', '', '', '', '', '', '-', ''];
@@ -3884,10 +3907,30 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         'Selected: youth', 'Selected: youth %', 'Selected: women', 'Selected: women %', 'Selected: with a disability', 'Selected: disability %',
         'Reasons targets not met', 'To shortlist (3 per post)', 'To shortlist: youth', 'To shortlist: women', 'To shortlist: with a disability',
         'Online applications', 'Online %', 'Paper applications', 'Paper %', 'To shortlist: online', 'To shortlist: paper',
-        'On the shortlist: online', 'On the shortlist: paper'],
-      numeric: [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-      rows: rows.map(function (r) { return r.map(String); })
+        'On the shortlist: online', 'On the shortlist: paper', 'On the shortlist', 'On the shortlist: youth', 'On the shortlist: women',
+        'On the shortlist: with a disability', 'Shortlist criteria'],
+      numeric: [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+      rows: rows.map(function (r) { return r.map(String); }),
+      before: [criteriaSheet(out.scope + ' (' + out.institutions.length + ' institutions)', out.generated, scopePlan, scopeOn,
+        sumGroups(out.institutions.map(function (i) { return i.groups && i.groups.Selected; })))],
+      after: districtSheet(out)
     }), 'EPWP_Posts_and_applications_' + fileSafe(out.scope) + '_' + todayIso() + '.xlsx');
+  }
+
+  // Per district (when there is more than one) and the total: the shortlist criteria.
+  function districtSheet(out) {
+    var names = [];
+    out.institutions.forEach(function (i) { if (names.indexOf(i.district) === -1) names.push(i.district); });
+    if (names.length < 2) return [];
+    names.sort();
+    var row = function (label, list) {
+      return [label].concat(planCols(shortlistPlan(list), sumGroups(list.map(function (i) { return onShortlist(i.groups); })),
+        sumGroups(list.map(function (i) { return i.groups && i.groups.Selected; }))));
+    };
+    var rows = names.map(function (nm) { return row(nm, out.institutions.filter(function (i) { return i.district === nm; })); });
+    rows.push(row('Total: ' + out.scope, out.institutions));
+    return [{ sheet: 'Districts', headers: ['District'].concat(PLAN_HEADERS), rows: rows.map(function (r) { return r.map(String); }),
+      numeric: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0] }];
   }
 
   function openInstitution(inst) {
@@ -4384,11 +4427,25 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     btn.disabled = true;
     $('sel-pool-export-label').textContent = 'Preparing file...';
     selAlert('');
-    var f = selPoolFilters;
-    post(Object.assign({}, f, { action: 'pool', token: s.token, institution: selInst.id, all: true }))
-      .then(function (out) {
-        if (out && out.error === 'auth') return sessionEnded();
+    var f = selPoolFilters, inst = selInst;
+    Promise.all([post(Object.assign({}, f, { action: 'pool', token: s.token, institution: inst.id, all: true })),
+      post({ action: 'pool', token: s.token, institution: inst.id, all: true, decided: true })])
+      .then(function (res) {
+        var out = res[0], decided = res[1];
+        if ((out && out.error === 'auth') || (decided && decided.error === 'auth')) return sessionEnded();
         if (!out || !out.ok) { selAlert((out && out.message) || 'The download could not be prepared.'); return; }
+        var crit = instCriteria(inst, decided && decided.ok ? haveFromRows(decided.rows) : null);
+        var shown = [];
+        if (f.search) shown.push('search "' + f.search + '"');
+        [['channel', { Online: 'online only', Captured: 'paper only' }], ['group', { youth: 'youth', older: 'older than 35', women: 'women', men: 'men', pwd: 'persons with disabilities' }],
+          ['status', null], ['docs', { unverified: 'documents not yet verified', verified: 'documents verified', missing: 'a document missing' }],
+          ['facility', null], ['qual', { __unlisted: 'not an advertised qualification' }]].forEach(function (x) {
+          if (f[x[0]]) shown.push(x[1] && x[1][f[x[0]]] ? x[1][f[x[0]]] : x[0] + ' ' + f[x[0]]);
+        });
+        if (f.local) shown.push(shortLocal(f.local));
+        if (f.ward) shown.push('ward ' + f.ward.split('|').pop());
+        if (f.idText) shown.push('ID contains ' + f.idText);
+        if (f.cellText) shown.push('cellphone contains ' + f.cellText);
         var rows = out.rows.map(function (r) {
           var here = r.elsewhere ? '' : r.status;
           return [r.ref, here || 'Not reviewed', here ? r.reason : '', here ? r.statusBy : '', here ? r.statusOn : '',
@@ -4396,7 +4453,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
             r.disability, r.cell, r.address || '', r.district, r.local, r.ward, r.facility, r.qualification, r.qualificationListed ? 'Yes' : 'No',
             r.channel, r.paperDocs, r.idDoc, r.resultsDoc,
             (r.docs && r.docs.id) || 'Not checked', (r.docs && r.docs.results) || 'Not checked', (r.docs && r.docs.note) || '',
-            (r.docs && r.docs.by) || '', (r.docs && r.docs.on) || '', r.receivedAt || '', r.dateReceived || ''];
+            (r.docs && r.docs.by) || '', (r.docs && r.docs.on) || '', r.receivedAt || '', r.dateReceived || '',
+            r.groups && r.groups.youth ? 'Yes' : 'No', r.groups && r.groups.women ? 'Yes' : 'No', r.groups && r.groups.pwd ? 'Yes' : 'No'];
         });
         downloadBlob(buildXlsx({
           sheet: 'Applicants', title: 'EPWP selection - ' + out.institution.name, scope: out.institution.district,
@@ -4404,10 +4462,14 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
             'Surname', 'ID number', 'Gender', 'Age', 'Disability', 'Cellphone', 'Home address', 'District', 'Local municipality', 'Ward',
             'Applied for', 'Qualification', 'Advertised qualification', 'How applied', 'Paper documents', 'ID document', 'Proof of results',
             'ID document check', 'Proof of results check', 'Check note', 'Checked by', 'Checked on', 'Paper form handed in at',
-            'Paper form received on'],
+            'Paper form received on', 'Youth (18 to 35)', 'Woman', 'Person with a disability'],
           links: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
           numeric: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-          rows: rows
+          rows: rows,
+          before: [criteriaSheet(out.institution.name + ', ' + out.institution.district + ' (' + num(out.institution.posts) + ' posts)',
+            (selData && selData.generated) || todayIso(), crit.plan, crit.on, crit.selected,
+            [['', '', '', '', ''], ['THIS LIST', (out.from === 'district' ? 'Everyone living in the district' : 'Applicants for this institution') +
+              (shown.length ? '; filters: ' + shown.join(', ') : '; no filters') + '. ' + num(out.rows.length) + ' applicant' + (out.rows.length === 1 ? '' : 's') + '.', '', '', '']])]
         }), 'EPWP_Selection_' + fileSafe(out.institution.name) + (out.from === 'district' ? '_whole_district' : '') + '_' + todayIso() + '.xlsx');
       }).catch(function () {
         selAlert('The download could not be prepared. Check your internet connection and try again.');
@@ -4590,17 +4652,172 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     }
   }
 
-  function controlsSection(r) {
-    r.heading('Controls applied by the system');
-    r.bullets([
+  /* ---------- shortlisting criteria and process, for the audit files ---------- */
+  // What the people on the shortlist (shortlisted, reserve, selected) of an
+  // institution are, from its decided applicants (pool with decided: true).
+  function haveFromRows(rows) {
+    var on = { n: 0, youth: 0, women: 0, pwd: 0 }, se = { n: 0, youth: 0, women: 0, pwd: 0 }, online = 0, paper = 0;
+    rows.forEach(function (r) {
+      if (r.elsewhere || !{ Shortlisted: 1, Selected: 1, Reserve: 1 }[r.status]) return;
+      var g = r.groups || {};
+      [on].concat(r.status === 'Selected' ? [se] : []).forEach(function (t) {
+        t.n++;
+        if (g.youth) t.youth++;
+        if (g.women) t.women++;
+        if (g.pwd) t.pwd++;
+      });
+      if (r.channel === 'Captured') paper++; else online++;
+    });
+    return { on: on, selected: se, online: online, paper: paper };
+  }
+
+  // The plan and what has been achieved, for one institution (have: from haveFromRows, else the overview figures).
+  function instCriteria(i, have) {
+    var g = i.groups || {};
+    var plan = shortlistPlan([have ? Object.assign({}, i, { activeOnline: have.online, activeCaptured: have.paper }) : i]);
+    return { plan: plan, on: have ? have.on : onShortlist(g), selected: have ? have.selected : (g.Selected || { n: 0, youth: 0, women: 0, pwd: 0 }) };
+  }
+
+  function statusOf(have, need) { return have >= need ? 'Met' : num(need - have) + ' to go'; }
+
+  // [criterion, how it is worked out, required, achieved, status]
+  function criteriaRows(plan, on, selected) {
+    var t = targetsOf();
+    on = on || { n: 0, youth: 0, women: 0, pwd: 0 };
+    selected = selected || { n: 0, youth: 0, women: 0, pwd: 0 };
+    var rows = [['Shortlist in total', 'Selection ratio 1:' + SHORTLIST_TIMES + ' (' + SHORTLIST_TIMES + ' people per post): ' +
+      num(plan.posts) + ' posts x ' + SHORTLIST_TIMES, plan.shortlist, on.n || 0, statusOf(on.n || 0, plan.shortlist)]];
+    TARGET_LIST.forEach(function (k) {
+      var key = k[0];
+      rows.push(['Shortlist at least: ' + k[1].toLowerCase(), plan.single ? slSum(plan.posts, key) + ' (to the nearest whole person, at least 1)' :
+        t[key] + '% of the shortlist of each institution (nearest person, at least 1), added up', plan.sl[key], on[key] || 0,
+        statusOf(on[key] || 0, plan.sl[key])]);
+    });
+    var ch = plan.ch;
+    if (ch && ch.known) {
+      var exact = ch.n ? Math.round(plan.shortlist * ch.online / ch.n * 10) / 10 : 0;
+      rows.push(['Shortlist from online applications', pctOfN(ch.online, ch.n) + ' of the applications (' + num(ch.online) + ' of ' + num(ch.n) + ')' +
+        (plan.single ? (ch.n ? ': ' + num(plan.shortlist) + ' x ' + pctOfN(ch.online, ch.n) + ' = ' + exact + ', so ' + num(ch.onlineQ) : '') :
+          '; shared per institution and added up'), ch.onlineQ, ch.haveOnline, statusOf(ch.haveOnline, ch.onlineQ)]);
+      rows.push(['Shortlist from paper applications', pctOfN(ch.paper, ch.n) + ' of the applications (' + num(ch.paper) + ' of ' + num(ch.n) + ')' +
+        (plan.single ? (ch.n ? ': the rest of the shortlist, ' + num(plan.shortlist) + ' - ' + num(ch.onlineQ) : '') : '; shared per institution and added up'),
+        ch.paperQ, ch.havePaper, statusOf(ch.havePaper, ch.paperQ)]);
+    }
+    rows.push(['Select in total', 'The posts (nobody selected before both documents are verified)', plan.posts, selected.n || 0, statusOf(selected.n || 0, plan.posts)]);
+    TARGET_LIST.forEach(function (k) {
+      var key = k[0];
+      rows.push(['Select at least: ' + k[1].toLowerCase(), t[key] + '% of ' + (plan.single ? num(plan.posts) + ' posts' : 'the posts of each institution') +
+        ', rounded up' + (plan.single ? '' : ', added up'), plan.sel[key], selected[key] || 0, statusOf(selected[key] || 0, plan.sel[key])]);
+    });
+    return rows;
+  }
+
+  // What is still short on the shortlist, in one line ("Met" when nothing).
+  function shortText(plan, on) {
+    var short = [];
+    if ((on.n || 0) < plan.shortlist) short.push(num(plan.shortlist - (on.n || 0)) + ' in total');
+    TARGET_LIST.forEach(function (k) {
+      var gap = plan.sl[k[0]] - (on[k[0]] || 0);
+      if (gap > 0) short.push(num(gap) + ' ' + (k[0] === 'pwd' ? (gap === 1 ? 'person with a disability' : 'persons with disabilities') : TARGET_NOUN[k[0]]));
+    });
+    if (plan.ch && plan.ch.known) {
+      if (plan.ch.haveOnline < plan.ch.onlineQ) short.push(num(plan.ch.onlineQ - plan.ch.haveOnline) + ' online');
+      if (plan.ch.havePaper < plan.ch.paperQ) short.push(num(plan.ch.paperQ - plan.ch.havePaper) + ' paper');
+    }
+    return short.length ? 'Short: ' + short.join(', ') : 'Met';
+  }
+
+  // The same, short, for PDF tables: "Met" or "Not met: total, Y, W, D, O, P".
+  function shortCodes(plan, on) {
+    var miss = [];
+    if ((on.n || 0) < plan.shortlist) miss.push('total');
+    [['youth', 'Y'], ['women', 'W'], ['pwd', 'D']].forEach(function (k) { if ((on[k[0]] || 0) < plan.sl[k[0]]) miss.push(k[1]); });
+    if (plan.ch && plan.ch.known) {
+      if (plan.ch.haveOnline < plan.ch.onlineQ) miss.push('O');
+      if (plan.ch.havePaper < plan.ch.paperQ) miss.push('P');
+    }
+    return miss.length ? 'Not met: ' + miss.join(', ') : 'Met';
+  }
+
+  // The shortlisting process, as followed at each institution.
+  function processSteps(plan) {
+    var ch = plan.ch, t = targetsOf();
+    return [
+      'Check the ward of the facility.',
+      'Check the candidates who applied from that ward (the Local municipality and Ward filters of the list); when there are too few, neighbouring wards or all wards.',
+      'Know the selection target: 1:' + SHORTLIST_TIMES + '. ' + (plan.single ? num(plan.posts) + ' posts x ' + SHORTLIST_TIMES + ' = ' + num(plan.shortlist) +
+        ' must be shortlisted.' : 'Each institution shortlists ' + SHORTLIST_TIMES + ' people per post: ' + num(plan.shortlist) + ' for the ' + num(plan.posts) + ' posts.') +
+        (ch && ch.known && ch.n ? ' The applications are ' + pctOfN(ch.online, ch.n) + ' online and ' + pctOfN(ch.paper, ch.n) + ' paper, so ' +
+          (plan.single ? '' : 'together ') + num(ch.onlineQ) + ' are shortlisted from online and ' + num(ch.paperQ) +
+          ' from paper applications (in proportion, ' + (plan.single ? 'to the nearest person' : 'per institution') + ').' : ''),
+      'Calculate the targets using that number: ' + (plan.single ? TARGET_LIST.map(function (k) { return k[1] + ' ' + slSum(plan.posts, k[0]); }).join('; ') :
+        t.youth + '% youth, ' + t.women + '% women and ' + t.pwd + '% persons with disabilities of each shortlist') + ' (to the nearest whole person, at least 1).',
+      'Filter the targeted groups (youth, women, persons with disabilities) and the online and paper applications.',
+      'View the documents: the ID document and proof of results, from the upload for online applicants and from the paper file at the HR office for paper applicants. Record each check.',
+      'Shortlist: set the status to Shortlisted. Then select up to the number of posts (both documents verified) and put others on reserve.'
+    ];
+  }
+
+  var CONTROLS = [
       'Every applicant was checked when applying: valid South African ID number, age 18 to 45, one application per ID number. Paper applications were captured by approved district capturers and imported lists were checked the same way.',
       'Only staff with Selection access could change a status or check documents; everyone else could only view. District staff only see their own district.',
       'Nobody could be selected before both the ID document and the proof of results were verified (from the upload for online applicants, from the paper file for paper applicants).',
       'No institution could have more people selected than its posts, and an applicant could be shortlisted, selected or on reserve at only one institution at a time.',
       '"Not suitable" and "Withdrawn" required a reason. A selection that made the youth or women target unreachable required a reason for the target not being met.',
       'Every change (status, document check, target reason) is kept with who made it and when, in the Selections, Document Checks, Target Reasons and Selection History tabs of the Google Sheet. The Applications master list is never changed by selection.'
-    ]);
+  ];
+  function controlsSection(r) {
+    r.heading('Controls applied by the system');
+    r.bullets(CONTROLS);
   }
+
+  // PDF: the criteria table and the process.
+  function criteriaSection(r, heading, note, plan, on, selected) {
+    r.heading(heading, note);
+    r.table([['Criterion', 18], ['How it is worked out', 52], ['Required', 9, 'right'], ['Achieved', 9, 'right'], ['Status', 12]],
+      criteriaRows(plan, on, selected).map(function (x) {
+        var label = x[0].replace(/ at least:/, ':').replace(/ from (online|paper) applications/, ': $1').replace(/ \(18 to 35\)/, '')
+          .replace(/persons with disabilities/, 'disability').replace(/ in total/, ': total');
+        return [label, x[1], num(x[2]), num(x[3]), x[4]];
+      }),
+      function (ri, ci, v) { return ci === 4 ? (v === 'Met' ? '#0a6b3d' : '#b26a00') : null; });
+    r.para('Achieved: for the shortlist, everyone shortlisted, on reserve or selected; for selection, everyone selected.', 8, r.C.muted);
+    r.para('The process followed', 9.5, r.C.dark, true);
+    r.bullets(processSteps(plan).map(function (x, i) { return (i + 1) + '. ' + x; }));
+  }
+
+  // Excel: a Criteria sheet with the same content.
+  function criteriaSheet(forWhat, generated, plan, on, selected, extra) {
+    var s = session();
+    var blank = ['', '', '', '', ''];
+    var rows = [['Report', 'EPWP General Worker recruitment: shortlisting criteria and process', '', '', ''],
+      ['For', forWhat, '', '', ''], ['Figures as at', generated || todayIso(), '', '', ''],
+      ['Downloaded by', (s ? s.name + ' (' + s.username + ')' : '') + ' on ' + todayIso(), '', '', ''], blank,
+      ['CRITERIA', 'How it is worked out', 'Required', 'Achieved', 'Status']];
+    criteriaRows(plan, on, selected).forEach(function (x) { rows.push(x.map(String)); });
+    rows.push(['', 'Achieved: for the shortlist, everyone shortlisted, on reserve or selected; for selection, everyone selected.', '', '', '']);
+    rows.push(blank);
+    rows.push(['PROCESS FOLLOWED', '', '', '', '']);
+    processSteps(plan).forEach(function (x, i) { rows.push(['Step ' + (i + 1), x, '', '', '']); });
+    (extra || []).forEach(function (x) { rows.push(x); });
+    rows.push(blank);
+    rows.push(['CONTROLS', '', '', '', '']);
+    CONTROLS.forEach(function (x) { rows.push(['', x, '', '', '']); });
+    return { sheet: 'Criteria', headers: ['Item', 'Details', 'Required', 'Achieved', 'Status'], rows: rows,
+      numeric: [0, 0, 1, 1, 0], wrap: [1, 1, 0, 0, 0], widths: [34, 95, 11, 11, 16], filter: false };
+  }
+
+  // One row per district or institution: what is required on the shortlist and what is there.
+  var PLAN_HEADERS = ['Posts', 'To shortlist', 'On the shortlist', 'Youth required', 'Youth on it', 'Women required', 'Women on it',
+    'Disability required', 'Disability on it', 'Online required', 'Online on it', 'Paper required', 'Paper on it',
+    'Selected', 'Shortlist criteria'];
+  function planCols(plan, on, selected) {
+    var ch = plan.ch || {};
+    return [plan.posts, plan.shortlist, on.n || 0, plan.sl.youth, on.youth || 0, plan.sl.women, on.women || 0, plan.sl.pwd, on.pwd || 0,
+      ch.known ? ch.onlineQ : '', ch.known ? ch.haveOnline : '', ch.known ? ch.paperQ : '', ch.known ? ch.havePaper : '',
+      selected ? selected.n || 0 : '', shortText(plan, on)];
+  }
+
 
   function reasonRows(insts) {
     var rows = [];
@@ -4649,8 +4866,12 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 
     r.heading('2. EPWP national targets', 'Targets: ' + t.youth + '% youth (18 to 35), ' + t.women + '% women, ' + t.pwd +
       '% persons with disabilities. Shares of the applications, the shortlist and the selected.');
-    targetTable(r, out.applicationGroups || { n: 0, youth: 0, women: 0, pwd: 0 }, shortlisted, selected, posts, scopeChannels(shortlistPlan(insts), out),
-      sumGroups(insts.map(function (i) { return onShortlist(i.groups); })));
+    var scopePlan = scopeChannels(shortlistPlan(insts), out);
+    var scopeOn = sumGroups(insts.map(function (i) { return onShortlist(i.groups); }));
+    targetTable(r, out.applicationGroups || { n: 0, youth: 0, women: 0, pwd: 0 }, shortlisted, selected, posts, scopePlan, scopeOn);
+
+    criteriaSection(r, '3. Shortlisting criteria and process', 'The criteria are worked out at each institution from its own posts and applications, ' +
+      'and added up here for ' + out.scope + '.', scopePlan, scopeOn, selected);
 
     var byD = {};
     insts.forEach(function (i) {
@@ -4659,8 +4880,31 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       if (i.groups) { d.slg.push(i.groups.Shortlisted); d.seg.push(i.groups.Selected); }
     });
     var names = Object.keys(byD).sort();
+    var sec = 4;
+    var crCols = [['', 24], ['Posts', 6, 'right'], ['Shortlist', 8, 'right'], ['Youth', 8, 'right'], ['Women', 8, 'right'], ['Disab.', 7, 'right'],
+      ['Online', 8, 'right'], ['Paper', 8, 'right'], ['Status', 23]];
+    var crRow = function (label, plan, on) {
+      var ch = plan.ch || {};
+      var x = function (have, need) { return num(have || 0) + '/' + num(need); };
+      return [label, num(plan.posts), x(on.n, plan.shortlist), x(on.youth, plan.sl.youth), x(on.women, plan.sl.women), x(on.pwd, plan.sl.pwd),
+        ch.known ? x(ch.haveOnline, ch.onlineQ) : '-', ch.known ? x(ch.havePaper, ch.paperQ) : '-', shortCodes(plan, on)];
+    };
+    var crColour = function (ri, ci, v) { return ci === 8 ? (v === 'Met' ? '#0a6b3d' : '#b26a00') : null; };
     if (names.length > 1) {
-      r.heading('3. Per district', 'Selected shares against the targets (Y youth, W women, D persons with disabilities).');
+      var dCols = crCols.slice();
+      dCols[0] = ['District', 24];
+      r.heading(sec++ + '. Shortlisting criteria per district', 'On the shortlist / required (shortlisted, reserve and selected count). Each district adds up its institutions. Status: the criteria not met yet (Y youth, W women, D persons with disabilities, O online, P paper).');
+      r.table(dCols, names.map(function (nm) {
+        var di = insts.filter(function (i) { return i.district === nm; });
+        return crRow(nm, shortlistPlan(di), sumGroups(di.map(function (i) { return onShortlist(i.groups); })));
+      }), crColour);
+    }
+    var iCols = crCols.slice();
+    iCols[0] = ['Institution', 24];
+    r.heading(sec++ + '. Shortlisting criteria per institution', 'On the shortlist / required, worked out from each institution\'s posts and applications (ratio 1:' + SHORTLIST_TIMES + '). Status: the criteria not met yet (Y youth, W women, D persons with disabilities, O online, P paper).');
+    r.table(iCols, insts.map(function (i) { return crRow(i.name + (names.length > 1 ? ' (' + i.district.replace(/ District$| Metro$/, '') + ')' : ''), shortlistPlan([i]), onShortlist(i.groups)); }), crColour);
+    if (names.length > 1) {
+      r.heading(sec++ + '. Per district', 'Selected shares against the targets (Y youth, W women, D persons with disabilities).');
       r.table([['District', 24], ['Posts', 7, 'right'], ['Applications', 11, 'right'], ['Shortlisted', 10, 'right'],
         ['Selected', 9, 'right'], ['Open', 7, 'right'], ['Y selected', 10, 'right'], ['W selected', 10, 'right'], ['D selected', 10, 'right']],
         names.map(function (n) {
@@ -4673,7 +4917,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         });
     }
 
-    r.heading((names.length > 1 ? '4' : '3') + '. Per institution', 'Selected shares against the targets. Docs: shortlisted, reserve and selected with both documents verified.');
+    r.heading(sec++ + '. Per institution', 'Selected shares against the targets. Docs: shortlisted, reserve and selected with both documents verified.');
     r.table([['Institution', 26], ['District', 15], ['Posts', 6, 'right'], ['Appl.', 7, 'right'], ['Short.', 7, 'right'],
       ['Sel.', 6, 'right'], ['Open', 6, 'right'], ['Docs', 8, 'right'], ['Y', 6, 'right'], ['W', 6, 'right'], ['D', 6, 'right']],
       insts.map(function (i) {
@@ -4689,7 +4933,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     r.para('* A reason has been given for a target not met (see the next section). Institutions that were not on the application form take applications from a nearby facility; shared applicants can only be active at one institution.', 8, r.C.muted);
 
     var reasons = reasonRows(insts);
-    r.heading((names.length > 1 ? '5' : '4') + '. Reasons targets were not met');
+    r.heading(sec++ + '. Reasons targets were not met');
     r.table([['District', 13], ['Institution', 17], ['Target', 12], ['Reason', 32], ['Given by', 12], ['On', 14]], reasons);
 
     controlsSection(r);
@@ -4715,13 +4959,16 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     ]);
     r.heading('2. EPWP national targets', 'Targets: ' + t.youth + '% youth (18 to 35), ' + t.women + '% women, ' + t.pwd +
       '% persons with disabilities, each rounded up to whole people for the posts here.');
-    targetTable(r, apps, g.Shortlisted || { n: 0 }, g.Selected || { n: 0, youth: 0, women: 0, pwd: 0 }, i.posts, shortlistPlan([i]), onShortlist(g));
+    var crit = instCriteria(i, haveFromRows(decided));
+    targetTable(r, apps, g.Shortlisted || { n: 0 }, g.Selected || { n: 0, youth: 0, women: 0, pwd: 0 }, i.posts, crit.plan, crit.on);
+    criteriaSection(r, '3. Shortlisting criteria and process', 'How the shortlisting team worked out the shortlist for ' + i.name +
+      ', and how far it has got.', crit.plan, crit.on, crit.selected);
     var reasons = reasonRows([i]);
     if (reasons.length) {
-      r.heading('3. Reasons targets were not met');
+      r.heading('4. Reasons targets were not met');
       r.table([['Target', 18], ['Reason', 48], ['Given by', 18], ['On', 16]], reasons.map(function (x) { return x.slice(2); }));
     }
-    var n = reasons.length ? 4 : 3;
+    var n = reasons.length ? 5 : 4;
     var order = { Selected: 0, Reserve: 1, Shortlisted: 2, 'Not suitable': 3, Withdrawn: 4 };
     decided.sort(function (a, b) { return order[a.status] - order[b.status] || (a.ref < b.ref ? -1 : 1); });
     r.heading(n + '. Decisions', 'Everyone with a status at this institution. Docs: ID document / proof of results.');

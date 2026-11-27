@@ -288,6 +288,22 @@ the whole process, from posts and applications to selection, at every level:
   figures for that institution, plus every decision: reference, applicant, gender
   and age, target groups, how they applied, document checks, status and reason.
 
+**Shortlisting criteria and process in every report.** So that the shortlisting
+team can show how it reached its shortlist, every audit file includes the
+criteria, how each is worked out, what is required, what has been achieved and
+whether it is met, and the process followed (the 7 steps) and the controls:
+
+| File | Where | What it includes |
+|---|---|---|
+| Audit report (PDF), institution | Institution page | Section *Shortlisting criteria and process*: shortlist in total (1:3), youth, women, persons with disabilities, from online and from paper applications, selection in total and per target, each with its working (for example "60% of 18 = 10.8, so 11"), required, achieved and status; then the 7 steps with the numbers for that institution |
+| Audit report (PDF), district or province | Overview | The same, added up over the institutions; then *Shortlisting criteria per district* (province) and *per institution*: on the shortlist / required for each criterion, and which criteria are not met yet |
+| Download to Excel, institution's applicants | Institution page | A first sheet **Criteria** (as in the PDF, plus which list and filters were downloaded); on the Applicants sheet, Yes/No columns for youth, woman and person with a disability |
+| Download to Excel, institutions | Overview | A first sheet **Criteria** for the district or province; on the Institutions sheet, on the shortlist (total, youth, women, disability) and *Shortlist criteria* (Met, or what is short); for the province a **Districts** sheet with the criteria per district and the total |
+
+"Achieved" for the shortlist counts everyone shortlisted, on reserve or selected;
+for selection, everyone selected. In the institution's files the achieved numbers
+are read fresh from the decisions when the file is made.
+
 The PDF is made in the browser from the figures on screen, with the department
 logo, the date of the figures and who produced it. The full history of every
 change stays in the Selection History tab of the Sheet.
