@@ -341,6 +341,12 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 .tm-mark { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
 .tm-val { white-space: nowrap; font-weight: 700; font-variant-numeric: tabular-nums; }
 .tm-need { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
+.sel-steps ol { margin: 10px 0 0; padding-left: 22px; }
+.sel-steps li { margin: 0 0 10px; padding-left: 4px; }
+.sel-steps li b { color: var(--green-900); }
+.sel-steps li .muted { display: block; font-size: 13px; }
+.sel-steps .row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.sel-steps .btn { min-height: 34px; padding: 4px 12px; font-size: 13px; }
 .tm-row.tm-count { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); }
 .tplan { margin-bottom: 14px; padding: 12px 14px; border-radius: 10px; background: var(--green-50); border: 1px solid var(--line); }
 .tplan h3 { margin: 0 0 10px; font-size: 16px; color: var(--green-900); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; }
@@ -955,6 +961,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       <div class="kpis" id="sel-inst-kpis"></div>
       <section class="targets" id="sel-inst-targets" aria-label="EPWP national targets for this institution"></section>
       <div class="sel-warn" id="sel-inst-warn" hidden></div>
+      <section class="targets sel-steps" id="sel-inst-steps" aria-label="How to shortlist" hidden></section>
       <form class="filters sel-pool-filters" id="sel-pool-form" novalidate>
         <div class="field">
           <label for="sel-search">Search</label>
@@ -3314,14 +3321,26 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
   var DEFAULT_TARGETS = { youth: 60, women: 55, pwd: 2 };
   function targetsOf(out) { return (out && out.targets) || (selData && selData.targets) || DEFAULT_TARGETS; }
   function share(g, k) { return g && g.n ? g[k] / g.n * 100 : null; }
-  // HR shortlists 3 people per post. Per institution: the people each target
-  // needs among the posts (rounded up), times 3, is the least to shortlist of
-  // that group. A district or the province adds up its institutions.
+  // Selection ratio 1:3: HR shortlists 3 people per post. Per institution the
+  // target percentages are taken of that shortlist, to the nearest whole person
+  // and at least 1: 9 posts -> 27 to shortlist: 60% = 16 youth, 55% = 15 women,
+  // 2% = 1 person with a disability. A district or the province adds up its
+  // institutions.
   var SHORTLIST_TIMES = 3;
   var TARGET_NOUN = { youth: 'youth', women: 'women', pwd: 'persons with disabilities' };
   function needOf(posts, key) { return Math.ceil((posts || 0) * targetsOf()[key] / 100); }
   // Everyone who made the shortlist: still shortlisted, on reserve or selected.
   function onShortlist(groups) { return sumGroups(groups ? [groups.Shortlisted, groups.Selected, groups.Reserve] : []); }
+  function slNeedOf(posts, key) {
+    return posts ? Math.max(1, Math.round(SHORTLIST_TIMES * posts * targetsOf()[key] / 100)) : 0;
+  }
+  // "60% of 27 = 16.2, so 16"
+  function slSum(posts, key) {
+    var exact = Math.round(SHORTLIST_TIMES * posts * targetsOf()[key]) / 100;
+    var n = slNeedOf(posts, key);
+    return targetsOf()[key] + '% of ' + num(SHORTLIST_TIMES * posts) + ' = ' + String(exact) +
+      (exact === n ? '' : ', so ' + n);
+  }
   function shortlistPlan(insts) {
     var plan = { posts: 0, shortlist: 0, sel: { youth: 0, women: 0, pwd: 0 }, sl: { youth: 0, women: 0, pwd: 0 } };
     insts.forEach(function (i) {
@@ -3329,11 +3348,11 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       plan.posts += i.posts;
       plan.shortlist += SHORTLIST_TIMES * i.posts;
       TARGET_LIST.forEach(function (k) {
-        var n = needOf(i.posts, k[0]);
-        plan.sel[k[0]] += n;
-        plan.sl[k[0]] += SHORTLIST_TIMES * n;
+        plan.sel[k[0]] += needOf(i.posts, k[0]);
+        plan.sl[k[0]] += slNeedOf(i.posts, k[0]);
       });
     });
+    plan.single = insts.filter(function (i) { return i && i.posts; }).length === 1;
     return plan;
   }
   // "Shortlist 18 (3 x 6 posts): at least 12 youth, 12 women, 3 persons with disabilities"
@@ -3348,14 +3367,14 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     var h = document.createElement('h3');
     h.textContent = 'Shortlist ' + num(plan.shortlist) + ' people';
     var sub = document.createElement('span');
-    sub.textContent = SHORTLIST_TIMES + ' per post \u00d7 ' + num(plan.posts) + ' post' + (plan.posts === 1 ? '' : 's');
+    sub.textContent = 'Selection ratio 1:' + SHORTLIST_TIMES + ': ' + num(plan.posts) + ' post' + (plan.posts === 1 ? '' : 's') + ' \u00d7 ' + SHORTLIST_TIMES;
     h.appendChild(sub);
     box.appendChild(h);
     var have = shortlistedG || { n: 0, youth: 0, women: 0, pwd: 0 };
     var grid = document.createElement('div');
     grid.className = 'tplan-grid';
     [['n', 'In total', plan.shortlist, '']].concat(TARGET_LIST.map(function (k) {
-      return [k[0], k[1], plan.sl[k[0]], SHORTLIST_TIMES + ' \u00d7 ' + num(plan.sel[k[0]]) + ' needed among the posts (' + targetsOf()[k[0]] + '%)'];
+      return [k[0], k[1], plan.sl[k[0]], plan.single ? slSum(plan.posts, k[0]) : targetsOf()[k[0]] + '% of each institution\'s shortlist, added up'];
     })).forEach(function (x) {
       var got = have[x[0]] || 0;
       var cell = document.createElement('div');
@@ -3521,7 +3540,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         var open = posts - (selectedG ? selectedG.n : 0);
         var n = document.createElement('p');
         n.className = 'tm-need';
-        var slLine = plan && plan.posts ? ' Shortlist at least ' + num(plan.sl[key]) + ' ' + nounOf(plan.sl[key]) + ' (' + SHORTLIST_TIMES + ' \u00d7 ' + num(need) + ').' : '';
+        var slLine = plan && plan.posts ? ' Shortlist at least ' + num(plan.sl[key]) + ' ' + nounOf(plan.sl[key]) +
+          (plan.single ? ' (' + slSum(plan.posts, key) + ').' : ' (' + target + '% of each shortlist, added up).') : '';
         if (have >= need) {
           n.textContent = 'At least ' + need + ' ' + nounOf(need) + ' among the ' + posts + ' posts. Reached: ' + have + ' selected.';
         } else if (need - have > open) {
@@ -3667,7 +3687,78 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     });
   }
 
+  // The shortlisting process, in the order HR works, with buttons that set the filters.
+  function renderInstSteps() {
+    var i = selInst, box = $('sel-inst-steps');
+    box.hidden = !i || !i.posts;
+    if (box.hidden) return;
+    var plan = shortlistPlan([i]);
+    box.innerHTML = '';
+    var h = document.createElement('h2');
+    h.textContent = 'How to shortlist for ' + i.name;
+    box.appendChild(h);
+    var ol = document.createElement('ol');
+    var toList = function () { $('sel-pool-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+    var btn = function (row, label, fn) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn ghost';
+      b.textContent = label;
+      b.addEventListener('click', fn);
+      row.appendChild(b);
+    };
+    var step = function (title, text, buttons) {
+      var li = document.createElement('li');
+      var b = document.createElement('b');
+      b.textContent = title;
+      li.appendChild(b);
+      if (text) {
+        var m = document.createElement('span');
+        m.className = 'muted';
+        m.textContent = text;
+        li.appendChild(m);
+      }
+      if (buttons) {
+        var row = document.createElement('div');
+        row.className = 'row';
+        buttons(row);
+        li.appendChild(row);
+      }
+      ol.appendChild(li);
+    };
+    step('Check the ward of the facility.', 'Choose the facility\'s local municipality and then its ward in the headings of the list.', function (row) {
+      btn(row, 'Choose the ward', function () {
+        toList();
+        var w = $('sel-ward'), l = $('sel-local');
+        setTimeout(function () { (w.disabled ? l : w).focus(); }, 400);
+      });
+    });
+    step('Check the candidates who applied from that ward.', 'With the ward chosen, the list shows only applicants living in that ward. ' +
+      'If there are too few, choose a neighbouring ward, or "All wards".');
+    step('Know your selection target: 1:' + SHORTLIST_TIMES + '.', num(plan.posts) + ' post' + (plan.posts === 1 ? '' : 's') + ' \u00d7 ' +
+      SHORTLIST_TIMES + ' = ' + num(plan.shortlist) + ' must be shortlisted.');
+    step('Calculate your targets using that number.', TARGET_LIST.map(function (k) {
+      return k[1] + ': ' + slSum(plan.posts, k[0]) + (slNeedOf(plan.posts, k[0]) === 1 ? ' person' : ' people');
+    }).join('. ') + '.');
+    step('Filter your targeted percentages.', 'Show one target group at a time (the Applicant heading of the list).', function (row) {
+      [['youth', 'Youth'], ['women', 'Women'], ['pwd', 'Persons with disabilities'], ['', 'Everyone']].forEach(function (g) {
+        btn(row, g[0] ? 'Show ' + g[1].toLowerCase() : 'Show everyone', function () {
+          $('sel-group').value = g[0];
+          loadPool(0);
+          toList();
+        });
+      });
+    });
+    step('Now view the documents.', 'Open the ID and results in the Documents column and record the check. Paper applicants: check the paper file at the HR office.',
+      function (row) {
+        btn(row, 'Show those not yet verified', function () { $('sel-docs').value = 'unverified'; loadPool(0); toList(); });
+      });
+    step('Shortlist.', 'Set the Status to Shortlisted. The targets above show how many of each group are on the shortlist and how many to go.');
+    box.appendChild(ol);
+  }
+
   function renderInstTargets() {
+    renderInstSteps();
     var i = selInst, box = $('sel-inst-targets');
     box.hidden = !i || !i.groups;
     if (box.hidden) return;
@@ -4410,7 +4501,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
           posts ? need + ' of ' + posts + '; ' + have + ' selected' : '-'];
       }), function (ri, ci, v) { return ci === 5 ? metColour(ri, ci, v) : null; });
     if (plan && plan.posts) {
-      r.para(planText(plan) + ' (' + SHORTLIST_TIMES + ' times the people each target needs among the posts of each institution). ' +
+      r.para(planText(plan) + '. Selection ratio 1:' + SHORTLIST_TIMES + '; the target percentages are taken of the shortlist of each institution, to the nearest whole person and at least 1. ' +
         'On the shortlist so far (shortlisted, reserve or selected): ' + num(onSl.n || 0) + '.', 8, r.C.muted);
     }
   }

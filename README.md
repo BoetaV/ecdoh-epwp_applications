@@ -214,24 +214,34 @@ every level and stage:
 - **Per institution**: the *Targets* column shows the shortlist and the selected
   (Y youth, W women, D disability), and the institution's own page has the same
   meters. It warns when a target can no longer be met with the posts still open.
-- **How many to shortlist.** HR shortlists **3 people per post**. For each
-  institution, the people each target needs among its posts are worked out and
-  rounded up to whole people, then multiplied by 3. For example, 6 posts:
-  at least 4 youth (60%), 4 women (55%) and 1 person with a disability (2%) must
-  be selected, so shortlist 18 people with at least 12 youth, 12 women and
-  3 persons with disabilities. A district and the province add up their
-  institutions. These numbers are shown:
+- **How many to shortlist.** The selection ratio is **1:3**: HR shortlists
+  3 people per post. The target percentages are taken of that shortlist, to the
+  nearest whole person and at least 1. For example, 9 posts: 9 × 3 = **27**
+  must be shortlisted, with 60% youth = 27 × 0.6 = 16.2, so **16**; 55% women =
+  14.85, so **15**; 2% persons with disabilities = 0.54, so **1**. A district and
+  the province add up their institutions. These numbers are shown:
   - in a box at the top of the targets (total and per group, with how many are on
     the shortlist and how many to go; orange until reached, green once reached);
-  - as a *To shortlist* bar in each meter (for example "2 of 12");
-  - on the *On the shortlist* card (for example "5 of 18");
-  - in the overview's *Targets* column and the district table (Y 2/12, W 3/12,
-    D 0/3);
+  - as a *To shortlist* bar in each meter (for example "2 of 16");
+  - on the *On the shortlist* card (for example "5 of 27");
+  - in the overview's *Targets* column and the district table (Y 2/16, W 3/15,
+    D 0/1);
   - in the audit PDF (*To shortlist* column) and the Excel download of the
     institutions.
 
   *On the shortlist* counts everyone still shortlisted, on reserve or selected,
   so selecting someone does not lower it.
+- **How to shortlist**: each institution's page lists the process step by step,
+  with the numbers worked out for its posts and buttons that set the filters:
+  1. Check the ward of the facility (*Choose the ward* goes to the Local
+     municipality and Ward headings of the list).
+  2. Check the candidates who applied from that ward.
+  3. Know your selection target: 1:3 (posts × 3 = how many to shortlist).
+  4. Calculate your targets using that number (60%, 55%, 2% of it).
+  5. Filter your targeted percentages (*Show youth*, *Show women*, *Show persons
+     with disabilities*, *Show everyone*).
+  6. Now view the documents (*Show those not yet verified*).
+  7. Shortlist (set the Status to Shortlisted).
 - **Target group filter** in the *Applicant* heading of an institution's list
   (youth, women, persons with disabilities, also men and older than 35), and Youth / Woman / PwD tags next to each applicant, to help
   shortlist towards the targets.
