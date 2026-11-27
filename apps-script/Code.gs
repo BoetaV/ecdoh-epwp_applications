@@ -84,6 +84,9 @@ var DISTRICT_NAMES = {};
 DISTRICTS.forEach(function (d) { DISTRICT_NAMES[d[0]] = d[1]; });
 var PAGE_SIZE = 50;
 var DOWNLOADS_SHEET = 'Downloads';
+// Every supporting document opened through the website (who, when, which), for POPIA.
+var DOC_VIEWS_SHEET = 'Document Views';
+var DOC_VIEWS_HEADERS = ['Timestamp', 'Username', 'Name', 'Access', 'Reference', 'Applicant', 'Document'];
 var DOWNLOAD_HEADERS = ['Timestamp', 'Username', 'Name', 'Access', 'Downloaded', 'Filters', 'Rows'];
 
 // Columns of the Excel download, in order: [heading in Excel, column in the Applications tab].
@@ -861,7 +864,7 @@ function importPlace_(districtText, localText, facilityText) {
 function doGet() {
   // "uploads" and "capture" tell the website which features this version has.
   return json_({ ok: true, service: 'EPWP general worker applications', uploads: true, capture: true, accountRequests: true,
-    download: true, dashboard: true, selection: true, verification: true });
+    download: true, dashboard: true, selection: true, verification: true, documents: true });
 }
 
 function doPost(e) {
@@ -889,6 +892,7 @@ function doPost(e) {
       case 'select': return json_(select_(data, sessionUser_(data.token)));
       case 'verify': return json_(verify_(data, sessionUser_(data.token)));
       case 'target-reason': return json_(targetReason_(data, sessionUser_(data.token)));
+      case 'document': return json_(document_(data, sessionUser_(data.token)));
       default: return json_(saveApplication_(data, null));
     }
   } catch (err) {
@@ -2157,7 +2161,7 @@ function pool_(data, user) {
   var words = String(data.search || '').toLowerCase().replace(/[^a-z0-9 -]/g, ' ').split(/\s+/).filter(String);
 
   var values = readRows_(getSheet_(), ['Reference', 'Name', 'Surname', 'SouthAfricanID', 'DateOfBirth', 'Gender',
-    'DisabilityStatus', 'CellphoneNumber', 'District', 'LocalMunicipality', 'NearestFacility', 'MunicipalWardNo',
+    'DisabilityStatus', 'CurrentAddress', 'CellphoneNumber', 'District', 'LocalMunicipality', 'NearestFacility', 'MunicipalWardNo',
     'HighestSchoolLevel', 'ID Document (link)', 'Proof of Results (link)', 'Channel', 'Date Received', 'Received At',
     'Paper Documents']);
   var col = {};
@@ -2209,6 +2213,7 @@ function pool_(data, user) {
       gender: String(row[col.Gender]), age: applicantAge_(row, col, now),
       disability: String(row[col.DisabilityStatus]),
       cell: String(row[col.CellphoneNumber]).replace(/^'/, ''),
+      address: String(row[col.CurrentAddress] || '').replace(/^'/, ''),
       district: displayDistrict_(String(row[col.District])),
       local: String(row[col.LocalMunicipality]), ward: String(row[col.MunicipalWardNo]),
       facility: String(row[col.NearestFacility]),
@@ -2446,6 +2451,60 @@ function verify_(data, user) {
   } finally {
     lock.releaseLock();
   }
+}
+
+/**
+ * A supporting document (ID or proof of results) for a signed-in staff member.
+ * The file is read from Drive by the script (running as the Sheet owner), so
+ * staff never need their own access to the Drive folder, and the folder stays
+ * private. The same access rule as the lists applies: district staff only for
+ * applicants of their district, or of an institution of their district they
+ * may select for. Every view is logged in the Document Views tab.
+ */
+function document_(data, user) {
+  var bad = function (message) { return { ok: false, error: 'invalid', message: message }; };
+  var which = data.which === 'results' ? 'Proof of Results (link)' : data.which === 'id' ? 'ID Document (link)' : '';
+  if (!which) return bad('Choose a document.');
+  var ref = String(data.ref || '').trim();
+  var apps = getSheet_();
+  var last = apps.getLastRow();
+  var refs = last < 2 ? [] : apps.getRange(2, HEADERS.indexOf('Reference') + 1, last - 1, 1).getDisplayValues();
+  var at = -1;
+  for (var i = 0; i < refs.length; i++) if (refs[i][0] === ref) { at = i + 2; break; }
+  if (at === -1) return bad('Application ' + ref + ' was not found.');
+  var row = apps.getRange(at, 1, 1, HEADERS.length).getValues()[0];
+  var col = {};
+  HEADERS.forEach(function (h, j) { col[h] = j; });
+
+  var allowed = canSee_(user, row[col.District]);
+  if (!allowed) {
+    // An applicant of a neighbouring district who applied at one of this user's institutions.
+    var allocs = allocations_();
+    allowed = institutionMatcher_(allocs).all(row[col.NearestFacility], row[col.District])
+      .some(function (a) { return canSee_(user, a.district); });
+  }
+  if (!allowed) return bad('You may not open the documents of this applicant.');
+
+  var link = String(row[col[which]] || '');
+  var m = /\/d\/([A-Za-z0-9_-]+)/.exec(link) || /[?&]id=([A-Za-z0-9_-]+)/.exec(link);
+  if (!m) return bad('There is no uploaded document for this applicant. For a paper application, check the paper file.');
+  var file;
+  try { file = DriveApp.getFileById(m[1]); } catch (err) { return bad('The document could not be found in Drive.'); }
+  if (file.isTrashed()) return bad('The document has been deleted from Drive.');
+  var blob = file.getBlob();
+  var label = which === 'ID Document (link)' ? 'ID document' : 'Proof of results';
+  logDocumentView_(user, ref, String(row[col.Name]) + ' ' + String(row[col.Surname]), label);
+  return { ok: true, name: file.getName(), type: blob.getContentType(), data: Utilities.base64Encode(blob.getBytes()) };
+}
+
+function logDocumentView_(user, ref, applicant, label) {
+  try {
+    var sheet = headedSheet_(DOC_VIEWS_SHEET, DOC_VIEWS_HEADERS);
+    var r = sheet.getLastRow() + 1;
+    sheet.getRange(r, 1).setNumberFormat('yyyy-mm-dd hh:mm:ss');
+    sheet.getRange(r, 1, 1, DOC_VIEWS_HEADERS.length).setValues([[new Date(), user.username, safeCell_(user.name),
+      safeCell_(user.district), ref, safeCell_(applicant), label]]);
+  } catch (err) { console.error(err); }
 }
 
 /** The applications a staff member may see, newest first, after the filters. */

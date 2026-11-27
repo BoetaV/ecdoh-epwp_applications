@@ -2160,15 +2160,10 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       chip.textContent = r.channel;
       how.insertBefore(chip, how.firstChild);
       var docs = addCell(tr, '');
-      [['ID', r.idDoc], ['Results', r.resultsDoc]].forEach(function (d) {
+      [['ID', r.idDoc, 'id'], ['Results', r.resultsDoc, 'results']].forEach(function (d) {
         if (!d[1]) return;
-        var a = document.createElement('a');
-        a.href = d[1];
-        a.target = '_blank';
-        a.rel = 'noopener';
-        a.textContent = d[0];
         if (docs.firstChild) docs.appendChild(document.createTextNode(' · '));
-        docs.appendChild(a);
+        docs.appendChild(docLink(d[0], r.ref, d[2], d[1]));
       });
       if (!docs.firstChild) docs.textContent = '-';
       body.appendChild(tr);
@@ -2179,6 +2174,64 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     $('list-page').textContent = out.total ? first + ' to ' + lastShown + ' of ' + out.total : '';
     $('list-prev').disabled = out.offset === 0;
     $('list-next').disabled = lastShown >= out.total;
+  }
+
+  /* ---------- supporting documents ---------- */
+  // Staff open uploads through the Apps Script, which reads them from Drive as
+  // the Sheet owner. Nobody needs their own access to the Drive folder, and
+  // every document opened is logged.
+  function docLink(label, ref, which, driveUrl) {
+    var a = document.createElement('a');
+    a.href = '#';
+    a.textContent = label;
+    a.title = 'Open the ' + (which === 'id' ? 'ID document' : 'proof of results') + ' in a new tab';
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      openDocument(ref, which, driveUrl);
+    });
+    return a;
+  }
+
+  function openDocument(ref, which, driveUrl) {
+    var s = session();
+    if (!s) return sessionEnded();
+    // Open the tab now (in the click), so the browser does not block it.
+    var win = window.open('', '_blank');
+    var say = function (text) {
+      if (!win || win.closed) { window.alert(text); return; }
+      win.document.title = 'EPWP document';
+      win.document.body.style.fontFamily = 'Arial, sans-serif';
+      win.document.body.textContent = text;
+    };
+    say('Opening the document...');
+    post({ action: 'document', token: s.token, ref: ref, which: which }).then(function (out) {
+      if (out && out.error === 'auth') { if (win) win.close(); return sessionEnded(); }
+      if (!out || !out.ok || !out.data) {
+        // An Apps Script from before this change: fall back to the Drive link.
+        if (out && !out.data && /required fields/i.test(out.message || '') && driveUrl) {
+          if (win) win.location.href = driveUrl; else window.open(driveUrl, '_blank');
+          return;
+        }
+        say((out && out.message) || 'The document could not be opened. Please try again.');
+        return;
+      }
+      var bin = atob(out.data), bytes = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      var url = URL.createObjectURL(new Blob([bytes], { type: out.type || 'application/octet-stream' }));
+      if (win && !win.closed) {
+        win.location.href = url;
+      } else {
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = out.name || 'document';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+      setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+    }).catch(function () {
+      say('The document could not be opened. Check your internet connection and try again.');
+    });
   }
 
   /* ---------- staff: download to Excel ---------- */
@@ -3653,15 +3706,10 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     var d = r.docs || { id: '', results: '', note: '' };
     var links = document.createElement('div');
     links.className = 'doc-links';
-    [['ID', r.idDoc], ['Results', r.resultsDoc]].forEach(function (x) {
+    [['ID', r.idDoc, 'id'], ['Results', r.resultsDoc, 'results']].forEach(function (x) {
       if (!x[1]) return;
-      var a = document.createElement('a');
-      a.href = x[1];
-      a.target = '_blank';
-      a.rel = 'noopener';
-      a.textContent = x[0];
       if (links.firstChild) links.appendChild(document.createTextNode(' · '));
-      links.appendChild(a);
+      links.appendChild(docLink(x[0], r.ref, x[2], x[1]));
     });
     if (!links.firstChild) {
       links.textContent = r.channel === 'Captured'
@@ -3951,7 +3999,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
           var here = r.elsewhere ? '' : r.status;
           return [r.ref, here || 'Not reviewed', here ? r.reason : '', here ? r.statusBy : '', here ? r.statusOn : '',
             r.elsewhere ? 'Already ' + r.status.toLowerCase() + ' at ' + r.elsewhere : '', r.name, r.surname, r.id, r.gender, r.age === null ? '' : String(r.age),
-            r.disability, r.cell, r.district, r.local, r.ward, r.facility, r.qualification, r.qualificationListed ? 'Yes' : 'No',
+            r.disability, r.cell, r.address || '', r.district, r.local, r.ward, r.facility, r.qualification, r.qualificationListed ? 'Yes' : 'No',
             r.channel, r.paperDocs, r.idDoc, r.resultsDoc,
             (r.docs && r.docs.id) || 'Not checked', (r.docs && r.docs.results) || 'Not checked', (r.docs && r.docs.note) || '',
             (r.docs && r.docs.by) || '', (r.docs && r.docs.on) || '', r.receivedAt || '', r.dateReceived || ''];
@@ -3959,11 +4007,11 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         downloadBlob(buildXlsx({
           sheet: 'Applicants', title: 'EPWP selection - ' + out.institution.name, scope: out.institution.district,
           headers: ['Reference', 'Status', 'Reason', 'Status set by', 'Status date', 'Status at another institution', 'First name(s)',
-            'Surname', 'ID number', 'Gender', 'Age', 'Disability', 'Cellphone', 'District', 'Local municipality', 'Ward',
+            'Surname', 'ID number', 'Gender', 'Age', 'Disability', 'Cellphone', 'Home address', 'District', 'Local municipality', 'Ward',
             'Applied for', 'Qualification', 'Advertised qualification', 'How applied', 'Paper documents', 'ID document', 'Proof of results',
             'ID document check', 'Proof of results check', 'Check note', 'Checked by', 'Checked on', 'Paper form handed in at',
             'Paper form received on'],
-          links: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+          links: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
           numeric: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
           rows: rows
         }), 'EPWP_Selection_' + fileSafe(out.institution.name) + (out.from === 'district' ? '_whole_district' : '') + '_' + todayIso() + '.xlsx');

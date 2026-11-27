@@ -377,6 +377,17 @@ reference number.
 
 ## Finding the supporting documents
 
+**On the website (staff).** Signed-in staff click **ID** or **Results** in View
+applications or on the Selection screen. The Apps Script reads the file from
+Drive as the Sheet owner and opens it in a new tab, so staff do **not** need
+access to the Drive folder and the owner never has to share each file. The usual
+access rule applies (district staff: their own district's applicants, or
+applicants of an institution in their district). Every document opened is
+logged in the **Document Views** tab (who, when, which applicant and document).
+The Drive folder itself stays private. Links in the Excel downloads still point
+straight to Drive and only open for people the folder has been shared with.
+
+
 Applicants upload two documents: a copy of their ID and their proof of results
 (school results or qualification certificate).
 
