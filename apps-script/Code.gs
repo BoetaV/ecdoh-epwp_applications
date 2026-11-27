@@ -2027,7 +2027,7 @@ function selectionScope_(data, user) {
 function institutions_(data, user) {
   ensureAllocationTabs_();
   var district = selectionScope_(data, user);
-  var key = 'inst:' + dataVersion_() + ':' + ALLOCATIONS_VERSION + ':' + (user.provincial ? 'P' : 'D:' + user.districtCode) +
+  var key = 'inst2:' + dataVersion_() + ':' + ALLOCATIONS_VERSION + ':' + (user.provincial ? 'P' : 'D:' + user.districtCode) +
     ':' + (district || 'all');
   var out = cacheGet_(key);
   if (!out) {
@@ -2045,14 +2045,14 @@ function computeInstitutions_(district, user) {
   var stats = {};
   allocs.forEach(function (a) {
     if (!inScope(a.district)) return;
-    stats[a.id] = { applications: 0, women: 0, youth: 0, disabled: 0, Shortlisted: 0, Selected: 0, Reserve: 0,
-      'Not suitable': 0, Withdrawn: 0, active: 0, verified: 0,
+    stats[a.id] = { applications: 0, online: 0, captured: 0, women: 0, youth: 0, disabled: 0, Shortlisted: 0, Selected: 0, Reserve: 0,
+      'Not suitable': 0, Withdrawn: 0, active: 0, verified: 0, activeOnline: 0, activeCaptured: 0,
       groups: { Shortlisted: emptyGroups_(), Selected: emptyGroups_(), Reserve: emptyGroups_() } };
   });
   var sel = selections_();
   var docs = documentChecks_();
   var reasons = targetReasons_();
-  var groupsByRef = {};
+  var groupsByRef = {}, paperByRef = {};
   var appGroups = emptyGroups_(), appByDistrict = {}, appChannel = { online: 0, captured: 0 };
 
   var values = readRows_(getSheet_(), ['Reference', 'SouthAfricanID', 'DateOfBirth', 'Gender', 'DisabilityStatus',
@@ -2067,12 +2067,14 @@ function computeInstitutions_(district, user) {
     var counted = false;
     var g = targetGroups_(row, col, now);
     var ref = String(row[col.Reference]);
-    if (sel[ref]) groupsByRef[ref] = g;
+    var paper = row[col.Channel] === 'Captured';
+    if (sel[ref]) { groupsByRef[ref] = g; paperByRef[ref] = paper; }
     targets.forEach(function (a) {
       if (!stats[a.id]) return;
       counted = true;
       var st = stats[a.id];
       st.applications++;
+      if (paper) st.captured++; else st.online++;
       if (g.women) st.women++;
       if (g.pwd) st.disabled++;
       if (g.youth) st.youth++;
@@ -2102,6 +2104,7 @@ function computeInstitutions_(district, user) {
     st[s.status]++;
     if (SEL_ACTIVE[s.status]) {
       st.active++;
+      if (paperByRef[ref]) st.activeCaptured++; else if (paperByRef[ref] === false) st.activeOnline++;
       if (docsVerified_(docs[ref])) st.verified++;
       if (groupsByRef[ref]) addGroups_(st.groups[s.status], groupsByRef[ref]);
     }
@@ -2111,7 +2114,9 @@ function computeInstitutions_(district, user) {
     var st = stats[a.id];
     return {
       id: a.id, district: displayDistrict_(a.district), name: a.name, local: a.local, posts: a.posts,
-      onForm: !!a.facility, takesFrom: a.takesFrom, sharesWith: sharesWith_(a, allocs), applications: st.applications, women: st.women, youth: st.youth, disabled: st.disabled,
+      onForm: !!a.facility, takesFrom: a.takesFrom, sharesWith: sharesWith_(a, allocs), applications: st.applications,
+      online: st.online, captured: st.captured, activeOnline: st.activeOnline, activeCaptured: st.activeCaptured,
+      women: st.women, youth: st.youth, disabled: st.disabled,
       shortlisted: st.Shortlisted, selected: st.Selected, reserve: st.Reserve, notSuitable: st['Not suitable'],
       withdrawn: st.Withdrawn, open: Math.max(0, a.posts - st.Selected), active: st.active, verified: st.verified,
       groups: st.groups, reasons: publicReasons_(reasons[a.id])

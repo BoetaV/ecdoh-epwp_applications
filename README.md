@@ -231,6 +231,19 @@ every level and stage:
 
   *On the shortlist* counts everyone still shortlisted, on reserve or selected,
   so selecting someone does not lower it.
+- **Online and paper applications.** The shortlist is shared between the two
+  channels in proportion to how the applications came in, so both are fairly
+  represented. For example, 40 applications of which 30 online (75%) and 10 paper
+  (25%), with 18 to shortlist: 18 × 75% = 13.5, so **14 from online** and the
+  rest, **4 from paper** applications (the two always add up to the shortlist).
+  Shown per institution in the overview (*Online / paper* column: number and
+  percentage of each, how many to shortlist from each, and how many are on the
+  shortlist), on the *Online / paper* card, in the box above the meters, in step 3
+  of *How to shortlist* (with *Show online* / *Show paper* buttons in step 5), in
+  the audit PDF and in the Excel download of the institutions. For a district or
+  the province the percentages are of all its applications (an applicant shared
+  by two institutions counts once), and the numbers to shortlist add up the
+  institutions.
 - **How to shortlist**: each institution's page lists the process step by step,
   with the numbers worked out for its posts and buttons that set the filters:
   1. Check the ward of the facility (*Choose the ward* goes to the Local

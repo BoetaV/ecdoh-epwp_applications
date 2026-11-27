@@ -354,6 +354,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 .tplan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
 .tplan-cell { background: var(--white); border: 1px solid var(--line); border-left: 4px solid #b26a00; border-radius: 8px; padding: 8px 10px; }
 .tplan-cell.met { border-left-color: var(--green-700); }
+.tplan h3.tplan-sub { margin-top: 14px; font-size: 15px; }
 .tplan-cell small { display: block; font-size: 12px; font-weight: 700; color: var(--muted); }
 .tplan-cell strong { display: block; font-size: 24px; color: var(--green-900); font-variant-numeric: tabular-nums; }
 .tplan-cell span { display: block; font-size: 13px; font-weight: 700; }
@@ -923,7 +924,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         <table>
           <thead>
             <tr>
-              <th>Institution</th><th class="num">Posts</th><th class="num">Applications</th><th class="num">Per post</th>
+              <th>Institution</th><th class="num">Posts</th><th class="num">Applications</th><th class="num">Per post</th><th>Online / paper</th>
               <th class="num">Women</th><th class="num">Youth</th><th class="num">Disability</th>
               <th class="num">Shortlisted</th><th class="num">Selected</th><th class="num">Reserve</th><th class="num">Still open</th><th>Targets (shortlist / selected)</th><th><span class="sr-only">Open</span></th>
             </tr>
@@ -3201,7 +3202,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       (out.totalPosts && out.totalPosts !== posts + kept ? '. Should be ' + num(out.totalPosts) + ': check the Allocations tab' : '')));
     var appsTotal = out.applicationsTotal !== undefined ? out.applicationsTotal : apps + otherApps;
     kp.appendChild(kpi('Applications', num(appsTotal), perPost(appsTotal, posts) + ' per post'));
-    var sp = shortlistPlan(out.institutions);
+    var sp = scopeChannels(shortlistPlan(out.institutions), out);
+    if (sp.ch.known) kp.appendChild(channelKpi(sp.ch));
     kp.appendChild(kpi('On the shortlist', num(sum(out.institutions, 'shortlisted') + selected + sum(out.institutions, 'reserve')) + ' of ' + num(sp.shortlist),
       'At least ' + num(sp.sl.youth) + ' youth, ' + num(sp.sl.women) + ' women, ' + num(sp.sl.pwd) + ' with a disability'));
     kp.appendChild(kpi('Selected', num(selected), pct(selected, posts) + ' of the posts'));
@@ -3214,7 +3216,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     if (!list.length) {
       var tr0 = document.createElement('tr');
       var td0 = document.createElement('td');
-      td0.colSpan = 13;
+      td0.colSpan = 14;
       td0.className = 'empty';
       td0.textContent = out.institutions.length ? 'No institution matches.' : 'There are no posts for this district.';
       tr0.appendChild(td0);
@@ -3248,6 +3250,13 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       numCell(tr, num(i.posts), true);
       numCell(tr, num(i.applications));
       numCell(tr, perPost(i.applications, i.posts));
+      var cs = channelSplit(i);
+      if (cs) {
+        addCell(tr, num(cs.online) + ' (' + pctOfN(cs.online, cs.n) + ') / ' + num(cs.paper) + ' (' + pctOfN(cs.paper, cs.n) + ')',
+          i.posts ? 'Shortlist ' + num(cs.onlineQ) + ' online, ' + num(cs.paperQ) + ' paper (on it: ' + num(cs.haveOnline) + ' / ' + num(cs.havePaper) + ')' : '');
+      } else {
+        addCell(tr, '-');
+      }
       numCell(tr, pct(i.women, i.applications));
       numCell(tr, pct(i.youth, i.applications));
       numCell(tr, num(i.disabled));
@@ -3341,8 +3350,36 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     return targetsOf()[key] + '% of ' + num(SHORTLIST_TIMES * posts) + ' = ' + String(exact) +
       (exact === n ? '' : ', so ' + n);
   }
+  // Online and paper: the shortlist is shared in proportion to how the
+  // applications came in (to the nearest person; the two add up to the shortlist).
+  function channelSplit(i) {
+    if (!i || i.online === undefined) return null;
+    var n = i.online + i.captured, total = SHORTLIST_TIMES * (i.posts || 0);
+    var onlineQ = n ? Math.round(total * i.online / n) : 0;
+    return { n: n, online: i.online, paper: i.captured, onlineQ: onlineQ, paperQ: n ? total - onlineQ : 0,
+      haveOnline: i.activeOnline || 0, havePaper: i.activeCaptured || 0 };
+  }
+  // For a district or the province: the split of the applications themselves
+  // (an applicant shared by two institutions counts once), not added up per institution.
+  function scopeChannels(plan, out) {
+    var c = out && out.applicationChannels;
+    if (c && plan.ch.known) { plan.ch.online = c.online; plan.ch.paper = c.captured; plan.ch.n = c.online + c.captured; }
+    return plan;
+  }
+  function channelKpi(ch) {
+    return kpi('Online / paper', pctOfN(ch.online, ch.n) + ' / ' + pctOfN(ch.paper, ch.n),
+      num(ch.online) + ' online, ' + num(ch.paper) + ' paper. Shortlist ' + num(ch.onlineQ) + ' online, ' + num(ch.paperQ) + ' paper');
+  }
+  function pctOfN(x, n) { return n ? Math.round(x / n * 1000) / 10 + '%' : '-'; }
   function shortlistPlan(insts) {
-    var plan = { posts: 0, shortlist: 0, sel: { youth: 0, women: 0, pwd: 0 }, sl: { youth: 0, women: 0, pwd: 0 } };
+    var plan = { posts: 0, shortlist: 0, sel: { youth: 0, women: 0, pwd: 0 }, sl: { youth: 0, women: 0, pwd: 0 },
+      ch: { known: false, n: 0, online: 0, paper: 0, onlineQ: 0, paperQ: 0, haveOnline: 0, havePaper: 0 } };
+    insts.forEach(function (i) {
+      var c = channelSplit(i);
+      if (!c) return;
+      plan.ch.known = true;
+      ['n', 'online', 'paper', 'onlineQ', 'paperQ', 'haveOnline', 'havePaper'].forEach(function (k) { plan.ch[k] += c[k]; });
+    });
     insts.forEach(function (i) {
       if (!i || !i.posts) return;
       plan.posts += i.posts;
@@ -3392,6 +3429,37 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       grid.appendChild(cell);
     });
     box.appendChild(grid);
+    var ch = plan.ch;
+    if (ch && ch.known) {
+      var h4 = document.createElement('h3');
+      h4.className = 'tplan-sub';
+      h4.textContent = 'From online and paper applications';
+      var sub2 = document.createElement('span');
+      sub2.textContent = 'In proportion to how the applications came in';
+      h4.appendChild(sub2);
+      box.appendChild(h4);
+      var grid2 = document.createElement('div');
+      grid2.className = 'tplan-grid';
+      [['Online', ch.online, ch.onlineQ, ch.haveOnline], ['Paper', ch.paper, ch.paperQ, ch.havePaper]].forEach(function (x) {
+        var cell = document.createElement('div');
+        cell.className = 'tplan-cell' + (x[3] >= x[2] ? ' met' : '');
+        var l = document.createElement('small');
+        l.textContent = 'Shortlist from ' + x[0].toLowerCase() + ' applications';
+        var v = document.createElement('strong');
+        v.textContent = num(x[2]);
+        var n = document.createElement('span');
+        n.textContent = num(x[3]) + ' on the shortlist' + (x[3] >= x[2] ? ' \u2713' : ', ' + num(x[2] - x[3]) + ' to go');
+        var f = document.createElement('em');
+        f.textContent = pctOfN(x[1], ch.n) + ' of the applications (' + num(x[1]) + ' of ' + num(ch.n) + ')' +
+          (plan.single && x[2] > x[1] ? '. Only ' + num(x[1]) + ' applied this way.' : '');
+        cell.appendChild(l);
+        cell.appendChild(v);
+        cell.appendChild(n);
+        cell.appendChild(f);
+        grid2.appendChild(cell);
+      });
+      box.appendChild(grid2);
+    }
     return box;
   }
   function pct1(v) { return (Math.round(v * 10) / 10).toFixed(1) + '%'; }
@@ -3654,7 +3722,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     var box = $('sel-targets');
     box.hidden = !out.applicationGroups;
     if (out.applicationGroups) {
-      var plan = shortlistPlan(out.institutions);
+      var plan = scopeChannels(shortlistPlan(out.institutions), out);
       renderTargets(box, 'EPWP national targets: ' + out.scope,
         'Applications, shortlist and selected compared with the national targets (the black line). Green: met. Orange: below target. ' +
         'The numbers to shortlist add up the institutions: at each, ' + SHORTLIST_TIMES + ' times the people each target needs among its posts.',
@@ -3735,18 +3803,25 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     });
     step('Check the candidates who applied from that ward.', 'With the ward chosen, the list shows only applicants living in that ward. ' +
       'If there are too few, choose a neighbouring ward, or "All wards".');
+    var ch = plan.ch;
     step('Know your selection target: 1:' + SHORTLIST_TIMES + '.', num(plan.posts) + ' post' + (plan.posts === 1 ? '' : 's') + ' \u00d7 ' +
-      SHORTLIST_TIMES + ' = ' + num(plan.shortlist) + ' must be shortlisted.');
+      SHORTLIST_TIMES + ' = ' + num(plan.shortlist) + ' must be shortlisted.' +
+      (ch.known && ch.n ? ' The applications here are ' + pctOfN(ch.online, ch.n) + ' online (' + num(ch.online) + ') and ' +
+        pctOfN(ch.paper, ch.n) + ' paper (' + num(ch.paper) + '), so shortlist ' + num(ch.onlineQ) + ' from online and ' +
+        num(ch.paperQ) + ' from paper applications.' : ''));
     step('Calculate your targets using that number.', TARGET_LIST.map(function (k) {
       return k[1] + ': ' + slSum(plan.posts, k[0]) + (slNeedOf(plan.posts, k[0]) === 1 ? ' person' : ' people');
     }).join('. ') + '.');
-    step('Filter your targeted percentages.', 'Show one target group at a time (the Applicant heading of the list).', function (row) {
+    step('Filter your targeted percentages.', 'Show one target group at a time (the Applicant heading of the list), and online or paper applications (the Reference heading).', function (row) {
       [['youth', 'Youth'], ['women', 'Women'], ['pwd', 'Persons with disabilities'], ['', 'Everyone']].forEach(function (g) {
         btn(row, g[0] ? 'Show ' + g[1].toLowerCase() : 'Show everyone', function () {
           $('sel-group').value = g[0];
           loadPool(0);
           toList();
         });
+      });
+      [['Online', 'Show online'], ['Captured', 'Show paper'], ['', 'Online and paper']].forEach(function (c) {
+        btn(row, c[1], function () { $('sel-channel').value = c[0]; loadPool(0); toList(); });
       });
     });
     step('Now view the documents.', 'Open the ID and results in the Documents column and record the check. Paper applicants: check the paper file at the HR office.',
@@ -3790,7 +3865,9 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         (i.sharesWith || []).join(', ')].concat(groupCols(i.groups && i.groups.Shortlisted), groupCols(i.groups && i.groups.Selected),
         [Object.keys(i.reasons || {}).map(function (k) {
           return { youth: 'Youth', women: 'Women', pwd: 'Disability' }[k] + ': ' + i.reasons[k].reason;
-        }).join(' | ')], (function (pl) { return [pl.shortlist, pl.sl.youth, pl.sl.women, pl.sl.pwd]; })(shortlistPlan([i])));
+        }).join(' | ')], (function (pl) { return [pl.shortlist, pl.sl.youth, pl.sl.women, pl.sl.pwd]; })(shortlistPlan([i])),
+        (function (c) { return c ? [c.online, pctOfN(c.online, c.n).replace('%', ''), c.paper, pctOfN(c.paper, c.n).replace('%', ''),
+          c.onlineQ, c.paperQ, c.haveOnline, c.havePaper] : []; })(channelSplit(i)));
     }).concat((out.reserved || []).map(function (r) {
       return [r.district, 'Reserved for further allocation' + (r.removed ? ' (duplicate line "' + r.removed + '" removed)' : ''),
         r.allocatedTo ? 'Allocated to ' + r.allocatedTo : '', r.allocatedTo ? 0 : r.posts, '', '', '', '', '', '', '', '', '', '', '', '-', ''];
@@ -3805,8 +3882,10 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
         'Posts still open', 'Takes applications from', 'Shares applicants with',
         'Shortlisted: youth', 'Shortlisted: youth %', 'Shortlisted: women', 'Shortlisted: women %', 'Shortlisted: with a disability', 'Shortlisted: disability %',
         'Selected: youth', 'Selected: youth %', 'Selected: women', 'Selected: women %', 'Selected: with a disability', 'Selected: disability %',
-        'Reasons targets not met', 'To shortlist (3 per post)', 'To shortlist: youth', 'To shortlist: women', 'To shortlist: with a disability'],
-      numeric: [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1],
+        'Reasons targets not met', 'To shortlist (3 per post)', 'To shortlist: youth', 'To shortlist: women', 'To shortlist: with a disability',
+        'Online applications', 'Online %', 'Paper applications', 'Paper %', 'To shortlist: online', 'To shortlist: paper',
+        'On the shortlist: online', 'On the shortlist: paper'],
+      numeric: [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
       rows: rows.map(function (r) { return r.map(String); })
     }), 'EPWP_Posts_and_applications_' + fileSafe(out.scope) + '_' + todayIso() + '.xlsx');
   }
@@ -3835,6 +3914,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
     var ip = shortlistPlan([i]);
     kp.appendChild(kpi('On the shortlist', num(i.shortlisted + i.selected + i.reserve) + ' of ' + num(ip.shortlist),
       'At least ' + num(ip.sl.youth) + ' youth, ' + num(ip.sl.women) + ' women, ' + num(ip.sl.pwd) + ' with a disability'));
+    if (ip.ch.known) kp.appendChild(channelKpi(ip.ch));
     kp.appendChild(kpi('Selected', num(i.selected), i.posts && !i.open ? 'All posts filled' : num(i.open) + ' still open'));
     kp.appendChild(kpi('Reserve', num(i.reserve), 'In case someone declines'));
     if (i.active !== undefined) {
@@ -4502,7 +4582,11 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
       }), function (ri, ci, v) { return ci === 5 ? metColour(ri, ci, v) : null; });
     if (plan && plan.posts) {
       r.para(planText(plan) + '. Selection ratio 1:' + SHORTLIST_TIMES + '; the target percentages are taken of the shortlist of each institution, to the nearest whole person and at least 1. ' +
-        'On the shortlist so far (shortlisted, reserve or selected): ' + num(onSl.n || 0) + '.', 8, r.C.muted);
+        'On the shortlist so far (shortlisted, reserve or selected): ' + num(onSl.n || 0) + '.' +
+        (plan.ch && plan.ch.known && plan.ch.n ? ' Applications: ' + num(plan.ch.online) + ' online (' + pctOfN(plan.ch.online, plan.ch.n) +
+          '), ' + num(plan.ch.paper) + ' paper (' + pctOfN(plan.ch.paper, plan.ch.n) + '). In proportion, shortlist ' + num(plan.ch.onlineQ) +
+          ' from online and ' + num(plan.ch.paperQ) + ' from paper applications; on the shortlist so far ' + num(plan.ch.haveOnline) +
+          ' online and ' + num(plan.ch.havePaper) + ' paper.' : ''), 8, r.C.muted);
     }
   }
 
@@ -4565,7 +4649,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(18,138,74,.3
 
     r.heading('2. EPWP national targets', 'Targets: ' + t.youth + '% youth (18 to 35), ' + t.women + '% women, ' + t.pwd +
       '% persons with disabilities. Shares of the applications, the shortlist and the selected.');
-    targetTable(r, out.applicationGroups || { n: 0, youth: 0, women: 0, pwd: 0 }, shortlisted, selected, posts, shortlistPlan(insts),
+    targetTable(r, out.applicationGroups || { n: 0, youth: 0, women: 0, pwd: 0 }, shortlisted, selected, posts, scopeChannels(shortlistPlan(insts), out),
       sumGroups(insts.map(function (i) { return onShortlist(i.groups); })));
 
     var byD = {};
